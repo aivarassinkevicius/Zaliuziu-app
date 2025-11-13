@@ -1,5 +1,5 @@
 streamlit
-openai
+openai>=1.0.0
 python-dotenv
-Pillow
+Pillow>=10.0.0
 Pillow==10.1.0
