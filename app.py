@@ -95,12 +95,27 @@ st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotrau
 st.markdown("### 📷 Nuotraukų įkėlimas")
 st.info("📱 **Telefone:** Pasirinkite 'Fotografuoti' arba 'Pasirinkti iš galerijos'. Maksimalus failo dydis: 18MB")
 
+# Session state failų sėkmingam įkėlimui
+if 'uploaded_files_count' not in st.session_state:
+    st.session_state.uploaded_files_count = 0
+
 uploaded_files = st.file_uploader(
     "Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
     type=["jpg", "jpeg", "png"],
     accept_multiple_files=True,
-    help="Palaikomi formatai: JPG, JPEG, PNG. Maksimalus dydis: 18MB per failą"
+    help="Palaikomi formatai: JPG, JPEG, PNG. Maksimalus dydis: 18MB per failą",
+    key="file_uploader"
 )
+
+# Debug informacija
+if uploaded_files:
+    st.session_state.uploaded_files_count = len(uploaded_files)
+    st.success(f"✅ Sėkmingai įkelta {len(uploaded_files)} nuotraukų!")
+    
+    # Rodyti failų informaciją
+    for i, file in enumerate(uploaded_files):
+        file_size = len(file.getvalue()) / (1024 * 1024)
+        st.text(f"Failas {i+1}: {file.name} ({file_size:.1f}MB)")
 
 if uploaded_files:
     # Tikrinti failų kiekį
@@ -108,14 +123,16 @@ if uploaded_files:
         st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
         uploaded_files = uploaded_files[:4]
     
-    # Tikrinti failų dydį
-    valid_files = []
-    for file in uploaded_files:
-        file_size = len(file.getvalue()) / (1024 * 1024)  # MB
-        if file_size > 18:
-            st.error(f"❌ Failas '{file.name}' per didelis ({file_size:.1f}MB). Maksimalus dydis: 18MB")
-        else:
-            valid_files.append(file)
+    with st.spinner("🔄 Tikrinami failai..."):
+        # Tikrinti failų dydį
+        valid_files = []
+        for file in uploaded_files:
+            file_size = len(file.getvalue()) / (1024 * 1024)  # MB
+            if file_size > 18:
+                st.error(f"❌ Failas '{file.name}' per didelis ({file_size:.1f}MB). Maksimalus dydis: 18MB")
+            else:
+                valid_files.append(file)
+                st.success(f"✅ {file.name} - OK ({file_size:.1f}MB)")
     
     uploaded_files = valid_files
     
