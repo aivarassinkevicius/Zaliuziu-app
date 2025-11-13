@@ -93,13 +93,13 @@ st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotrau
 
 # Failų įkėlimas
 st.markdown("### 📷 Nuotraukų įkėlimas")
-st.info("📱 **Telefone:** Pasirinkite 'Fotografuoti' arba 'Pasirinkti iš galerijos'. Maksimalus failo dydis: 10MB")
+st.info("📱 **Telefone:** Pasirinkite 'Fotografuoti' arba 'Pasirinkti iš galerijos'. Maksimalus failo dydis: 18MB")
 
 uploaded_files = st.file_uploader(
     "Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
     type=["jpg", "jpeg", "png"],
     accept_multiple_files=True,
-    help="Palaikomi formatai: JPG, JPEG, PNG. Maksimalus dydis: 10MB per failą"
+    help="Palaikomi formatai: JPG, JPEG, PNG. Maksimalus dydis: 18MB per failą"
 )
 
 if uploaded_files:
@@ -112,8 +112,8 @@ if uploaded_files:
     valid_files = []
     for file in uploaded_files:
         file_size = len(file.getvalue()) / (1024 * 1024)  # MB
-        if file_size > 10:
-            st.error(f"❌ Failas '{file.name}' per didelis ({file_size:.1f}MB). Maksimalus dydis: 10MB")
+        if file_size > 18:
+            st.error(f"❌ Failas '{file.name}' per didelis ({file_size:.1f}MB). Maksimalus dydis: 18MB")
         else:
             valid_files.append(file)
     
@@ -145,7 +145,7 @@ if uploaded_files:
             try:
                 # Tikrinti failo dydį dar kartą prieš apdorojimą
                 file_size = len(file.getvalue()) / (1024 * 1024)
-                if file_size > 10:
+                if file_size > 18:
                     st.error(f"❌ Failas {i+1} per didelis ({file_size:.1f}MB)")
                     continue
                 
