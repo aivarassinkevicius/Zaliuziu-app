@@ -28,6 +28,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Session state inicializavimas mobiliems
+if 'files_uploaded' not in st.session_state:
+    st.session_state.files_uploaded = []
+if 'files_processed' not in st.session_state:
+    st.session_state.files_processed = False
+if 'last_result' not in st.session_state:
+    st.session_state.last_result = None
+
 st.title("🌿 Žaliuzių & Roletų turinio kūrėjas")
 st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tinklams.")
 
@@ -95,9 +103,14 @@ st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotrau
 st.markdown("### 📷 Nuotraukų įkėlimas")
 st.info("📱 **Telefone:** Pasirinkite 'Fotografuoti' arba 'Pasirinkti iš galerijos'. Maksimalus failo dydis: 18MB")
 
-# Session state failų sėkmingam įkėlimui
-if 'uploaded_files_count' not in st.session_state:
-    st.session_state.uploaded_files_count = 0
+# Rodyti anksčiau įkeltas nuotraukas
+if st.session_state.files_uploaded:
+    st.success(f"✅ Anksčiau įkelta {len(st.session_state.files_uploaded)} nuotraukų")
+    if st.button("🗑️ Išvalyti visas nuotraukas"):
+        st.session_state.files_uploaded = []
+        st.session_state.files_processed = False
+        st.session_state.last_result = None
+        st.rerun()
 
 uploaded_files = st.file_uploader(
     "Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
@@ -107,69 +120,64 @@ uploaded_files = st.file_uploader(
     key="file_uploader"
 )
 
-# Debug informacija
-if uploaded_files:
-    st.session_state.uploaded_files_count = len(uploaded_files)
-    st.success(f"✅ Sėkmingai įkelta {len(uploaded_files)} nuotraukų!")
-    
-    # Rodyti failų informaciją
-    for i, file in enumerate(uploaded_files):
-        file_size = len(file.getvalue()) / (1024 * 1024)
-        st.text(f"Failas {i+1}: {file.name} ({file_size:.1f}MB)")
+# Naudoti failus iš session state arba naujai įkeltus
+files_to_process = st.session_state.files_uploaded if st.session_state.files_uploaded else []
 
+# Jei įkelti nauji failai, atnaujinti session state
 if uploaded_files:
-    # Tikrinti failų kiekį
-    if len(uploaded_files) > 4:
-        st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
-        uploaded_files = uploaded_files[:4]
+    st.session_state.files_uploaded = []
+    for file in uploaded_files:
+        file_data = {
+            'name': file.name,
+            'size': len(file.getvalue()),
+            'content': file.getvalue()
+        }
+        st.session_state.files_uploaded.append(file_data)
+    files_to_process = st.session_state.files_uploaded
+
+if files_to_process:
+    st.success(f"✅ Paruošta {len(files_to_process)} nuotraukų!")
     
     with st.spinner("🔄 Tikrinami failai..."):
         # Tikrinti failų dydį
         valid_files = []
-        for file in uploaded_files:
-            file_size = len(file.getvalue()) / (1024 * 1024)  # MB
+        for file_data in files_to_process:
+            file_size = file_data['size'] / (1024 * 1024)  # MB
             if file_size > 18:
-                st.error(f"❌ Failas '{file.name}' per didelis ({file_size:.1f}MB). Maksimalus dydis: 18MB")
+                st.error(f"❌ Failas '{file_data['name']}' per didelis ({file_size:.1f}MB). Maksimalus dydis: 18MB")
             else:
-                valid_files.append(file)
-                st.success(f"✅ {file.name} - OK ({file_size:.1f}MB)")
+                valid_files.append(file_data)
+                st.success(f"✅ {file_data['name']} - OK ({file_size:.1f}MB)")
     
-    uploaded_files = valid_files
-    
-    if not uploaded_files:
+    if not valid_files:
         st.error("❌ Nėra tinkamų failų. Patikrinkite failų dydį ir formatą.")
-        st.stop()
-    
-    st.subheader(f"📸 Įkeltos nuotraukos ({len(uploaded_files)})")
-    
-    # Rodyti nuotraukas
-    cols = st.columns(min(len(uploaded_files), 4))
-    for i, file in enumerate(uploaded_files):
-        with cols[i]:
-            st.image(file, caption=f"Nuotrauka {i+1}", use_container_width=True)
-    
-    # Apdorojimo mygtukas
-    if st.button("🚀 Sukurti turinį", type="primary", use_container_width=True):
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+    else:
+        st.subheader(f"📸 Paruoštos nuotraukos ({len(valid_files)})")
         
-        all_analyses = []
-        
-        for i, file in enumerate(uploaded_files):
-            status_text.text(f"🔍 Analizuojama nuotrauka {i+1}/{len(uploaded_files)}...")
-            progress_bar.progress((i + 1) / (len(uploaded_files) + 1))
+        # Rodyti nuotraukas iš session state
+        cols = st.columns(min(len(valid_files), 4))
+        for i, file_data in enumerate(valid_files):
+            with cols[i]:
+                st.image(file_data['content'], caption=f"Nuotrauka {i+1}", use_container_width=True)
+    
+        # Apdorojimo mygtukas
+        if st.button("🚀 Sukurti turinį", type="primary", use_container_width=True):
+            progress_bar = st.progress(0)
+            status_text = st.empty()
             
-            try:
-                # Tikrinti failo dydį dar kartą prieš apdorojimą
-                file_size = len(file.getvalue()) / (1024 * 1024)
-                if file_size > 18:
-                    st.error(f"❌ Failas {i+1} per didelis ({file_size:.1f}MB)")
-                    continue
+            all_analyses = []
+            
+            for i, file_data in enumerate(valid_files):
+                status_text.text(f"🔍 Analizuojama nuotrauka {i+1}/{len(valid_files)}...")
+                progress_bar.progress((i + 1) / (len(valid_files) + 1))
                 
-                # Konvertuojame į base64
-                image_b64 = image_to_base64(file)
-                
-                # Analizuojame
+                try:
+                    # Konvertuojame į base64
+                    image_b64 = base64.b64encode(file_data['content']).decode()
+                    
+                    # Analizuojame
+                    analysis = analyze_image(image_b64)
+                    all_analyses.append(analysis)
                 analysis = analyze_image(image_b64)
                 all_analyses.append(analysis)
                 
