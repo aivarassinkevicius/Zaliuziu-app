@@ -178,13 +178,11 @@ if files_to_process:
                     # Analizuojame
                     analysis = analyze_image(image_b64)
                     all_analyses.append(analysis)
-                analysis = analyze_image(image_b64)
-                all_analyses.append(analysis)
-                
-            except Exception as e:
-                st.error(f"❌ Klaida apdorojant nuotrauką {i+1}: {str(e)}")
-                st.error("💡 Patarimas: Pabandykite su mažesniu failu arba kitu formatu")
-                continue
+                    
+                except Exception as e:
+                    st.error(f"❌ Klaida apdorojant nuotrauką {i+1}: {str(e)}")
+                    st.error("💡 Patarimas: Pabandykite su mažesniu failu arba kitu formatu")
+                    continue
         
         if all_analyses:
             status_text.text("✍️ Kuriamas turinys...")
