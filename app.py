@@ -21,7 +21,12 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
-st.set_page_config(page_title="Žaliuzių turinio kūrėjas", page_icon="🌞", layout="wide")
+st.set_page_config(
+    page_title="Žaliuzių turinio kūrėjas", 
+    page_icon="🌞", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 st.title("🌿 Žaliuzių & Roletų turinio kūrėjas")
 st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tinklams.")
@@ -87,16 +92,36 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotraukas su žaliuzėmis ar roletais.")
 
 # Failų įkėlimas
+st.markdown("### 📷 Nuotraukų įkėlimas")
+st.info("📱 **Telefone:** Pasirinkite 'Fotografuoti' arba 'Pasirinkti iš galerijos'. Maksimalus failo dydis: 10MB")
+
 uploaded_files = st.file_uploader(
-    "📷 Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
+    "Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
     type=["jpg", "jpeg", "png"],
-    accept_multiple_files=True
+    accept_multiple_files=True,
+    help="Palaikomi formatai: JPG, JPEG, PNG. Maksimalus dydis: 10MB per failą"
 )
 
 if uploaded_files:
+    # Tikrinti failų kiekį
     if len(uploaded_files) > 4:
         st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
         uploaded_files = uploaded_files[:4]
+    
+    # Tikrinti failų dydį
+    valid_files = []
+    for file in uploaded_files:
+        file_size = len(file.getvalue()) / (1024 * 1024)  # MB
+        if file_size > 10:
+            st.error(f"❌ Failas '{file.name}' per didelis ({file_size:.1f}MB). Maksimalus dydis: 10MB")
+        else:
+            valid_files.append(file)
+    
+    uploaded_files = valid_files
+    
+    if not uploaded_files:
+        st.error("❌ Nėra tinkamų failų. Patikrinkite failų dydį ir formatą.")
+        st.stop()
     
     st.subheader(f"📸 Įkeltos nuotraukos ({len(uploaded_files)})")
     
@@ -118,6 +143,12 @@ if uploaded_files:
             progress_bar.progress((i + 1) / (len(uploaded_files) + 1))
             
             try:
+                # Tikrinti failo dydį dar kartą prieš apdorojimą
+                file_size = len(file.getvalue()) / (1024 * 1024)
+                if file_size > 10:
+                    st.error(f"❌ Failas {i+1} per didelis ({file_size:.1f}MB)")
+                    continue
+                
                 # Konvertuojame į base64
                 image_b64 = image_to_base64(file)
                 
@@ -126,7 +157,8 @@ if uploaded_files:
                 all_analyses.append(analysis)
                 
             except Exception as e:
-                st.error(f"❌ Klaida apdorojant nuotrauką {i+1}: {e}")
+                st.error(f"❌ Klaida apdorojant nuotrauką {i+1}: {str(e)}")
+                st.error("💡 Patarimas: Pabandykite su mažesniu failu arba kitu formatu")
                 continue
         
         if all_analyses:
