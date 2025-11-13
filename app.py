@@ -41,14 +41,16 @@ def analyze_image(image_bytes):
     )
     return response.choices[0].message.content.strip()
 
-def generate_captions(analysis_text, season):
+def generate_captions(analysis_text, season, holiday):
     """Sukuria 3 teksto variantus lietuviškai"""
+    holiday_context = f" ir šventę: {holiday}" if holiday != "Nėra" else ""
     prompt = f"""
     Pagal šią analizę: {analysis_text}
-    ir metų laiką: {season},
+    ir metų laiką: {season}{holiday_context},
     sukurk 3 trumpus socialinių tinklų įrašų variantus (iki 250 simbolių) apie žaliuzes/roletus:
     1) marketinginis, 2) draugiškas, 3) su humoru. 
     Lietuviškai, gali pridėti 1–2 tinkamus hashtag'us.
+    {f"Įtraukk šventės {holiday} tematiką, jei tinkama." if holiday != "Nėra" else ""}
     """
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -68,6 +70,15 @@ season = st.sidebar.selectbox(
     "🌤️ Metų laikas",
     ["Pavasaris", "Vasara", "Ruduo", "Žiema"],
     index=1
+)
+
+holiday = st.sidebar.selectbox(
+    "🎉 Lietuviškos šventės (pasirinktinai)",
+    ["Nėra", "Naujieji metai", "Šv. Valentino diena", "Vasario 16-oji", "Kovo 11-oji", 
+     "Velykos", "Gegužės 1-oji (Darbo diena)", "Motinos diena", "Tėvo diena", 
+     "Joninės", "Liepos 6-oji (Karaliaus Mindaugo diena)", "Žolinė", "Rugsėjo 1-oji", 
+     "Šv. Kalėdos", "Kūčios"],
+    index=0
 )
 
 auto_process = st.sidebar.checkbox("🤖 Automatinis apdorojimas", value=True)
@@ -127,7 +138,7 @@ if uploaded_files:
             
             # Generuojame tekstą
             try:
-                captions = generate_captions(combined_analysis, season)
+                captions = generate_captions(combined_analysis, season, holiday)
                 
                 st.success("✅ Turinys sėkmingai sukurtas!")
                 
