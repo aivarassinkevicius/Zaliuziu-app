@@ -2,6 +2,7 @@ import streamlit as st
 import io, os, base64
 from openai import OpenAI
 from dotenv import load_dotenv
+from PIL import Image
 
 # Bandome importuoti camera input (jei neveiks, praleidžia)
 try:
@@ -39,6 +40,51 @@ st.title("🌿 Žaliuzių & Roletų turinio kūrėjas")
 st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tinklams.")
 
 # ---------- Pagalbinės funkcijos ----------
+
+def compress_image(image_file, max_size_mb=1, max_dimension=1920):
+    """
+    Sumažina nuotrauką iki nurodyto dydžio ir rezoliucijos.
+    Tai išsprendžia mobilių įkėlimo problemas ir sutaupo API kaštus.
+    """
+    try:
+        # Atidarome nuotrauką
+        img = Image.open(image_file)
+        
+        # Konvertuojame į RGB jei reikia (pvz. PNG su alpha kanalu)
+        if img.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            img = background
+        
+        # Sumažiname rezoliuciją jei per didelė
+        if max(img.size) > max_dimension:
+            img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+        
+        # Išsaugome į bytes su progressyviu mažinimu kokybės
+        output = io.BytesIO()
+        quality = 95
+        
+        while quality > 20:
+            output.seek(0)
+            output.truncate()
+            img.save(output, format='JPEG', quality=quality, optimize=True)
+            
+            size_mb = output.tell() / (1024 * 1024)
+            if size_mb <= max_size_mb:
+                break
+            quality -= 5
+        
+        output.seek(0)
+        return output
+        
+    except Exception as e:
+        st.error(f"Klaida mažinant nuotrauką: {e}")
+        # Jei nepavyko sumažinti, grąžiname originalą
+        image_file.seek(0)
+        return image_file
+
 def analyze_image(image_bytes):
     """Naudoja GPT-4o-mini vaizdo analizei"""
     response = client.chat.completions.create(
@@ -72,8 +118,10 @@ def generate_captions(analysis_text, season, holiday):
     return response.choices[0].message.content.strip()
 
 def image_to_base64(image_file):
-    """Konvertuoja įkeltą failą į base64"""
-    return base64.b64encode(image_file.getvalue()).decode()
+    """Konvertuoja įkeltą failą į base64 su automatine kompresija"""
+    # Pirmiausia sumažiname nuotrauką
+    compressed = compress_image(image_file, max_size_mb=1, max_dimension=1920)
+    return base64.b64encode(compressed.getvalue()).decode()
 
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
@@ -145,6 +193,7 @@ st.markdown("""
 # Patikriname ar yra įkeltų failų
 # Mobiliai optimizuotas failų įkėlimas
 st.markdown("### 📸 Įkelkite nuotraukas")
+st.info("💡 **Patarimas**: Nuotraukos automatiškai sumažinamos iki 1 MB - tai pagreitina įkėlimą ir sutaupo API kaštus!")
 
 # Sukuriame tabs skirtingoms įkėlimo opcijoms
 tab1, tab2, tab3 = st.tabs(["📁 Failų įkėlimas", "📷 Kamera", "🔧 Rankiniu būdu"])
@@ -204,15 +253,23 @@ with tab3:
     )
     
     if single_file:
+        # Rodyti failo dydį
+        file_size_mb = single_file.size / (1024 * 1024)
+        
         col1, col2 = st.columns([1,1])
         with col1:
             st.image(single_file, caption="Peržiūra", width=200)
+            st.caption(f"📏 Dydis: {file_size_mb:.2f} MB")
         with col2:
             if st.button("➕ Pridėti šią nuotrauką", key="add_single"):
                 if "manual_files" not in st.session_state:
                     st.session_state.manual_files = []
                 
                 if len(st.session_state.manual_files) < 4:
+                    # Informuojame apie kompresiją jei failas didelis
+                    if file_size_mb > 2:
+                        st.info("🗜️ Didelė nuotrauka - bus automatiškai sumažinta")
+                    
                     st.session_state.manual_files.append(single_file)
                     st.success(f"Pridėta! Iš viso: {len(st.session_state.manual_files)}")
                     st.rerun()
