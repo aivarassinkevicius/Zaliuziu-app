@@ -137,15 +137,6 @@ files_to_process = st.session_state.uploaded_files
 # Mygtukas visada matomas
 create_content = st.button("🚀 Sukurti turinį", type="primary", use_container_width=True)
 
-# Debug informacija (pašalinsime vėliau)
-if create_content:
-    st.write(f"🔍 Debug: uploaded_files = {uploaded_files}")
-    st.write(f"🔍 Debug: uploaded_files tipas = {type(uploaded_files)}")
-    st.write(f"🔍 Debug: files_to_process = {files_to_process}")
-    st.write(f"🔍 Debug: files_to_process tipas = {type(files_to_process)}")
-    if files_to_process:
-        st.write(f"🔍 Debug: failų skaičius = {len(files_to_process)}")
-
 if files_to_process:
     # Žalias langelis - sėkmingai įkelta
     st.markdown("""
