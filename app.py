@@ -94,18 +94,54 @@ st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotrau
 st.markdown("### 📷 Nuotraukų įkėlimas")
 st.info("📱 **Telefone:** Pasirinkite 'Fotografuoti' arba 'Pasirinkti iš galerijos'")
 
+# CSS stilių pridejimas
+st.markdown("""
+<style>
+.upload-area {
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+}
+.upload-area-success {
+    border: 2px solid #28a745;
+    background-color: #d4edda;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Patikriname ar yra įkeltų failų
 uploaded_files = st.file_uploader(
     "Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
     type=["jpg", "jpeg", "png"],
-    accept_multiple_files=True
+    accept_multiple_files=True,
+    label_visibility="collapsed"
+)
+
+files_uploaded = uploaded_files is not None and len(uploaded_files) > 0
+
+# Spalvotas langelis priklausomai nuo būsenos  
+uploaded_files = st.file_uploader(
+    "Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
+    type=["jpg", "jpeg", "png"],
+    accept_multiple_files=True,
+    label_visibility="collapsed"
 )
 
 if uploaded_files:
+    # Žalias langelis - sėkmingai įkelta
+    st.markdown('<div class="upload-area-success">', unsafe_allow_html=True)
+    st.success(f"✅ Įkelta {len(uploaded_files)} nuotraukų!")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
     if len(uploaded_files) > 4:
         st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
         uploaded_files = uploaded_files[:4]
-    
-    st.success(f"✅ Įkelta {len(uploaded_files)} nuotraukų!")
     
     st.subheader(f"📸 Įkeltos nuotraukos ({len(uploaded_files)})")
     
