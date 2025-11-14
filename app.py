@@ -127,6 +127,13 @@ uploaded_files = st.file_uploader(
 # Mygtukas visada matomas
 create_content = st.button("🚀 Sukurti turinį", type="primary", use_container_width=True)
 
+# Debug informacija (pašalinsime vėliau)
+if create_content:
+    st.write(f"🔍 Debug: uploaded_files = {uploaded_files}")
+    st.write(f"🔍 Debug: uploaded_files tipas = {type(uploaded_files)}")
+    if uploaded_files:
+        st.write(f"🔍 Debug: failų skaičius = {len(uploaded_files)}")
+
 if uploaded_files:
     # Žalias langelis - sėkmingai įkelta
     st.markdown("""
@@ -142,7 +149,7 @@ if uploaded_files:
         uploaded_files = uploaded_files[:4]
 
 # Apdorojimas tik jei yra failų ir paspaustas mygtukas
-if create_content and uploaded_files:
+if create_content and uploaded_files and len(uploaded_files) > 0:
     progress_bar = st.progress(0)
     status_text = st.empty()
     
@@ -203,7 +210,7 @@ if create_content and uploaded_files:
     progress_bar.empty()
     status_text.empty()
 
-elif create_content and not uploaded_files:
+elif create_content and (not uploaded_files or len(uploaded_files) == 0):
     st.warning("⚠️ Prašome pirmiausia įkelti bent vieną nuotrauką!")
 
 # Footer
