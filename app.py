@@ -124,6 +124,9 @@ uploaded_files = st.file_uploader(
     key="main_file_uploader"
 )
 
+# Mygtukas visada matomas
+create_content = st.button("🚀 Sukurti turinį", type="primary", use_container_width=True)
+
 if uploaded_files:
     # Žalias langelis - sėkmingai įkelta
     st.markdown("""
@@ -137,71 +140,71 @@ if uploaded_files:
     if len(uploaded_files) > 4:
         st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
         uploaded_files = uploaded_files[:4]
-    
-    # Iškarto rodyti mygtuką sukurti turinį
-    if st.button("🚀 Sukurti turinį", type="primary", use_container_width=True):
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        all_analyses = []
-        
-        # Rodyti nuotraukas apdorojimo metu
-        st.subheader(f"📸 Apdorojamos nuotraukos ({len(uploaded_files)})")
-        cols = st.columns(min(len(uploaded_files), 4))
-        for i, file in enumerate(uploaded_files):
-            with cols[i]:
-                st.image(file, caption=f"Nuotrauka {i+1}", use_container_width=True)
-        
-        for i, file in enumerate(uploaded_files):
-            status_text.text(f"🔍 Analizuojama nuotrauka {i+1}/{len(uploaded_files)}...")
-            progress_bar.progress((i + 1) / (len(uploaded_files) + 1))
-            
-            try:
-                # Konvertuojame į base64
-                image_b64 = image_to_base64(file)
-                
-                # Analizuojame
-                analysis = analyze_image(image_b64)
-                all_analyses.append(analysis)
-                
-            except Exception as e:
-                st.error(f"❌ Klaida apdorojant nuotrauką {i+1}: {str(e)}")
-                continue
-        
-        if all_analyses:
-            status_text.text("✍️ Kuriamas turinys...")
-            progress_bar.progress(1.0)
-            
-            # Sujungiame visas analizes
-            combined_analysis = " ".join(all_analyses)
-            
-            # Generuojame tekstą
-            try:
-                captions = generate_captions(combined_analysis, season, holiday)
-                
-                st.success("✅ Turinys sėkmingai sukurtas!")
-                
-                # Rezultatai
-                st.subheader("📝 Socialinių tinklų įrašai")
-                
-                # Rodyti sugeneruotą turinį
-                st.markdown("### 🎯 Paruošti tekstai:")
-                st.text_area("Kopijuokite tekstą:", value=captions, height=200)
-                
-                # Analitikos informacija
-                with st.expander("📊 Detali analizė"):
-                    st.markdown("**Vaizdų analizė:**")
-                    for i, analysis in enumerate(all_analyses):
-                        st.markdown(f"**Nuotrauka {i+1}:** {analysis}")
-                
-            except Exception as e:
-                st.error(f"❌ Klaida generuojant turinį: {e}")
-        
-        progress_bar.empty()
-        status_text.empty()
 
-else:
-    st.info("👆 Įkelkite nuotraukas, kad pradėtumėte!")
+# Apdorojimas tik jei yra failų ir paspaustas mygtukas
+if create_content and uploaded_files:
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    all_analyses = []
+    
+    # Rodyti nuotraukas apdorojimo metu
+    st.subheader(f"📸 Apdorojamos nuotraukos ({len(uploaded_files)})")
+    cols = st.columns(min(len(uploaded_files), 4))
+    for i, file in enumerate(uploaded_files):
+        with cols[i]:
+            st.image(file, caption=f"Nuotrauka {i+1}", use_container_width=True)
+            
+    for i, file in enumerate(uploaded_files):
+        status_text.text(f"🔍 Analizuojama nuotrauka {i+1}/{len(uploaded_files)}...")
+        progress_bar.progress((i + 1) / (len(uploaded_files) + 1))
+        
+        try:
+            # Konvertuojame į base64
+            image_b64 = image_to_base64(file)
+            
+            # Analizuojame
+            analysis = analyze_image(image_b64)
+            all_analyses.append(analysis)
+            
+        except Exception as e:
+            st.error(f"❌ Klaida apdorojant nuotrauką {i+1}: {str(e)}")
+            continue
+    
+    if all_analyses:
+        status_text.text("✍️ Kuriamas turinys...")
+        progress_bar.progress(1.0)
+        
+        # Sujungiame visas analizes
+        combined_analysis = " ".join(all_analyses)
+        
+        # Generuojame tekstą
+        try:
+            captions = generate_captions(combined_analysis, season, holiday)
+            
+            st.success("✅ Turinys sėkmingai sukurtas!")
+            
+            # Rezultatai
+            st.subheader("📝 Socialinių tinklų įrašai")
+            
+            # Rodyti sugeneruotą turinį
+            st.markdown("### 🎯 Paruošti tekstai:")
+            st.text_area("Kopijuokite tekstą:", value=captions, height=200)
+            
+            # Analitikos informacija
+            with st.expander("📊 Detali analizė"):
+                st.markdown("**Vaizdų analizė:**")
+                for i, analysis in enumerate(all_analyses):
+                    st.markdown(f"**Nuotrauka {i+1}:** {analysis}")
+            
+        except Exception as e:
+            st.error(f"❌ Klaida generuojant turinį: {e}")
+    
+    progress_bar.empty()
+    status_text.empty()
+
+elif create_content and not uploaded_files:
+    st.warning("⚠️ Prašome pirmiausia įkelti bent vieną nuotrauką!")
 
 # Footer
 st.markdown("---")
