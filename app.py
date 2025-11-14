@@ -98,6 +98,25 @@ st.info("📱 **Telefone:** Pasirinkite 'Fotografuoti' arba 'Pasirinkti iš gale
 # CSS stilių pridejimas
 st.markdown("""
 <style>
+/* Mobilių optimizacija */
+@media (max-width: 768px) {
+    .stFileUploader > div > div {
+        font-size: 18px !important;
+        padding: 30px !important;
+        border: 3px dashed #1f77b4 !important;
+        border-radius: 15px !important;
+        text-align: center !important;
+        background-color: #f0f8ff !important;
+        min-height: 100px !important;
+    }
+    
+    .stFileUploader label {
+        font-size: 20px !important;
+        font-weight: bold !important;
+        color: #1f77b4 !important;
+    }
+}
+
 .upload-area {
     border: 2px dashed #ccc;
     border-radius: 10px;
@@ -117,19 +136,56 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Patikriname ar yra įkeltų failų
-# Failų įkėlimas su spalvotos rėmelio
+# Mobiliai optimizuotas failų įkėlimas
+st.markdown("### 📸 Įkelkite nuotraukas")
+st.markdown("*Palaikomi formatai: JPG, PNG. Maksimaliai 4 failai.*")
+
+# Paprastesnis file_uploader mobiliems
 uploaded_files = st.file_uploader(
-    "Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
+    "Pasirinkite nuotraukas",
     type=["jpg", "jpeg", "png"],
     accept_multiple_files=True,
-    key="main_file_uploader"
+    key="mobile_uploader",
+    help="Paspaukite čia ir pasirinkite nuotraukas iš galerijos"
 )
 
-# Išsaugojame failus session_state (mobiliems telefonams)
+# EKSPERIMENTINIS: Alternatyvus uploader telefono problemoms
+if not uploaded_files:
+    st.markdown("#### 🔄 Jei neveikia, bandykite po vieną:")
+    
+    single_file = st.file_uploader(
+        "Įkelkite vieną nuotrauką",
+        type=["jpg", "jpeg", "png"],
+        key="single_uploader"
+    )
+    
+    if single_file:
+        if "manual_files" not in st.session_state:
+            st.session_state.manual_files = []
+        
+        if st.button("➕ Pridėti šią nuotrauką", key="add_file"):
+            st.session_state.manual_files.append(single_file)
+            st.success(f"Pridėta! Iš viso: {len(st.session_state.manual_files)} nuotraukų")
+            st.rerun()
+    
+    if "manual_files" in st.session_state and st.session_state.manual_files:
+        uploaded_files = st.session_state.manual_files
+        st.info(f"📝 Rankiniu būdu pridėta: {len(uploaded_files)} nuotraukų")
+        
+        if st.button("🗑️ Išvalyti visas", key="clear_manual"):
+            st.session_state.manual_files = []
+            st.rerun()
+
+# Mobilus failų valdymas
 if uploaded_files:
     st.session_state.uploaded_files = uploaded_files
+    st.success(f"✅ Sėkmingai įkelta {len(uploaded_files)} nuotraukų!")
 elif "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
+
+# Rodyti instrukcijas jei nėra failų
+if not uploaded_files and len(st.session_state.uploaded_files) == 0:
+    st.info("📱 **Telefono instrukcijos:**\n\n1. Paspaukite aukščiau esantį laukelį\n2. Pasirinkite 'Galerija' arba 'Kamera'\n3. Pasirinkite nuotraukas\n4. Palaukite kol įkels")
 
 # Naudojame session_state failus
 files_to_process = st.session_state.uploaded_files
