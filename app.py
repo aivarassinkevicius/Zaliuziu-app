@@ -116,29 +116,23 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Patikriname ar yra įkeltų failų
+# Failų įkėlimas su spalvotos rėmelio
 uploaded_files = st.file_uploader(
     "Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
     type=["jpg", "jpeg", "png"],
     accept_multiple_files=True,
-    label_visibility="collapsed"
-)
-
-files_uploaded = uploaded_files is not None and len(uploaded_files) > 0
-
-# Spalvotas langelis priklausomai nuo būsenos  
-uploaded_files = st.file_uploader(
-    "Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
-    type=["jpg", "jpeg", "png"],
-    accept_multiple_files=True,
-    label_visibility="collapsed",
     key="main_file_uploader"
 )
 
 if uploaded_files:
     # Žalias langelis - sėkmingai įkelta
-    st.markdown('<div class="upload-area-success">', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="border: 2px solid #28a745; background-color: #d4edda; 
+                border-radius: 10px; padding: 15px; margin: 10px 0;">
+    </div>
+    """, unsafe_allow_html=True)
+    
     st.success(f"✅ Įkelta {len(uploaded_files)} nuotraukų!")
-    st.markdown('</div>', unsafe_allow_html=True)
     
     if len(uploaded_files) > 4:
         st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
