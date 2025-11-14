@@ -24,17 +24,8 @@ client = OpenAI(api_key=api_key)
 st.set_page_config(
     page_title="Žaliuzių turinio kūrėjas", 
     page_icon="🌞", 
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
-
-# Session state inicializavimas mobiliems
-if 'files_uploaded' not in st.session_state:
-    st.session_state.files_uploaded = []
-if 'files_processed' not in st.session_state:
-    st.session_state.files_processed = False
-if 'last_result' not in st.session_state:
-    st.session_state.last_result = None
 
 st.title("🌿 Žaliuzių & Roletų turinio kūrėjas")
 st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tinklams.")
@@ -101,88 +92,51 @@ st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotrau
 
 # Failų įkėlimas
 st.markdown("### 📷 Nuotraukų įkėlimas")
-st.info("📱 **Telefone:** Pasirinkite 'Fotografuoti' arba 'Pasirinkti iš galerijos'. Maksimalus failo dydis: 18MB")
-
-# Rodyti anksčiau įkeltas nuotraukas
-if st.session_state.files_uploaded:
-    st.success(f"✅ Anksčiau įkelta {len(st.session_state.files_uploaded)} nuotraukų")
-    if st.button("🗑️ Išvalyti visas nuotraukas"):
-        st.session_state.files_uploaded = []
-        st.session_state.files_processed = False
-        st.session_state.last_result = None
-        st.rerun()
+st.info("📱 **Telefone:** Pasirinkite 'Fotografuoti' arba 'Pasirinkti iš galerijos'")
 
 uploaded_files = st.file_uploader(
     "Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
     type=["jpg", "jpeg", "png"],
-    accept_multiple_files=True,
-    help="Palaikomi formatai: JPG, JPEG, PNG. Maksimalus dydis: 18MB per failą",
-    key="file_uploader"
+    accept_multiple_files=True
 )
 
-# Naudoti failus iš session state arba naujai įkeltus
-files_to_process = st.session_state.files_uploaded if st.session_state.files_uploaded else []
-
-# Jei įkelti nauji failai, atnaujinti session state
 if uploaded_files:
-    st.session_state.files_uploaded = []
-    for file in uploaded_files:
-        file_data = {
-            'name': file.name,
-            'size': len(file.getvalue()),
-            'content': file.getvalue()
-        }
-        st.session_state.files_uploaded.append(file_data)
-    files_to_process = st.session_state.files_uploaded
-
-if files_to_process:
-    st.success(f"✅ Paruošta {len(files_to_process)} nuotraukų!")
+    if len(uploaded_files) > 4:
+        st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
+        uploaded_files = uploaded_files[:4]
     
-    with st.spinner("🔄 Tikrinami failai..."):
-        # Tikrinti failų dydį
-        valid_files = []
-        for file_data in files_to_process:
-            file_size = file_data['size'] / (1024 * 1024)  # MB
-            if file_size > 18:
-                st.error(f"❌ Failas '{file_data['name']}' per didelis ({file_size:.1f}MB). Maksimalus dydis: 18MB")
-            else:
-                valid_files.append(file_data)
-                st.success(f"✅ {file_data['name']} - OK ({file_size:.1f}MB)")
+    st.success(f"✅ Įkelta {len(uploaded_files)} nuotraukų!")
     
-    if not valid_files:
-        st.error("❌ Nėra tinkamų failų. Patikrinkite failų dydį ir formatą.")
-    else:
-        st.subheader(f"📸 Paruoštos nuotraukos ({len(valid_files)})")
+    st.subheader(f"📸 Įkeltos nuotraukos ({len(uploaded_files)})")
+    
+    # Rodyti nuotraukas
+    cols = st.columns(min(len(uploaded_files), 4))
+    for i, file in enumerate(uploaded_files):
+        with cols[i]:
+            st.image(file, caption=f"Nuotrauka {i+1}", use_container_width=True)
+    
+    # Apdorojimo mygtukas
+    if st.button("🚀 Sukurti turinį", type="primary", use_container_width=True):
+        progress_bar = st.progress(0)
+        status_text = st.empty()
         
-        # Rodyti nuotraukas iš session state
-        cols = st.columns(min(len(valid_files), 4))
-        for i, file_data in enumerate(valid_files):
-            with cols[i]:
-                st.image(file_data['content'], caption=f"Nuotrauka {i+1}", use_container_width=True)
-    
-        # Apdorojimo mygtukas
-        if st.button("🚀 Sukurti turinį", type="primary", use_container_width=True):
-            progress_bar = st.progress(0)
-            status_text = st.empty()
+        all_analyses = []
+        
+        for i, file in enumerate(uploaded_files):
+            status_text.text(f"🔍 Analizuojama nuotrauka {i+1}/{len(uploaded_files)}...")
+            progress_bar.progress((i + 1) / (len(uploaded_files) + 1))
             
-            all_analyses = []
-            
-            for i, file_data in enumerate(valid_files):
-                status_text.text(f"🔍 Analizuojama nuotrauka {i+1}/{len(valid_files)}...")
-                progress_bar.progress((i + 1) / (len(valid_files) + 1))
+            try:
+                # Konvertuojame į base64
+                image_b64 = image_to_base64(file)
                 
-                try:
-                    # Konvertuojame į base64
-                    image_b64 = base64.b64encode(file_data['content']).decode()
-                    
-                    # Analizuojame
-                    analysis = analyze_image(image_b64)
-                    all_analyses.append(analysis)
-                    
-                except Exception as e:
-                    st.error(f"❌ Klaida apdorojant nuotrauką {i+1}: {str(e)}")
-                    st.error("💡 Patarimas: Pabandykite su mažesniu failu arba kitu formatu")
-                    continue
+                # Analizuojame
+                analysis = analyze_image(image_b64)
+                all_analyses.append(analysis)
+                
+            except Exception as e:
+                st.error(f"❌ Klaida apdorojant nuotrauką {i+1}: {str(e)}")
+                continue
         
         if all_analyses:
             status_text.text("✍️ Kuriamas turinys...")
