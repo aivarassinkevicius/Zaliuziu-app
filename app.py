@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 # ---------- Nustatymai ----------
 load_dotenv()
 
+# Version: 2.1 - Mobile session state fix
 # Bandome gauti API raktą iš .env failo (vietinis) arba Streamlit secrets (cloud)
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
