@@ -124,6 +124,15 @@ uploaded_files = st.file_uploader(
     key="main_file_uploader"
 )
 
+# Išsaugojame failus session_state (mobiliems telefonams)
+if uploaded_files:
+    st.session_state.uploaded_files = uploaded_files
+elif "uploaded_files" not in st.session_state:
+    st.session_state.uploaded_files = []
+
+# Naudojame session_state failus
+files_to_process = st.session_state.uploaded_files
+
 # Mygtukas visada matomas
 create_content = st.button("🚀 Sukurti turinį", type="primary", use_container_width=True)
 
@@ -131,10 +140,12 @@ create_content = st.button("🚀 Sukurti turinį", type="primary", use_container
 if create_content:
     st.write(f"🔍 Debug: uploaded_files = {uploaded_files}")
     st.write(f"🔍 Debug: uploaded_files tipas = {type(uploaded_files)}")
-    if uploaded_files:
-        st.write(f"🔍 Debug: failų skaičius = {len(uploaded_files)}")
+    st.write(f"🔍 Debug: files_to_process = {files_to_process}")
+    st.write(f"🔍 Debug: files_to_process tipas = {type(files_to_process)}")
+    if files_to_process:
+        st.write(f"🔍 Debug: failų skaičius = {len(files_to_process)}")
 
-if uploaded_files:
+if files_to_process:
     # Žalias langelis - sėkmingai įkelta
     st.markdown("""
     <div style="border: 2px solid #28a745; background-color: #d4edda; 
@@ -142,29 +153,35 @@ if uploaded_files:
     </div>
     """, unsafe_allow_html=True)
     
-    st.success(f"✅ Įkelta {len(uploaded_files)} nuotraukų!")
+    st.success(f"✅ Įkelta {len(files_to_process)} nuotraukų!")
     
-    if len(uploaded_files) > 4:
+    # Mygtukas išvalyti failus
+    if st.button("🗑️ Išvalyti failus", type="secondary"):
+        st.session_state.uploaded_files = []
+        st.rerun()
+    
+    if len(files_to_process) > 4:
         st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
-        uploaded_files = uploaded_files[:4]
+        files_to_process = files_to_process[:4]
+        st.session_state.uploaded_files = files_to_process
 
 # Apdorojimas tik jei yra failų ir paspaustas mygtukas
-if create_content and uploaded_files and len(uploaded_files) > 0:
+if create_content and files_to_process and len(files_to_process) > 0:
     progress_bar = st.progress(0)
     status_text = st.empty()
     
     all_analyses = []
     
     # Rodyti nuotraukas apdorojimo metu
-    st.subheader(f"📸 Apdorojamos nuotraukos ({len(uploaded_files)})")
-    cols = st.columns(min(len(uploaded_files), 4))
-    for i, file in enumerate(uploaded_files):
+    st.subheader(f"📸 Apdorojamos nuotraukos ({len(files_to_process)})")
+    cols = st.columns(min(len(files_to_process), 4))
+    for i, file in enumerate(files_to_process):
         with cols[i]:
             st.image(file, caption=f"Nuotrauka {i+1}", use_container_width=True)
             
-    for i, file in enumerate(uploaded_files):
-        status_text.text(f"🔍 Analizuojama nuotrauka {i+1}/{len(uploaded_files)}...")
-        progress_bar.progress((i + 1) / (len(uploaded_files) + 1))
+    for i, file in enumerate(files_to_process):
+        status_text.text(f"🔍 Analizuojama nuotrauka {i+1}/{len(files_to_process)}...")
+        progress_bar.progress((i + 1) / (len(files_to_process) + 1))
         
         try:
             # Konvertuojame į base64
@@ -210,7 +227,7 @@ if create_content and uploaded_files and len(uploaded_files) > 0:
     progress_bar.empty()
     status_text.empty()
 
-elif create_content and (not uploaded_files or len(uploaded_files) == 0):
+elif create_content and (not files_to_process or len(files_to_process) == 0):
     st.warning("⚠️ Prašome pirmiausia įkelti bent vieną nuotrauką!")
 
 # Footer
