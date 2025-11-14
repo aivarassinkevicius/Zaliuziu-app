@@ -130,7 +130,8 @@ uploaded_files = st.file_uploader(
     "Įkelkite nuotraukas (JPG/PNG, maks 4 failai)",
     type=["jpg", "jpeg", "png"],
     accept_multiple_files=True,
-    label_visibility="collapsed"
+    label_visibility="collapsed",
+    key="main_file_uploader"
 )
 
 if uploaded_files:
