@@ -138,20 +138,19 @@ if uploaded_files:
         st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
         uploaded_files = uploaded_files[:4]
     
-    st.subheader(f"📸 Įkeltos nuotraukos ({len(uploaded_files)})")
-    
-    # Rodyti nuotraukas
-    cols = st.columns(min(len(uploaded_files), 4))
-    for i, file in enumerate(uploaded_files):
-        with cols[i]:
-            st.image(file, caption=f"Nuotrauka {i+1}", use_container_width=True)
-    
-    # Apdorojimo mygtukas
+    # Iškarto rodyti mygtuką sukurti turinį
     if st.button("🚀 Sukurti turinį", type="primary", use_container_width=True):
         progress_bar = st.progress(0)
         status_text = st.empty()
         
         all_analyses = []
+        
+        # Rodyti nuotraukas apdorojimo metu
+        st.subheader(f"📸 Apdorojamos nuotraukos ({len(uploaded_files)})")
+        cols = st.columns(min(len(uploaded_files), 4))
+        for i, file in enumerate(uploaded_files):
+            with cols[i]:
+                st.image(file, caption=f"Nuotrauka {i+1}", use_container_width=True)
         
         for i, file in enumerate(uploaded_files):
             status_text.text(f"🔍 Analizuojama nuotrauka {i+1}/{len(uploaded_files)}...")
