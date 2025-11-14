@@ -86,34 +86,70 @@ def compress_image(image_file, max_size_mb=1, max_dimension=1920):
         return image_file
 
 def analyze_image(image_bytes):
-    """Naudoja GPT-4o-mini vaizdo analizei"""
+    """Naudoja GPT-4o-mini vaizdo analizei su konkrečiu produktų atpažinimu"""
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "Tu esi vaizdų analizės specialistas, apibūdink nuotraukas lietuviškai."},
+            {"role": "system", "content": """Tu esi langų uždangalų ir žaliuzių produktų atpažinimo specialistas. 
+Tavo užduotis - TIKSLIAI identifikuoti produkto tipą lietuviškai."""},
             {"role": "user", "content": [
-                {"type": "text", "text": "Aprašyk, kas matosi šioje nuotraukoje. Pastebėk aplinką, apšvietimą, spalvas, ar matosi langai ar žaliuzės, koks įspūdis susidaro."},
+                {"type": "text", "text": """Išanalizuok šią nuotrauką ir BŪTINAI nurodyk:
+
+1. **PRODUKTO TIPAS** (pasirink vieną iš šių):
+   - Roletai (tekstiliniai, rule-up blinds)
+   - Roletai Diena-Naktis (zebra blinds, dual blinds)
+   - Horizontalios žaliuzės (horizontal blinds, venetian blinds)
+   - Vertikalios žaliuzės (vertical blinds)
+   - Plisuotos žaliuzės (pleated blinds)
+   - Romanetės (roman shades)
+   - Lamelės (panel blinds, vertical panel track)
+   - Užuolaidos
+   - Kita (nurodyk kas)
+
+2. **SPALVA IR MEDŽIAGA**: kokios spalvos, ar matinė, skaidri, tamsinanti
+
+3. **APLINKA**: koks kambarys, apšvietimas, interjero stilius
+
+4. **DETALĖS**: kas dar įdomaus - langas, vaizdas, dekoro elementai
+
+BŪTINAI pradėk nuo produkto tipo, pvz: "Matosi ROLETAI DIENA-NAKTIS..." arba "Nuotraukoje - VERTIKALIOS ŽALIUZĖS..." """},
                 {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_bytes}}
             ]}
-        ]
+        ],
+        max_tokens=300
     )
     return response.choices[0].message.content.strip()
 
 def generate_captions(analysis_text, season, holiday):
-    """Sukuria 3 teksto variantus lietuviškai"""
+    """Sukuria 3 teksto variantus lietuviškai pagal tikslią produkto analizę"""
     holiday_context = f" ir šventę: {holiday}" if holiday != "Nėra" else ""
     prompt = f"""
-    Pagal šią analizę: {analysis_text}
-    ir metų laiką: {season}{holiday_context},
-    sukurk 3 trumpus socialinių tinklų įrašų variantus (iki 250 simbolių) apie žaliuzes/roletus:
-    1) marketinginis, 2) draugiškas, 3) su humoru. 
-    Lietuviškai, gali pridėti 1–2 tinkamus hashtag'us.
-    {f"Įtraukk šventės {holiday} tematiką, jei tinkama." if holiday != "Nėra" else ""}
+Pagal šią TIKSLIĄ produkto analizę:
+{analysis_text}
+
+Metų laikas: {season}{holiday_context}
+
+Sukurk 3 įvairius socialinių tinklų įrašų variantus (iki 250 simbolių kiekvienas) apie šį KONKRETŲ produktą:
+
+1) **MARKETINGINIS**: Profesionalus, pabrėžk produkto naudą ir savybes. Naudok TIKSLŲ produkto pavadinimą iš analizės.
+
+2) **DRAUGIŠKAS**: Šiltas, artimas, kaip kalbėtum su kaimynu. Paaiškink kaip šis produktas pagerina gyvenimą.
+
+3) **SU HUMORU**: Linksmas, kreatyvus, bet vis tiek informatyvus apie produktą.
+
+SVARBU:
+- Naudok TIKSLŲ produkto pavadinimą (pvz. "Roletai Diena-Naktis", ne tiesiog "roletai")
+- Pridėk 1-2 tinkamus #hashtag'us
+- Jei yra spalvų/medžiagos info - panaudok
+{f"- Įtraukk šventės {holiday} tematiką natūraliai" if holiday != "Nėra" else ""}
+
+Atskirk variantus su "---"
     """
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.9
+        temperature=0.8,
+        max_tokens=800
     )
     return response.choices[0].message.content.strip()
 
