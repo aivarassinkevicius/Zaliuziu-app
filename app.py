@@ -3,6 +3,13 @@ import io, os, base64
 from openai import OpenAI
 from dotenv import load_dotenv
 
+# Bandome importuoti camera input (jei neveiks, praleidžia)
+try:
+    from streamlit_camera_input_live import camera_input_live
+    CAMERA_AVAILABLE = True
+except ImportError:
+    CAMERA_AVAILABLE = False
+
 # ---------- Nustatymai ----------
 load_dotenv()
 
@@ -138,20 +145,57 @@ st.markdown("""
 # Patikriname ar yra įkeltų failų
 # Mobiliai optimizuotas failų įkėlimas
 st.markdown("### 📸 Įkelkite nuotraukas")
-st.markdown("*Palaikomi formatai: JPG, PNG. Maksimaliai 4 failai.*")
 
-# Paprastesnis file_uploader mobiliems
-uploaded_files = st.file_uploader(
-    "Pasirinkite nuotraukas",
-    type=["jpg", "jpeg", "png"],
-    accept_multiple_files=True,
-    key="mobile_uploader",
-    help="Paspaukite čia ir pasirinkite nuotraukas iš galerijos"
-)
+# Sukuriame tabs skirtingoms įkėlimo opcijoms
+tab1, tab2, tab3 = st.tabs(["📁 Failų įkėlimas", "📷 Kamera", "🔧 Rankiniu būdu"])
 
-# EKSPERIMENTINIS: Alternatyvus uploader telefono problemoms
-if not uploaded_files:
-    st.markdown("#### 🔄 Jei neveikia, bandykite po vieną:")
+uploaded_files = []
+
+with tab1:
+    st.markdown("**Standartinis būdas** (veikia PC ir kai kuriuose telefonuose)")
+    files_standard = st.file_uploader(
+        "Pasirinkite nuotraukas",
+        type=["jpg", "jpeg", "png"],
+        accept_multiple_files=True,
+        key="standard_uploader"
+    )
+    if files_standard:
+        uploaded_files.extend(files_standard)
+        st.success(f"✅ Įkelta {len(files_standard)} nuotraukų!")
+
+with tab2:
+    if CAMERA_AVAILABLE:
+        st.markdown("**Mobiliams telefonams** - fotografuokite tiesiai iš kameros")
+        
+        # Patikrinimas ar veikia kamera
+        camera_photo = camera_input_live()
+        if camera_photo is not None:
+            st.image(camera_photo, caption="Užfiksuota nuotrauka")
+            
+            if st.button("📸 Pridėti šią nuotrauką", key="add_camera"):
+                # Konvertuojame PIL į UploadedFile formato objektą
+                if "camera_photos" not in st.session_state:
+                    st.session_state.camera_photos = []
+                
+                # Konvertuojame PIL image į bytes
+                img_bytes = io.BytesIO()
+                camera_photo.save(img_bytes, format='JPEG')
+                img_bytes.seek(0)
+                
+                st.session_state.camera_photos.append(img_bytes.getvalue())
+                st.success("📸 Nuotrauka pridėta!")
+                st.rerun()
+        
+        # Rodyti pridėtas nuotraukas iš kameros
+        if "camera_photos" in st.session_state and st.session_state.camera_photos:
+            st.info(f"🖼️ Pridėta iš kameros: {len(st.session_state.camera_photos)} nuotraukų")
+            uploaded_files.extend([io.BytesIO(photo) for photo in st.session_state.camera_photos])
+    else:
+        st.error("📷 Kameros komponentas nepasiekiamas. Naudokite kitus būdus.")
+
+with tab3:
+    st.markdown("**Rezervinis variantas** - jei kiti būdai neveikia")
+    st.info("📱 **Instrukcijos telefonui:**\n1. Įkelkite po vieną nuotrauką\n2. Spauskite 'Pridėti' po kiekvienos\n3. Kartokite iki 4 nuotraukų")
     
     single_file = st.file_uploader(
         "Įkelkite vieną nuotrauką",
@@ -160,32 +204,68 @@ if not uploaded_files:
     )
     
     if single_file:
-        if "manual_files" not in st.session_state:
-            st.session_state.manual_files = []
-        
-        if st.button("➕ Pridėti šią nuotrauką", key="add_file"):
-            st.session_state.manual_files.append(single_file)
-            st.success(f"Pridėta! Iš viso: {len(st.session_state.manual_files)} nuotraukų")
-            st.rerun()
+        col1, col2 = st.columns([1,1])
+        with col1:
+            st.image(single_file, caption="Peržiūra", width=200)
+        with col2:
+            if st.button("➕ Pridėti šią nuotrauką", key="add_single"):
+                if "manual_files" not in st.session_state:
+                    st.session_state.manual_files = []
+                
+                if len(st.session_state.manual_files) < 4:
+                    st.session_state.manual_files.append(single_file)
+                    st.success(f"Pridėta! Iš viso: {len(st.session_state.manual_files)}")
+                    st.rerun()
+                else:
+                    st.error("Maksimaliai 4 nuotraukos!")
     
+    # Rodyti rankiniu būdu pridėtas nuotraukas
     if "manual_files" in st.session_state and st.session_state.manual_files:
-        uploaded_files = st.session_state.manual_files
-        st.info(f"📝 Rankiniu būdu pridėta: {len(uploaded_files)} nuotraukų")
+        st.success(f"📝 Rankiniu būdu pridėta: {len(st.session_state.manual_files)} nuotraukų")
+        uploaded_files.extend(st.session_state.manual_files)
         
-        if st.button("🗑️ Išvalyti visas", key="clear_manual"):
+        # Preview mažų nuotraukų
+        cols = st.columns(4)
+        for i, file in enumerate(st.session_state.manual_files):
+            with cols[i]:
+                st.image(file, width=100)
+        
+        if st.button("🗑️ Išvalyti visas rankiniu būdu pridėtas", key="clear_manual"):
             st.session_state.manual_files = []
             st.rerun()
 
 # Mobilus failų valdymas
 if uploaded_files:
     st.session_state.uploaded_files = uploaded_files
-    st.success(f"✅ Sėkmingai įkelta {len(uploaded_files)} nuotraukų!")
+    st.success(f"🎉 **Iš viso pasirinkta: {len(uploaded_files)} nuotraukų!**")
+    
+    # Rodyti preview
+    if len(uploaded_files) <= 4:
+        cols = st.columns(len(uploaded_files))
+        for i, file in enumerate(uploaded_files):
+            with cols[i]:
+                st.image(file, caption=f"#{i+1}", width=150)
+    else:
+        st.warning("⚠️ Per daug nuotraukų! Bus naudojamos tik pirmosios 4.")
+        uploaded_files = uploaded_files[:4]
+        st.session_state.uploaded_files = uploaded_files
+
 elif "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 
+# Globalus išvalymo mygtukas
+if st.session_state.uploaded_files:
+    if st.button("🗑️ Išvalyti VISAS nuotraukas", type="secondary", key="clear_all"):
+        st.session_state.uploaded_files = []
+        if "manual_files" in st.session_state:
+            st.session_state.manual_files = []
+        if "camera_photos" in st.session_state:
+            st.session_state.camera_photos = []
+        st.rerun()
+
 # Rodyti instrukcijas jei nėra failų
-if not uploaded_files and len(st.session_state.uploaded_files) == 0:
-    st.info("📱 **Telefono instrukcijos:**\n\n1. Paspaukite aukščiau esantį laukelį\n2. Pasirinkite 'Galerija' arba 'Kamera'\n3. Pasirinkite nuotraukas\n4. Palaukite kol įkels")
+if not st.session_state.uploaded_files:
+    st.info("👆 **Pasirinkite vieną iš būdų aukščiau įkelti nuotraukas**")
 
 # Naudojame session_state failus
 files_to_process = st.session_state.uploaded_files
