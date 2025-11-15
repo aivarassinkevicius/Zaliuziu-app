@@ -183,8 +183,6 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotraukas su žaliuzėmis ar roletais.")
 
 # Failų įkėlimas
-st.markdown("### 📷 Nuotraukų įkėlimas")
-st.info("📱 **Telefone:** Pasirinkite 'Fotografuoti' arba 'Pasirinkti iš galerijos'")
 
 # CSS stilių pridejimas
 st.markdown("""
@@ -367,19 +365,45 @@ files_to_process = st.session_state.uploaded_files
 create_content = st.button("🚀 Sukurti turinį", type="primary", use_container_width=True)
 
 if files_to_process:
-    # Žalias langelis - sėkmingai įkelta
-    st.markdown("""
-    <div style="border: 2px solid #28a745; background-color: #d4edda; 
-                border-radius: 10px; padding: 15px; margin: 10px 0;">
-    </div>
-    """, unsafe_allow_html=True)
-    
     st.success(f"✅ Įkelta {len(files_to_process)} nuotraukų!")
     
-    # Mygtukas išvalyti failus
-    if st.button("🗑️ Išvalyti failus", type="secondary"):
-        st.session_state.uploaded_files = []
-        st.rerun()
+    col1, col2 = st.columns(2)
+    with col1:
+        # Mygtukas atsisiųsti sumažintas nuotraukas
+        if st.button("💾 Atsisiųsti redaguotas nuotraukas", type="secondary"):
+            st.info("🗜️ Ruošiamos sumažintos nuotraukos...")
+            
+            # Sukuriame ZIP archyvą su sumažintomis nuotraukomis
+            import zipfile
+            from datetime import datetime
+            
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for i, file in enumerate(files_to_process):
+                    file.seek(0)
+                    compressed = compress_image(file, max_size_mb=1, max_dimension=1920)
+                    compressed.seek(0)
+                    
+                    # Gauname originalų failo pavadinimą arba naudojame default
+                    filename = getattr(file, 'name', f'nuotrauka_{i+1}.jpg')
+                    zip_file.writestr(f"compressed_{filename}", compressed.getvalue())
+            
+            zip_buffer.seek(0)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            st.download_button(
+                label="📥 Parsisiųsti ZIP archyvą",
+                data=zip_buffer.getvalue(),
+                file_name=f"sumažintos_nuotraukos_{timestamp}.zip",
+                mime="application/zip",
+                type="primary"
+            )
+    
+    with col2:
+        # Mygtukas išvalyti failus
+        if st.button("🗑️ Išvalyti failus", type="secondary"):
+            st.session_state.uploaded_files = []
+            st.rerun()
     
     if len(files_to_process) > 4:
         st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
