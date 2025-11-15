@@ -89,22 +89,24 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
             draw = ImageDraw.Draw(img)
             width, height = img.size
             
-            # Skaičiuojame šrifto dydį pagal slider'į
-            # watermark_size yra procentai (10-200), konvertuojame į decimal (0.10-2.00)
-            size_multiplier = watermark_size / 100.0
-            base_size = int(min(width, height) * 0.08)  # Bazinis dydis 8%
-            font_size = max(20, int(base_size * size_multiplier))
+            # PAPRASTA formulė: watermark_size procentai tiesiai nuo mažesnio nuotraukos matmens
+            # pvz: 1000px nuotrauka, 80% slider → 800px šrifto aukštis (per didelis!)
+            # Geriau: 1000px, 80 slider → 80px šriftas (normalus)
+            # TIESIAI: slider reikšmė = px dydis (bet ne mažiau kaip 20)
+            font_size = max(20, int(watermark_size))
             
-            # Bandome įkelti geresnį fontą arba naudojame default
+            # Bandome įkelti geresnį fontą
             try:
                 font = ImageFont.truetype("arial.ttf", font_size)
             except:
                 try:
-                    # Bandome kitus fontus
                     font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
                 except:
-                    # Jei nepavyko, naudojame default
-                    font = ImageFont.load_default()
+                    try:
+                        font = ImageFont.truetype("arialbd.ttf", font_size)  # Bold Arial
+                    except:
+                        # Jei nepavyko, naudojame default
+                        font = ImageFont.load_default()
             
             # Pozicija - dešiniame apatiniame kampe
             try:
@@ -237,10 +239,10 @@ st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
 add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=True, help="Pridės jūsų tekstą dešiniame apatiniame kampe")
 if add_watermark:
     watermark_text = st.sidebar.text_input("Vandens ženklo tekstas", value="#RūbaiLangams", help="Pvz: #RūbaiLangams arba © Jūsų Įmonė")
-    watermark_size = st.sidebar.slider("📏 Vandens ženklo dydis (%)", 10, 200, 80, 5, help="Procentai nuotraukos dydžio. 100% = labai didelis")
+    watermark_size = st.sidebar.slider("📏 Vandens ženklo dydis (px)", 20, 500, 120, 10, help="Šrifto dydis pikseliais. 120px = vidutinis, 200px = didelis")
 else:
     watermark_text = ""
-    watermark_size = 80
+    watermark_size = 120
 
 add_border = st.sidebar.checkbox("🖼️ Pridėti baltą rėmelį", value=False)
 
