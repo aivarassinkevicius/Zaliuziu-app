@@ -393,52 +393,47 @@ create_content = st.button("🚀 Sukurti turinį", type="primary", use_container
 if files_to_process:
     st.success(f"✅ Įkelta {len(files_to_process)} nuotraukų!")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        # Mygtukas atsisiųsti redaguotas nuotraukas
-        if st.button("🎨 Atsisiųsti redaguotas nuotraukas", type="secondary"):
-            st.info("🎨 Ruošiamos redaguotos nuotraukos...")
+    # Rodyti ir leisti atsisiųsti kiekvieną nuotrauką atskirai
+    st.markdown("### 🎨 Redaguotos nuotraukos")
+    st.info("Reguliuokite redagavimo nustatymus šoniniame meniu (šviesumas, kontrastas, vandens ženklas)")
+    
+    cols = st.columns(min(len(files_to_process), 4))
+    for i, file in enumerate(files_to_process):
+        with cols[i % 4]:
+            file.seek(0)
             
-            # Sukuriame ZIP archyvą su redaguotomis nuotraukomis
-            import zipfile
-            from datetime import datetime
+            # Redaguojame nuotrauką
+            edited = add_marketing_overlay(
+                file,
+                add_watermark=add_watermark,
+                brightness=brightness,
+                contrast=contrast,
+                saturation=saturation
+            )
+            edited.seek(0)
             
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                for i, file in enumerate(files_to_process):
-                    file.seek(0)
-                    
-                    # Redaguojame nuotrauką su marketinginiais elementais
-                    edited = add_marketing_overlay(
-                        file, 
-                        add_watermark=add_watermark,
-                        brightness=brightness,
-                        contrast=contrast,
-                        saturation=saturation
-                    )
-                    edited.seek(0)
-                    
-                    # Gauname originalų failo pavadinimą arba naudojame default
-                    filename = getattr(file, 'name', f'nuotrauka_{i+1}.jpg')
-                    base_name = filename.rsplit('.', 1)[0] if '.' in filename else filename
-                    zip_file.writestr(f"{base_name}_edited.jpg", edited.getvalue())
+            # Rodyti peržiūrą
+            st.image(edited, caption=f"Nuotrauka {i+1}", use_container_width=True)
             
-            zip_buffer.seek(0)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # Download mygtukas kiekvienai nuotraukai
+            filename = getattr(file, 'name', f'nuotrauka_{i+1}.jpg')
+            base_name = filename.rsplit('.', 1)[0] if '.' in filename else filename
             
+            edited.seek(0)
             st.download_button(
-                label="📥 Parsisiųsti redaguotas nuotraukas (ZIP)",
-                data=zip_buffer.getvalue(),
-                file_name=f"redaguotos_nuotraukos_{timestamp}.zip",
-                mime="application/zip",
-                type="primary"
+                label=f"📥 Atsisiųsti #{i+1}",
+                data=edited.getvalue(),
+                file_name=f"{base_name}_edited.jpg",
+                mime="image/jpeg",
+                key=f"download_{i}",
+                use_container_width=True
             )
     
-    with col2:
-        # Mygtukas išvalyti failus
-        if st.button("🗑️ Išvalyti failus", type="secondary"):
-            st.session_state.uploaded_files = []
-            st.rerun()
+    # Mygtukas išvalyti failus
+    st.markdown("---")
+    if st.button("🗑️ Išvalyti visus failus", type="secondary", use_container_width=True):
+        st.session_state.uploaded_files = []
+        st.rerun()
     
     if len(files_to_process) > 4:
         st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
