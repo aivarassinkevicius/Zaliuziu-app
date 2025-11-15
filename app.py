@@ -463,10 +463,13 @@ if files_to_process:
         with cols[i % 4]:
             file.seek(0)
             
+            # SVARBU: Vandens ženklas tik ant paskutinės nuotraukos (jei jų daugiau nei 1)
+            show_watermark = add_watermark and (len(files_to_process) == 1 or i == len(files_to_process) - 1)
+            
             # Redaguojame nuotrauką
             edited = add_marketing_overlay(
                 file,
-                add_watermark=add_watermark,
+                add_watermark=show_watermark,
                 add_border=add_border,
                 brightness=brightness,
                 contrast=contrast,
@@ -517,11 +520,15 @@ if files_to_process:
                 try:
                     # Paruošiame redaguotas nuotraukas
                     edited_images = []
-                    for file in files_to_process:
+                    for idx, file in enumerate(files_to_process):
                         file.seek(0)
+                        
+                        # SVARBU: Vandens ženklas tik ant paskutinės nuotraukos collage
+                        show_watermark = add_watermark and (idx == len(files_to_process) - 1)
+                        
                         edited = add_marketing_overlay(
                             file,
-                            add_watermark=add_watermark,
+                            add_watermark=show_watermark,
                             add_border=False,  # Collage'ui be rėmelio
                             brightness=brightness,
                             contrast=contrast,
