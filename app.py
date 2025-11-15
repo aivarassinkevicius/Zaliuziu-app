@@ -2,7 +2,7 @@ import streamlit as st
 import io, os, base64
 from openai import OpenAI
 from dotenv import load_dotenv
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
 
 # Bandome importuoti camera input (jei neveiks, praleidžia)
 try:
