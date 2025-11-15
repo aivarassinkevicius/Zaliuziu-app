@@ -199,90 +199,126 @@ Pavyzdys: "Nuotraukoje matosi TRYS SKIRTINGI PRODUKTAI: 1) PLISUOTOS ŽALIUZĖS 
 def generate_captions(analysis_text, season, holiday):
     """Sukuria 3 teksto variantus lietuviškai pagal tikslią produkto analizę"""
     
-    # Sezoninis ir šventinis kontekstas - LABAI KONKRETUS
-    seasonal_context = {
+    # ULTRA GRIEŽTA sezonų ir švenčių kontrolė
+    season_data = {
         "Pavasaris": {
-            "keywords": "pavasaris, atsinaujinimas, šviesumas, gaivumas, nauji pradžiai, šviesios spalvos",
-            "forbidden": ["žiema", "šaltis", "sniegas", "šiluma", "ruduo", "vasara"],
-            "vibe": "Šviesu, gaiviai, atsinaujinimas"
+            "must_have": ["pavasari", "atsinaujinim", "šviesi", "gaivu", "pavasario"],
+            "forbidden": ["žiem", "šalt", "snieg", "kalėd", "ruduo", "ruden", "vasara", "vasar", "karšt"],
+            "message": "pavasario gaivumą ir šviesumą"
         },
         "Vasara": {
-            "keywords": "vasara, šiluma, saulė, karšta, vėsinimas, apsauga nuo karščio, atostogos",
-            "forbidden": ["žiema", "šaltis", "sniegas", "pavasaris", "ruduo"],
-            "vibe": "Karšta, saulėta, vasariška"
+            "must_have": ["vasara", "vasar", "saulė", "šilum", "vėsin", "karšt"],
+            "forbidden": ["žiem", "šalt", "snieg", "kalėd", "pavasa", "ruduo", "ruden"],
+            "message": "vasaros šviesumą ir vėsumą"
         },
         "Ruduo": {
-            "keywords": "ruduo, jaukumas, šilti tonai, auksinė rudens, jauku, ramybė",
-            "forbidden": ["žiema", "pavasaris", "vasara", "sniegas", "karšta"],
-            "vibe": "Jaukiai, ramu, rudeniškai"
+            "must_have": ["ruden", "jauk", "šilt", "rudeni", "ruduo"],
+            "forbidden": ["žiem", "kalėd", "pavasa", "vasara", "karšt", "sniegas"],
+            "message": "rudenio jaukumą"
         },
         "Žiema": {
-            "keywords": "žiema, šaltis, šiluma, šilumos išsaugojimas, sniegas, šalta, žiemiškai",
-            "forbidden": ["pavasaris", "vasara", "ruduo", "karšta", "saulė"],
-            "vibe": "Šalta, žiemiškai, reikia šilumos"
+            "must_have": ["žiem", "šalt", "šilum", "kalėd"],
+            "forbidden": ["pavasa", "vasara", "ruden", "karšt", "velyk"],
+            "message": "žiemos šilumą"
         }
     }
     
-    current_season = seasonal_context.get(season, seasonal_context["Pavasaris"])
+    # Švenčių kontrolė
+    holiday_data = {
+        "Velykos": {
+            "must_have": ["velyk", "velykini", "pavasari"],
+            "forbidden": ["kalėd", "nauj metin", "žiem"],
+            "keywords": "Velykų, pavasario šventės, šeimos susibūrimas"
+        },
+        "Šv. Kalėdos": {
+            "must_have": ["kalėd", "švent", "žiem"],
+            "forbidden": ["velyk", "pavasa", "vasara"],
+            "keywords": "Kalėdų, žiemos švenčių, dovanų"
+        },
+        "Kūčios": {
+            "must_have": ["kūč", "kalėd", "žiem"],
+            "forbidden": ["velyk", "pavasa"],
+            "keywords": "Kūčių, šventinės vakarienės, šeimos"
+        },
+        "Šv. Valentino diena": {
+            "must_have": ["valentin", "meilė"],
+            "forbidden": ["kalėd", "velyk"],
+            "keywords": "Valentino dienos, meilės, romantikos"
+        }
+    }
     
-    holiday_instructions = ""
-    if holiday != "Nėra":
-        holiday_instructions = f"""
-🎉 ŠVENTĖ: {holiday}
-⚠️ GRIEŽTA TAISYKLĖ: {holiday} PRIVALOMA KIEKVIENAME TEKSTE!
-- Paminėk šventę tiesiogiai arba nuoroda
-- Šventinė nuotaika, dovanų idėjos, spec. pasiūlymai
+    current_season = season_data.get(season, season_data["Pavasaris"])
+    current_holiday = holiday_data.get(holiday, None) if holiday != "Nėra" else None
+    
+    # Sukuriame ULTRA GRIEŽTĄ prompt'ą
+    forbidden_list = current_season["forbidden"].copy()
+    must_have_list = current_season["must_have"].copy()
+    
+    if current_holiday:
+        forbidden_list.extend(current_holiday["forbidden"])
+        must_have_list.extend(current_holiday["must_have"])
+        holiday_text = f"""
+🎄 PRIVALOMA ŠVENTĖ: {holiday}
+Kiekviename tekste TURI būti: {current_holiday["keywords"]}
+NIEKADA nerašyk apie: {', '.join(current_holiday["forbidden"])}
 """
+    else:
+        holiday_text = "Šventės nėra - nerašyk apie jokias šventes!"
     
-    forbidden_words = ", ".join(current_season["forbidden"])
-    
-    prompt = f"""🤖 Tu esi AI turinio kūrėjas žaliuzių verslui. Griežtai laikaisi instrukcijų.
+    prompt = f"""KRITIŠKAI SVARBU! Perskaityk šias taisykles 3 KARTUS prieš rašydamas:
 
-📋 PRODUKTŲ ANALIZĖ:
+═══════════════════════════════════════
+🚨 ABSOLIUČIOS TAISYKLĖS (NEGALIMA PAŽEISTI!) 🚨
+═══════════════════════════════════════
+
+📅 SEZONAS: {season.upper()}
+✅ PRIVALOMA naudoti šiuos žodžius: {', '.join(must_have_list)}
+❌ GRIEŽTAI DRAUDŽIAMA naudoti: {', '.join(forbidden_list)}
+
+{holiday_text}
+
+📋 PRODUKTAI (iš nuotraukų):
 {analysis_text}
 
-⚠️ GRIEŽTOS TAISYKLĖS - BŪTINA LAIKYTIS:
+═══════════════════════════════════════
+📝 UŽDUOTIS: Sukurk 3 tekstus (iki 250 simbolių kiekvienas)
+═══════════════════════════════════════
 
-1️⃣ METŲ LAIKAS: {season.upper()}
-   ✅ PRIVALOMI žodžiai: {current_season["keywords"]}
-   ❌ DRAUDŽIAMI žodžiai: {forbidden_words}
-   📌 Nuotaika: {current_season["vibe"]}
+**TEKSTO PAVYZDYS KĄ RAŠYTI:**
+"Pavasario gaivumas su mūsų žaliuzėmis! 🌸 Šviesios spalvos, atsinaujinimas, nauji sprendimai Velykų proga!"
 
-{holiday_instructions}
+**TEKSTO PAVYZDYS KO NERAŠYTI:**
+"Žiemos šiluma..." ❌ (jei sezonas PAVASARIS!)
+"Kalėdų dovanos..." ❌ (jei šventė VELYKOS!)
 
-2️⃣ PRODUKTAI:
-   - Naudok TIKSLIUS pavadinimus iš analizės
-   - Jei keli produktai - PAMINĖK VISUS
+═══════════════════════════════════════
 
----
-
-🎯 SUKURK 3 VARIANTUS (iki 280 simbolių kiekvienas):
-
-**VARIANTAS 1 - MARKETINGINIS** 💼
+VARIANTAS 1 - MARKETINGINIS 💼
 - Profesionalus tonas
-- Produktų privalumai + {season} kontekstas
-{f"- {holiday} tema PRIVALOMA" if holiday != "Nėra" else ""}
+- Produktų privalumai + {current_season["message"]}
+{f"- {holiday} šventės kontekstas" if holiday != "Nėra" else ""}
 - 2-3 hashtag'us
 
-**VARIANTAS 2 - DRAUGIŠKAS** 🏡  
-- Šiltas, artimas tonas
-- Kaip produktai padeda {season} sezone
-{f"- {holiday} šventės jaukumas" if holiday != "Nėra" else ""}
+VARIANTAS 2 - DRAUGIŠKAS 🏡
+- Šiltas tonas
+- Praktiška nauda + {current_season["message"]}
+{f"- {holiday} jaukumas" if holiday != "Nėra" else ""}
 - 1-2 hashtag'us
 
-**VARIANTAS 3 - SU HUMORU** 😄
-- Linksmas bet informatyvus
-- {season} sezonas su humoru
-{f"- {holiday} juokeliai (bet profesionaliai!)" if holiday != "Nėra" else ""}
-- 2-3 hashtag'us su emoji
+VARIANTAS 3 - SU HUMORU 😄
+- Linksmas tonas
+- Juokas + {current_season["message"]}
+{f"- {holiday} su šypsena" if holiday != "Nėra" else ""}
+- 2-3 hashtag'us
 
----
+═══════════════════════════════════════
+⚠️ PRIEŠ SIŲSDAMAS ATSAKYMĄ - PATIKRINK:
+═══════════════════════════════════════
+1. Ar KIEKVIENAME tekste yra bent vienas iš: {', '.join(must_have_list[:3])}?
+2. Ar NĖRA nei vieno iš: {', '.join(forbidden_list[:5])}?
+3. Ar produktai paminėti tiksliais pavadinimais?
 
-⛔ PATIKRINK PRIEŠ ATSAKYDAMAS:
-1. Ar tekstuose yra "{season}" žodis ar jo sinonimai? (TURI BŪTI!)
-2. Ar NĖRA draudžiamų žodžių ({forbidden_words})? (NETURI BŪTI!)
-{f"3. Ar KIEKVIENAME tekste paminėta {holiday}? (TURI BŪTI!)" if holiday != "Nėra" else ""}
-4. Ar naudojami tikslūs produktų pavadinimai?
+Jei bent vienas patikrinimas FAILED - PERRAŠYK tekstus!
 
 Atskirk variantus su "---"
 Rašyk LIETUVIŠKAI.
@@ -291,10 +327,10 @@ Rašyk LIETUVIŠKAI.
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": f"Tu esi tikslus AI asistentas. GRIEŽTAI laikaisi instrukcijų. Dabar PRIVALOMA rašyti apie {season} sezoną{f' ir {holiday} šventę' if holiday != 'Nėra' else ''}. DRAUDŽIAMA minėti kitus sezonus."},
+            {"role": "system", "content": f"Tu esi AI asistentas. ABSOLIUTI TAISYKLĖ: Dabar yra {season} sezonas{f' ir {holiday} šventė' if holiday != 'Nėra' else ''}. Tu NIEKADA nerašai apie kitus sezonus ar šventes. Jei bandysi pažeisti - tekstas bus atmestas."},
             {"role": "user", "content": prompt}
         ],
-        temperature=0.7,  # Sumažinta iš 0.85 - daugiau tiksluma
+        temperature=0.5,  # DAR sumažinta - maksimalus tikslumas
         max_tokens=1200
     )
     return response.choices[0].message.content.strip()
