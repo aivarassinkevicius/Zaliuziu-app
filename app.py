@@ -91,18 +91,18 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
             
             # Bandome įkelti geresnį fontą arba naudojame default
             try:
-                # DIDESNIS šriftas - 5% nuotraukos dydžio
-                font_size = max(60, int(min(width, height) * 0.05))
+                # LABAI DIDELIS šriftas - 30% nuotraukos dydžio
+                font_size = max(100, int(min(width, height) * 0.30))
                 font = ImageFont.truetype("arial.ttf", font_size)
             except:
                 try:
                     # Bandome kitus fontus
-                    font_size = max(60, int(min(width, height) * 0.05))
+                    font_size = max(100, int(min(width, height) * 0.30))
                     font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
                 except:
                     # Jei nepavyko, naudojame default bet didesni
                     font = ImageFont.load_default()
-                    font_size = 40
+                    font_size = 100
             
             # Pozicija - dešiniame apatiniame kampe
             try:
