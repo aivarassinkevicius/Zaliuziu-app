@@ -573,55 +573,55 @@ if files_to_process:
     if edit_button and user_message:
         with st.spinner(f"🎨 DALL-E redaguoja nuotrauką {photo_to_edit + 1}... (5-15 sek)"):
             try:
-                    # Paimame pasirinktą nuotrauką
-                    selected_file = files_to_process[photo_to_edit]
-                    selected_file.seek(0)
+                # Paimame pasirinktą nuotrauką
+                selected_file = files_to_process[photo_to_edit]
+                selected_file.seek(0)
+                
+                # Redaguojame su AI
+                edited_img, message = edit_image_with_ai(selected_file, user_message)
+                
+                if edited_img:
+                    st.success(message)
                     
-                    # Redaguojame su AI
-                    edited_img, message = edit_image_with_ai(selected_file, user_message)
+                    # Parodome rezultatą
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("**🖼️ Originali:**")
+                        selected_file.seek(0)
+                        st.image(selected_file, use_container_width=True)
                     
-                    if edited_img:
-                        st.success(message)
-                        
-                        # Parodome rezultatą
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.markdown("**🖼️ Originali:**")
-                            selected_file.seek(0)
-                            st.image(selected_file, use_container_width=True)
-                        
-                        with col2:
-                            st.markdown("**✨ AI redaguota:**")
-                            edited_img.seek(0)
-                            st.image(edited_img, use_container_width=True)
-                        
-                        # Download mygtukas
+                    with col2:
+                        st.markdown("**✨ AI redaguota:**")
                         edited_img.seek(0)
-                        st.download_button(
-                            label="📥 Atsisiųsti AI redaguotą nuotrauką",
-                            data=edited_img.getvalue(),
-                            file_name=f"ai_edited_{photo_to_edit + 1}.png",
-                            mime="image/png",
-                            use_container_width=True
-                        )
-                        
-                        # Išsaugome į istoriją
-                        st.session_state.chat_history.append({
-                            'user': user_message,
-                            'ai': message,
-                            'photo_index': photo_to_edit + 1
-                        })
-                        
-                        # Parodome kainą
-                        st.info("💰 Kaina: ~$0.04 (DALL-E)")
-                        
-                    else:
-                        st.error(message)
-                        
-                except Exception as e:
-                    st.error(f"❌ Klaida: {str(e)}")
-                    import traceback
-                    st.error(traceback.format_exc())
+                        st.image(edited_img, use_container_width=True)
+                    
+                    # Download mygtukas
+                    edited_img.seek(0)
+                    st.download_button(
+                        label="📥 Atsisiųsti AI redaguotą nuotrauką",
+                        data=edited_img.getvalue(),
+                        file_name=f"ai_edited_{photo_to_edit + 1}.png",
+                        mime="image/png",
+                        use_container_width=True
+                    )
+                    
+                    # Išsaugome į istoriją
+                    st.session_state.chat_history.append({
+                        'user': user_message,
+                        'ai': message,
+                        'photo_index': photo_to_edit + 1
+                    })
+                    
+                    # Parodome kainą
+                    st.info("💰 Kaina: ~$0.04 (DALL-E)")
+                    
+                else:
+                    st.error(message)
+                    
+            except Exception as e:
+                st.error(f"❌ Klaida: {str(e)}")
+                import traceback
+                st.error(traceback.format_exc())
     
     # Rodyti chat istoriją
     if st.session_state.chat_history:
