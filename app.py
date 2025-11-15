@@ -842,13 +842,6 @@ if files_to_process:
 
 # Apdorojimas tik jei yra failų ir trigger'is aktyvuotas
 if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_content and files_to_process and len(files_to_process) > 0:
-    st.session_state.trigger_ai_content = False  # Reset trigger
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-# Apdorojimas tik jei yra failų ir trigger'is aktyvuotas
-if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_content and files_to_process and len(files_to_process) > 0:
-    st.session_state.trigger_ai_content = False  # Reset trigger
     progress_bar = st.progress(0)
     status_text = st.empty()
     
@@ -909,6 +902,9 @@ if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_cont
     
     progress_bar.empty()
     status_text.empty()
+    
+    # Reset trigger TIKTAI pabaigoje
+    st.session_state.trigger_ai_content = False
 
 # Rodyti AI turinio rezultatus (jei sukurti)
 if "ai_content_result" in st.session_state and st.session_state.ai_content_result:
