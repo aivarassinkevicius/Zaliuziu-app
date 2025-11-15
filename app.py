@@ -166,10 +166,11 @@ def edit_image_with_ai(image_file, prompt):
         if img.width > max_size or img.height > max_size:
             img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
         
-        # Išsaugome kaip PNG
+        # Išsaugome kaip PNG su tikru failo pavadinimu
         img_bytes = io.BytesIO()
         img.save(img_bytes, format='PNG')
         img_bytes.seek(0)
+        img_bytes.name = 'image.png'  # SVARBU: DALL-E reikia failo pavadinimo
         
         # Naudojame OpenAI DALL-E Edit - tikrą redagavimą
         response = client.images.edit(
