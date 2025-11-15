@@ -496,26 +496,24 @@ if files_to_process:
     # COLLAGE KŪRIMAS
     st.markdown("---")
     st.markdown("### 🖼️ Collage Kūrėjas")
-    st.info("✨ Sukurkite profesionalų collage iš redaguotų nuotraukų su sezoniniais motyvais!")
+    
+    # Automatiškai nustatome temą pagal sezoną/šventę
+    if holiday != "Nėra":
+        auto_theme = f"🎉 Šventinė: {holiday}"
+    else:
+        auto_theme = f"🍂 Sezoninė: {season}"
+    
+    st.info(f"✨ Automatinė tema: **{auto_theme}** (pagal jūsų nustatymus kairėje)")
     
     if len(files_to_process) >= 2:
-        col1, col2 = st.columns(2)
-        with col1:
-            collage_layout = st.selectbox(
-                "📐 Išdėstymas:",
-                ["2x2 Grid (4 nuotraukos)", "1x2 Horizontal (2 nuotraukos)", "2x1 Vertical (2 nuotraukos)", "1x3 Horizontal (3 nuotraukos)"],
-                help="Pasirinkite kaip išdėstyti nuotraukas"
-            )
-        
-        with col2:
-            collage_theme = st.selectbox(
-                "🎨 Tema:",
-                ["Švari (balta)", "Sezoninė (pagal metų laiką)", "Šventinė (pagal šventę)", "Tamsi"],
-                help="Collage fono spalva ir stilius"
-            )
+        collage_layout = st.selectbox(
+            "📐 Išdėstymas:",
+            ["2x2 Grid (4 nuotraukos)", "1x2 Horizontal (2 nuotraukos)", "2x1 Vertical (2 nuotraukos)", "1x3 Horizontal (3 nuotraukos)"],
+            help="Pasirinkite kaip išdėstyti nuotraukas"
+        )
         
         if st.button("🎨 Sukurti Collage", type="primary", use_container_width=True):
-            with st.spinner("🖼️ Kuriamas collage..."):
+            with st.spinner("🖼️ Kuriamas tematinis collage..."):
                 try:
                     # Paruošiame redaguotas nuotraukas
                     edited_images = []
@@ -566,36 +564,49 @@ if files_to_process:
                         img_resized = img.resize((img_width, img_height), Image.Resampling.LANCZOS)
                         resized.append(img_resized)
                     
-                    # Nustatome fono spalvą pagal temą
-                    if "Švari" in collage_theme:
-                        bg_color = (255, 255, 255)
-                        border_color = (200, 200, 200)
-                    elif "Sezoninė" in collage_theme:
-                        if season == "Pavasaris":
-                            bg_color = (240, 255, 240)  # Šviesiai žalia
-                            border_color = (150, 200, 150)
-                        elif season == "Vasara":
-                            bg_color = (255, 250, 205)  # Šilta geltona
-                            border_color = (255, 200, 100)
-                        elif season == "Ruduo":
-                            bg_color = (255, 245, 230)  # Švelni oranžinė
-                            border_color = (200, 150, 100)
-                        else:  # Žiema
-                            bg_color = (240, 248, 255)  # Šaltas mėlynas
-                            border_color = (180, 200, 220)
-                    elif "Šventinė" in collage_theme:
+                    # AUTOMATIŠKAI nustatome fono spalvą ir dekoracijų tipą pagal sezoną/šventę
+                    decorations = []
+                    
+                    if holiday != "Nėra":
+                        # ŠVENTINĖS TEMOS
                         if "Kalėdos" in holiday:
-                            bg_color = (220, 240, 220)  # Kalėdinis žalias
-                            border_color = (200, 50, 50)  # Raudonas
+                            bg_color = (20, 50, 30)  # Tamsiai žalia
+                            decorations = ["❄️", "🎄", "⭐", "🎅", "🎁"]
+                            decoration_color = (255, 255, 255)
                         elif "Velykos" in holiday:
-                            bg_color = (255, 250, 220)  # Velykinė geltona
-                            border_color = (200, 150, 200)
+                            bg_color = (255, 250, 230)  # Šviesi pastelinė
+                            decorations = ["🐰", "🥚", "🌷", "🌸", "🦋"]
+                            decoration_color = (150, 100, 200)
+                        elif "Valentino" in holiday:
+                            bg_color = (255, 240, 245)  # Švelniai rožinė
+                            decorations = ["❤️", "💕", "🌹", "💐"]
+                            decoration_color = (200, 50, 100)
+                        elif "Naujieji" in holiday:
+                            bg_color = (30, 30, 50)  # Tamsiai mėlyna
+                            decorations = ["🎆", "🎊", "🥂", "✨", "🎉"]
+                            decoration_color = (255, 215, 0)
                         else:
-                            bg_color = (255, 240, 245)  # Šventinė rožinė
-                            border_color = (220, 180, 200)
-                    else:  # Tamsi
-                        bg_color = (40, 40, 40)
-                        border_color = (100, 100, 100)
+                            bg_color = (250, 245, 250)
+                            decorations = ["🎉", "✨", "🎈"]
+                            decoration_color = (200, 150, 200)
+                    else:
+                        # SEZONINĖS TEMOS
+                        if season == "Pavasaris":
+                            bg_color = (245, 255, 245)  # Šviesiai žalia
+                            decorations = ["🌸", "🌷", "🌼", "🦋", "🌱"]
+                            decoration_color = (100, 180, 100)
+                        elif season == "Vasara":
+                            bg_color = (255, 250, 220)  # Šilta geltona
+                            decorations = ["☀️", "🌻", "🌺", "🦜", "🍋"]
+                            decoration_color = (255, 180, 50)
+                        elif season == "Ruduo":
+                            bg_color = (255, 240, 220)  # Švelni oranžinė
+                            decorations = ["🍂", "🍁", "🎃", "🌾", "🦊"]
+                            decoration_color = (180, 100, 50)
+                        else:  # Žiema
+                            bg_color = (240, 245, 255)  # Šaltas mėlynas
+                            decorations = ["❄️", "⛄", "🎿", "☃️", "🌨️"]
+                            decoration_color = (100, 150, 200)
                     
                     # Sukuriame collage
                     gap = 20
@@ -603,6 +614,7 @@ if files_to_process:
                     canvas_height = rows * img_height + (rows + 1) * gap
                     
                     collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
+                    draw = ImageDraw.Draw(collage)
                     
                     # Dedame nuotraukas
                     idx = 0
@@ -613,6 +625,35 @@ if files_to_process:
                                 y = gap + row * (img_height + gap)
                                 collage.paste(resized[idx], (x, y))
                                 idx += 1
+                    
+                    # PRIDEDAME DEKORACIJAS (emoji) po nuotraukomis
+                    if decorations:
+                        try:
+                            # Bandome įkelti emoji palaikantį šriftą
+                            emoji_font = None
+                            emoji_paths = [
+                                "C:/Windows/Fonts/seguiemj.ttf",  # Windows Emoji
+                                "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",  # Linux
+                                "/System/Library/Fonts/Apple Color Emoji.ttc"  # Mac
+                            ]
+                            
+                            for path in emoji_paths:
+                                try:
+                                    emoji_font = ImageFont.truetype(path, 60)
+                                    break
+                                except:
+                                    continue
+                            
+                            if emoji_font:
+                                # Atsitiktinai išdėstome dekoracijas kampuose ir tarpuose
+                                import random
+                                for _ in range(15):  # 15 dekoracijų
+                                    emoji = random.choice(decorations)
+                                    x = random.randint(10, canvas_width - 70)
+                                    y = random.randint(10, canvas_height - 70)
+                                    draw.text((x, y), emoji, font=emoji_font, embedded_color=True)
+                        except:
+                            pass  # Jei nepavyko - praleidžiame dekoracijas
                     
                     # Išsaugome
                     collage_bytes = io.BytesIO()
