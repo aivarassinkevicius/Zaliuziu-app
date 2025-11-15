@@ -448,9 +448,6 @@ if not st.session_state.uploaded_files:
 # Naudojame session_state failus
 files_to_process = st.session_state.uploaded_files
 
-# Mygtukas visada matomas
-create_content = st.button("🚀 Sukurti turinį", type="primary", use_container_width=True)
-
 if files_to_process:
     st.success(f"✅ Įkelta {len(files_to_process)} nuotraukų!")
     
@@ -512,14 +509,20 @@ if files_to_process:
         # Stilius pasirinkimas
         collage_style = st.selectbox(
             "🎨 Collage stilius:",
-            ["Polaroid (kaip nuotraukos su rėmeliais)", "Grid (tvarkingas tinklelis)", "Scrapbook (kūrybiškas)"],
+            [
+                "📸 Polaroid - Nuotraukos su baltais rėmeliais, pasuktos",
+                "📱 Instagram Grid - Tvarkingas tinklelis su tarpais",
+                "🎨 Scrapbook - Kūrybiškas, atsitiktinis išdėstymas",
+                "🖼️ Gallery Wall - Galerijos siena su juodais rėmeliais",
+                "✨ Minimalist - Minimalus stilius, baltas fonas"
+            ],
             help="Pasirinkite collage stilių",
             key="collage_style_selector"
         )
         
         collage_layout = st.selectbox(
             "📐 Išdėstymas:",
-            ["2x2 Grid (4 nuotraukos)", "1x2 Horizontal (2 nuotraukos)", "2x1 Vertical (2 nuotraukos)", "1x3 Horizontal (3 nuotraukos)"],
+            ["2x2 Grid (4 nuotraukos)", "1x2 Horizontal (2 nuotraukos)", "2x1 Vertical (2 nuotraukos)", "1x3 Horizontal (3 nuotraukos)", "3x1 Vertical (3 nuotraukos)"],
             help="Pasirinkite kaip išdėstyti nuotraukas"
         )
         
@@ -561,6 +564,9 @@ if files_to_process:
                     elif "1x3" in collage_layout:
                         rows, cols = 1, 3
                         needed = 3
+                    elif "3x1" in collage_layout:
+                        rows, cols = 3, 1
+                        needed = 3
                     
                     # Apkarpome jei per daug
                     edited_images = edited_images[:needed]
@@ -569,101 +575,157 @@ if files_to_process:
                     while len(edited_images) < needed:
                         edited_images.append(edited_images[-1])
                     
-                    # POLAROID STILIAUS COLLAGE (kaip jūsų pavyzdžiuose)
                     import random
                     
-                    # Nustatome collage dydį
-                    polaroid_width = 500  # Nuotraukos plotis
-                    polaroid_height = 500  # Nuotraukos aukštis
-                    border_size = 20  # Baltas Polaroid rėmelis
-                    bottom_border = 60  # Didesnis apačioje (Polaroid stilius)
+                    # NUSTATOME STILIŲ PAGAL PASIRINKIMĄ
                     
-                    # Canvas dydis priklauso nuo layout'o
-                    if needed == 4:
-                        canvas_width = 1800
-                        canvas_height = 1800
-                    elif needed == 3:
-                        canvas_width = 2000
-                        canvas_height = 1200
-                    else:  # 2 nuotraukos
-                        canvas_width = 1600
-                        canvas_height = 1200
-                    
-                    # AUTOMATIŠKAI nustatome fono spalvą pagal sezoną/šventę
+                    # Automatiškai nustatome fono spalvą pagal sezoną/šventę
                     if holiday != "Nėra":
-                        # ŠVENTINĖS TEMOS - šviesūs/neutralūs fonai
                         if "Kalėdos" in holiday:
-                            bg_color = (235, 245, 240)  # Šviesiai žalsvas
+                            bg_color = (235, 245, 240)
                         elif "Velykos" in holiday:
-                            bg_color = (255, 250, 235)  # Kreminė
+                            bg_color = (255, 250, 235)
                         elif "Valentino" in holiday:
-                            bg_color = (255, 245, 248)  # Švelniai rožinė
+                            bg_color = (255, 245, 248)
                         elif "Naujieji" in holiday:
-                            bg_color = (240, 245, 255)  # Šviesiai mėlyna
+                            bg_color = (240, 245, 255)
                         else:
-                            bg_color = (245, 245, 240)  # Neutrali
+                            bg_color = (245, 245, 240)
                     else:
-                        # SEZONINĖS TEMOS - šviesūs/neutralūs fonai
                         if season == "Pavasaris":
-                            bg_color = (248, 252, 245)  # Labai šviesi žalia
+                            bg_color = (248, 252, 245)
                         elif season == "Vasara":
-                            bg_color = (255, 252, 240)  # Šilta kreminė
+                            bg_color = (255, 252, 240)
                         elif season == "Ruduo":
-                            bg_color = (250, 245, 235)  # Šilta smėlio
-                        else:  # Žiema
-                            bg_color = (245, 248, 252)  # Šviesi mėlyna
+                            bg_color = (250, 245, 235)
+                        else:
+                            bg_color = (245, 248, 252)
                     
-                    # Sukuriame tuščią canvas
-                    collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
+                    # ============ POLAROID STILIUS ============
+                    if "Polaroid" in collage_style:
+                        polaroid_width = 500
+                        polaroid_height = 500
+                        border_size = 20
+                        bottom_border = 60
+                        
+                        if needed == 4:
+                            canvas_width, canvas_height = 1800, 1800
+                            positions = [(200, 150, -8), (850, 100, 12), (300, 850, 5), (950, 900, -10)]
+                        elif needed == 3:
+                            canvas_width, canvas_height = 2000, 1200
+                            positions = [(200, 250, -10), (750, 150, 8), (450, 700, -5)]
+                        else:
+                            canvas_width, canvas_height = 1600, 1200
+                            positions = [(250, 300, -12), (850, 350, 8)]
+                        
+                        collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
+                        
+                        for idx, img in enumerate(edited_images[:needed]):
+                            img_resized = img.resize((polaroid_width, polaroid_height), Image.Resampling.LANCZOS)
+                            polaroid_img = Image.new('RGB', 
+                                (polaroid_width + border_size * 2, 
+                                 polaroid_height + border_size + bottom_border), 
+                                (255, 255, 255))
+                            polaroid_img.paste(img_resized, (border_size, border_size))
+                            
+                            x, y, angle = positions[idx]
+                            rotated = polaroid_img.rotate(angle, expand=True, fillcolor=bg_color)
+                            collage.paste(rotated, (x, y))
                     
-                    # Nustatome nuotraukų pozicijas ir kampus
-                    if needed == 4:
-                        positions = [
-                            (200, 150, -8),    # x, y, kampas (laipsniais)
-                            (850, 100, 12),
-                            (300, 850, 5),
-                            (950, 900, -10)
-                        ]
-                    elif needed == 3:
-                        positions = [
-                            (200, 250, -10),
-                            (750, 150, 8),
-                            (450, 700, -5)
-                        ]
-                    else:  # 2
-                        positions = [
-                            (250, 300, -12),
-                            (850, 350, 8)
-                        ]
+                    # ============ INSTAGRAM GRID STILIUS ============
+                    elif "Instagram Grid" in collage_style:
+                        img_size = 600
+                        gap = 30
+                        
+                        canvas_width = cols * img_size + (cols + 1) * gap
+                        canvas_height = rows * img_size + (rows + 1) * gap
+                        
+                        collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
+                        
+                        idx = 0
+                        for row in range(rows):
+                            for col in range(cols):
+                                if idx < len(edited_images):
+                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
+                                    x = gap + col * (img_size + gap)
+                                    y = gap + row * (img_size + gap)
+                                    collage.paste(img_resized, (x, y))
+                                    idx += 1
                     
-                    # Apdorojame kiekvieną nuotrauką
-                    for idx, img in enumerate(edited_images[:needed]):
-                        # Resize nuotrauką
-                        img_resized = img.resize((polaroid_width, polaroid_height), Image.Resampling.LANCZOS)
+                    # ============ SCRAPBOOK STILIUS ============
+                    elif "Scrapbook" in collage_style:
+                        if needed == 4:
+                            canvas_width, canvas_height = 1900, 1900
+                        elif needed == 3:
+                            canvas_width, canvas_height = 2100, 1300
+                        else:
+                            canvas_width, canvas_height = 1700, 1300
                         
-                        # Sukuriame Polaroid rėmelį (baltą)
-                        polaroid_img = Image.new('RGB', 
-                            (polaroid_width + border_size * 2, 
-                             polaroid_height + border_size + bottom_border), 
-                            (255, 255, 255))
+                        collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
                         
-                        # Įdedame nuotrauką į Polaroid
-                        polaroid_img.paste(img_resized, (border_size, border_size))
+                        # Atsitiktiniai dydžiai ir pozicijos
+                        for idx, img in enumerate(edited_images[:needed]):
+                            size_var = random.randint(450, 650)
+                            img_resized = img.resize((size_var, size_var), Image.Resampling.LANCZOS)
+                            
+                            # Pridedame atsitiktinį rėmelį
+                            border_color = random.choice([(255,255,255), (250,250,240), (245,240,235)])
+                            border_width = random.randint(15, 35)
+                            bordered = ImageOps.expand(img_resized, border=border_width, fill=border_color)
+                            
+                            # Atsitiktinė pozicija ir kampas
+                            max_x = canvas_width - bordered.width - 100
+                            max_y = canvas_height - bordered.height - 100
+                            x = random.randint(50, max(51, max_x))
+                            y = random.randint(50, max(51, max_y))
+                            angle = random.randint(-15, 15)
+                            
+                            rotated = bordered.rotate(angle, expand=True, fillcolor=bg_color)
+                            collage.paste(rotated, (x, y))
+                    
+                    # ============ GALLERY WALL STILIUS ============
+                    elif "Gallery Wall" in collage_style:
+                        img_size = 550
+                        gap = 40
                         
-                        # Šešėlis (optional - sukuria gylį)
-                        shadow = Image.new('RGBA', polaroid_img.size, (0, 0, 0, 0))
-                        shadow_draw = ImageDraw.Draw(shadow)
-                        shadow_draw.rectangle(
-                            [(0, 0), polaroid_img.size],
-                            fill=(0, 0, 0, 30)
-                        )
+                        canvas_width = cols * img_size + (cols + 1) * gap
+                        canvas_height = rows * img_size + (rows + 1) * gap
                         
-                        # Pasukami nuotrauką
-                        x, y, angle = positions[idx]
-                        rotated = polaroid_img.rotate(angle, expand=True, fillcolor=bg_color)
+                        collage = Image.new('RGB', (canvas_width, canvas_height), (240, 240, 240))
                         
-                        # Įdedame į collage
-                        collage.paste(rotated, (x, y), rotated if rotated.mode == 'RGBA' else None)
+                        idx = 0
+                        for row in range(rows):
+                            for col in range(cols):
+                                if idx < len(edited_images):
+                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
+                                    # Juodas rėmelis
+                                    framed = ImageOps.expand(img_resized, border=15, fill=(20, 20, 20))
+                                    x = gap + col * (img_size + gap)
+                                    y = gap + row * (img_size + gap)
+                                    collage.paste(framed, (x, y))
+                                    idx += 1
+                    
+                    # ============ MINIMALIST STILIUS ============
+                    elif "Minimalist" in collage_style:
+                        img_size = 600
+                        gap = 60
+                        
+                        canvas_width = cols * img_size + (cols + 1) * gap
+                        canvas_height = rows * img_size + (rows + 1) * gap
+                        
+                        collage = Image.new('RGB', (canvas_width, canvas_height), (255, 255, 255))
+                        
+                        idx = 0
+                        for row in range(rows):
+                            for col in range(cols):
+                                if idx < len(edited_images):
+                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
+                                    # Labai plonas pilkas rėmelis
+                                    framed = ImageOps.expand(img_resized, border=2, fill=(200, 200, 200))
+                                    x = gap + col * (img_size + gap)
+                                    y = gap + row * (img_size + gap)
+                                    collage.paste(framed, (x, y))
+                                    idx += 1
                     
                     # Išsaugome
                     collage_bytes = io.BytesIO()
@@ -701,6 +763,10 @@ if files_to_process:
     st.markdown("### 📝 AI Turinio Generavimas")
     st.info("💡 Sukurkite tekstus socialiniams tinklams pagal jūsų nuotraukas")
     
+    # Mygtukas čia
+    if st.button("🚀 Sukurti AI Turinį", type="primary", use_container_width=True, key="create_ai_content_btn"):
+        st.session_state.trigger_ai_content = True
+    
     # Mygtukas išvalyti failus
     st.markdown("---")
     if st.button("🗑️ Išvalyti visus failus ir rezultatus", type="secondary", use_container_width=True):
@@ -716,8 +782,9 @@ if files_to_process:
         files_to_process = files_to_process[:4]
         st.session_state.uploaded_files = files_to_process
 
-# Apdorojimas tik jei yra failų ir paspaustas mygtukas
-if create_content and files_to_process and len(files_to_process) > 0:
+# Apdorojimas tik jei yra failų ir trigger'is aktyvuotas
+if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_content and files_to_process and len(files_to_process) > 0:
+    st.session_state.trigger_ai_content = False  # Reset trigger
     progress_bar = st.progress(0)
     status_text = st.empty()
     
