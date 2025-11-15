@@ -199,78 +199,102 @@ Pavyzdys: "Nuotraukoje matosi TRYS SKIRTINGI PRODUKTAI: 1) PLISUOTOS ŽALIUZĖS 
 def generate_captions(analysis_text, season, holiday):
     """Sukuria 3 teksto variantus lietuviškai pagal tikslią produkto analizę"""
     
-    # Sezoninis ir šventinis kontekstas
-    seasonal_tips = {
-        "Pavasaris": "Šviesios spalvos, gaivumas, atsinaujinimas, pavasario šviesumas",
-        "Vasara": "Apsauga nuo karščio, šviesus interjeras, vasaros saulė, energijos taupymas",
-        "Ruduo": "Jaukumas, šilti tonai, rudeniškas komfortas, namų atmosfera",
-        "Žiema": "Šilumos išsaugojimas, jaukumas, žiemos šviesa, energijos efektyvumas"
+    # Sezoninis ir šventinis kontekstas - LABAI KONKRETUS
+    seasonal_context = {
+        "Pavasaris": {
+            "keywords": "pavasaris, atsinaujinimas, šviesumas, gaivumas, nauji pradžiai, šviesios spalvos",
+            "forbidden": ["žiema", "šaltis", "sniegas", "šiluma", "ruduo", "vasara"],
+            "vibe": "Šviesu, gaiviai, atsinaujinimas"
+        },
+        "Vasara": {
+            "keywords": "vasara, šiluma, saulė, karšta, vėsinimas, apsauga nuo karščio, atostogos",
+            "forbidden": ["žiema", "šaltis", "sniegas", "pavasaris", "ruduo"],
+            "vibe": "Karšta, saulėta, vasariška"
+        },
+        "Ruduo": {
+            "keywords": "ruduo, jaukumas, šilti tonai, auksinė rudens, jauku, ramybė",
+            "forbidden": ["žiema", "pavasaris", "vasara", "sniegas", "karšta"],
+            "vibe": "Jaukiai, ramu, rudeniškai"
+        },
+        "Žiema": {
+            "keywords": "žiema, šaltis, šiluma, šilumos išsaugojimas, sniegas, šalta, žiemiškai",
+            "forbidden": ["pavasaris", "vasara", "ruduo", "karšta", "saulė"],
+            "vibe": "Šalta, žiemiškai, reikia šilumos"
+        }
     }
     
-    holiday_context = ""
+    current_season = seasonal_context.get(season, seasonal_context["Pavasaris"])
+    
+    holiday_instructions = ""
     if holiday != "Nėra":
-        holiday_context = f"\n🎉 ŠVENTĖ: {holiday} - PRIVALOMA įtraukti šventinę tematiką į VISUS 3 tekstus!"
+        holiday_instructions = f"""
+🎉 ŠVENTĖ: {holiday}
+⚠️ GRIEŽTA TAISYKLĖ: {holiday} PRIVALOMA KIEKVIENAME TEKSTE!
+- Paminėk šventę tiesiogiai arba nuoroda
+- Šventinė nuotaika, dovanų idėjos, spec. pasiūlymai
+"""
     
-    season_tip = seasonal_tips.get(season, "")
+    forbidden_words = ", ".join(current_season["forbidden"])
     
-    prompt = f"""Tu esi PROFESIONALUS turinio kūrėjas žaliuzių ir roletų verslui.
+    prompt = f"""🤖 Tu esi AI turinio kūrėjas žaliuzių verslui. Griežtai laikaisi instrukcijų.
 
-📊 DETALI PRODUKTŲ ANALIZĖ:
+📋 PRODUKTŲ ANALIZĖ:
 {analysis_text}
 
-🌍 KONTEKSTAS:
-- Metų laikas: {season} ({season_tip})
-{holiday_context}
+⚠️ GRIEŽTOS TAISYKLĖS - BŪTINA LAIKYTIS:
 
-🎯 UŽDUOTIS: Sukurk 3 SKIRTINGUS socialinių tinklų įrašų variantus (iki 280 simbolių kiekvienas):
+1️⃣ METŲ LAIKAS: {season.upper()}
+   ✅ PRIVALOMI žodžiai: {current_season["keywords"]}
+   ❌ DRAUDŽIAMI žodžiai: {forbidden_words}
+   📌 Nuotaika: {current_season["vibe"]}
 
----
-**1) MARKETINGINIS** 💼
-- Profesionalus, verslo tonas
-- Pabrėžk KONKREČIŲ produktų PRIVALUMUS ir funkcijas
-- Jei yra KELI produktai - paminėk VISUS pagal svarbą
-- Naudok TIKSLIUS pavadinimus iš analizės (pvz: "Plisuotos žaliuzės", "Medinės venetian", "Roletai Diena-Naktis")
-- Susieti su {season} sezonu ir jo specifika
-{f"- BŪTINAI įtraukti {holiday} tematiką (dovanų idėjos, šventinis dekoras, spec. pasiūlymai)" if holiday != "Nėra" else ""}
-- 2-3 tinkamus hashtag'us (#Žaliuzės, #{season}, etc.)
+{holiday_instructions}
+
+2️⃣ PRODUKTAI:
+   - Naudok TIKSLIUS pavadinimus iš analizės
+   - Jei keli produktai - PAMINĖK VISUS
 
 ---
-**2) DRAUGIŠKAS** 🏡
-- Šiltas, artimas tonas - lyg kalbėtum su kaimynu
-- Paaiškink kaip šie produktai pagerina kasdienį gyvenimą
-- Paminėk KONKREČIUS produktus iš nuotraukų
-- Praktinės naudos ({season} kontekste)
-{f"- Natūraliai susieti su {holiday} - šeimos jaukumas, švenčių nuotaika" if holiday != "Nėra" else ""}
+
+🎯 SUKURK 3 VARIANTUS (iki 280 simbolių kiekvienas):
+
+**VARIANTAS 1 - MARKETINGINIS** 💼
+- Profesionalus tonas
+- Produktų privalumai + {season} kontekstas
+{f"- {holiday} tema PRIVALOMA" if holiday != "Nėra" else ""}
+- 2-3 hashtag'us
+
+**VARIANTAS 2 - DRAUGIŠKAS** 🏡  
+- Šiltas, artimas tonas
+- Kaip produktai padeda {season} sezone
+{f"- {holiday} šventės jaukumas" if holiday != "Nėra" else ""}
 - 1-2 hashtag'us
 
----
-**3) SU HUMORU** 😄
-- Linksmas, įsimintinas, bet INFORMATYVUS
-- Išlaikyk produktų tipus ir pavadinimus
-- Žaismingas požiūris į {season} sezoną
-{f"- {holiday} tematika su humoru (bet profesionaliai!)" if holiday != "Nėra" else ""}
+**VARIANTAS 3 - SU HUMORU** 😄
+- Linksmas bet informatyvus
+- {season} sezonas su humoru
+{f"- {holiday} juokeliai (bet profesionaliai!)" if holiday != "Nėra" else ""}
 - 2-3 hashtag'us su emoji
 
 ---
 
-‼️ KRITIŠKAI SVARBU:
-1. Jei analizėje minimi KELI SKIRTINGI produktai (pvz. "plisuotos žaliuzės", "medinės žaliuzės", "roletai") - PRIVALOMA paminėti VISUS
-2. Naudok TIKSLIUS pavadinimus iš analizės (ne bendrinius)
-3. {season} sezonas turi būti AIŠKIAI matomas KIEKVIENAME tekste
-{f"4. {holiday} šventė PRIVALOMA KIEKVIENAME variante!" if holiday != "Nėra" else ""}
-5. Kiekvienas variantas turi būti UNIKALUS ir SKIRTINGO stiliaus
+⛔ PATIKRINK PRIEŠ ATSAKYDAMAS:
+1. Ar tekstuose yra "{season}" žodis ar jo sinonimai? (TURI BŪTI!)
+2. Ar NĖRA draudžiamų žodžių ({forbidden_words})? (NETURI BŪTI!)
+{f"3. Ar KIEKVIENAME tekste paminėta {holiday}? (TURI BŪTI!)" if holiday != "Nėra" else ""}
+4. Ar naudojami tikslūs produktų pavadinimai?
 
 Atskirk variantus su "---"
-Rašyk LIETUVIŠKAI, natūraliai, profesionaliai.
+Rašyk LIETUVIŠKAI.
 """
     
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "Tu esi ekspertas kuriantis įtraukiantį turinį langų dekoravimo verslui Lietuvoje. Esi kūrybiškas, tikslus ir atsižvelgi į produktų specifiką bei sezonines tendencijas."},
+            {"role": "system", "content": f"Tu esi tikslus AI asistentas. GRIEŽTAI laikaisi instrukcijų. Dabar PRIVALOMA rašyti apie {season} sezoną{f' ir {holiday} šventę' if holiday != 'Nėra' else ''}. DRAUDŽIAMA minėti kitus sezonus."},
             {"role": "user", "content": prompt}
         ],
-        temperature=0.85,
+        temperature=0.7,  # Sumažinta iš 0.85 - daugiau tiksluma
         max_tokens=1200
     )
     return response.choices[0].message.content.strip()
