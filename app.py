@@ -493,6 +493,151 @@ if files_to_process:
                 use_container_width=True
             )
     
+    # COLLAGE KŪRIMAS
+    st.markdown("---")
+    st.markdown("### 🖼️ Collage Kūrėjas")
+    st.info("✨ Sukurkite profesionalų collage iš redaguotų nuotraukų su sezoniniais motyvais!")
+    
+    if len(files_to_process) >= 2:
+        col1, col2 = st.columns(2)
+        with col1:
+            collage_layout = st.selectbox(
+                "📐 Išdėstymas:",
+                ["2x2 Grid (4 nuotraukos)", "1x2 Horizontal (2 nuotraukos)", "2x1 Vertical (2 nuotraukos)", "1x3 Horizontal (3 nuotraukos)"],
+                help="Pasirinkite kaip išdėstyti nuotraukas"
+            )
+        
+        with col2:
+            collage_theme = st.selectbox(
+                "🎨 Tema:",
+                ["Švari (balta)", "Sezoninė (pagal metų laiką)", "Šventinė (pagal šventę)", "Tamsi"],
+                help="Collage fono spalva ir stilius"
+            )
+        
+        if st.button("🎨 Sukurti Collage", type="primary", use_container_width=True):
+            with st.spinner("🖼️ Kuriamas collage..."):
+                try:
+                    # Paruošiame redaguotas nuotraukas
+                    edited_images = []
+                    for file in files_to_process:
+                        file.seek(0)
+                        edited = add_marketing_overlay(
+                            file,
+                            add_watermark=add_watermark,
+                            add_border=False,  # Collage'ui be rėmelio
+                            brightness=brightness,
+                            contrast=contrast,
+                            saturation=saturation,
+                            watermark_text=watermark_text,
+                            watermark_size=watermark_size
+                        )
+                        edited.seek(0)
+                        img = Image.open(edited)
+                        edited_images.append(img)
+                    
+                    # Nustatome layout
+                    if "2x2" in collage_layout:
+                        rows, cols = 2, 2
+                        needed = 4
+                    elif "1x2" in collage_layout:
+                        rows, cols = 1, 2
+                        needed = 2
+                    elif "2x1" in collage_layout:
+                        rows, cols = 2, 1
+                        needed = 2
+                    elif "1x3" in collage_layout:
+                        rows, cols = 1, 3
+                        needed = 3
+                    
+                    # Apkarpome jei per daug
+                    edited_images = edited_images[:needed]
+                    
+                    # Jei per mažai - dubliuojame
+                    while len(edited_images) < needed:
+                        edited_images.append(edited_images[-1])
+                    
+                    # Nustatome collage dydį
+                    img_width = 800
+                    img_height = 600
+                    
+                    # Resize'iname visas nuotraukas
+                    resized = []
+                    for img in edited_images:
+                        img_resized = img.resize((img_width, img_height), Image.Resampling.LANCZOS)
+                        resized.append(img_resized)
+                    
+                    # Nustatome fono spalvą pagal temą
+                    if "Švari" in collage_theme:
+                        bg_color = (255, 255, 255)
+                        border_color = (200, 200, 200)
+                    elif "Sezoninė" in collage_theme:
+                        if season == "Pavasaris":
+                            bg_color = (240, 255, 240)  # Šviesiai žalia
+                            border_color = (150, 200, 150)
+                        elif season == "Vasara":
+                            bg_color = (255, 250, 205)  # Šilta geltona
+                            border_color = (255, 200, 100)
+                        elif season == "Ruduo":
+                            bg_color = (255, 245, 230)  # Švelni oranžinė
+                            border_color = (200, 150, 100)
+                        else:  # Žiema
+                            bg_color = (240, 248, 255)  # Šaltas mėlynas
+                            border_color = (180, 200, 220)
+                    elif "Šventinė" in collage_theme:
+                        if "Kalėdos" in holiday:
+                            bg_color = (220, 240, 220)  # Kalėdinis žalias
+                            border_color = (200, 50, 50)  # Raudonas
+                        elif "Velykos" in holiday:
+                            bg_color = (255, 250, 220)  # Velykinė geltona
+                            border_color = (200, 150, 200)
+                        else:
+                            bg_color = (255, 240, 245)  # Šventinė rožinė
+                            border_color = (220, 180, 200)
+                    else:  # Tamsi
+                        bg_color = (40, 40, 40)
+                        border_color = (100, 100, 100)
+                    
+                    # Sukuriame collage
+                    gap = 20
+                    canvas_width = cols * img_width + (cols + 1) * gap
+                    canvas_height = rows * img_height + (rows + 1) * gap
+                    
+                    collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
+                    
+                    # Dedame nuotraukas
+                    idx = 0
+                    for row in range(rows):
+                        for col in range(cols):
+                            if idx < len(resized):
+                                x = gap + col * (img_width + gap)
+                                y = gap + row * (img_height + gap)
+                                collage.paste(resized[idx], (x, y))
+                                idx += 1
+                    
+                    # Išsaugome
+                    collage_bytes = io.BytesIO()
+                    collage.save(collage_bytes, format='JPEG', quality=95)
+                    collage_bytes.seek(0)
+                    
+                    st.success("✅ Collage sukurtas!")
+                    st.image(collage_bytes, caption="Jūsų Collage", use_container_width=True)
+                    
+                    collage_bytes.seek(0)
+                    st.download_button(
+                        label="📥 Atsisiųsti Collage",
+                        data=collage_bytes.getvalue(),
+                        file_name=f"collage_{season}_{holiday}.jpg",
+                        mime="image/jpeg",
+                        use_container_width=True
+                    )
+                    
+                except Exception as e:
+                    st.error(f"❌ Klaida kuriant collage: {str(e)}")
+                    import traceback
+                    st.error(traceback.format_exc())
+    else:
+        st.warning("⚠️ Collage reikia bent 2 nuotraukų!")
+    
     # Mygtukas išvalyti failus
     st.markdown("---")
     if st.button("🗑️ Išvalyti visus failus", type="secondary", use_container_width=True):
