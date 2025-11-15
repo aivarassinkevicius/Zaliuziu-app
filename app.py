@@ -154,66 +154,124 @@ def analyze_image(image_bytes):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": """Tu esi langų uždangalų ir žaliuzių produktų atpažinimo specialistas. 
-Tavo užduotis - TIKSLIAI identifikuoti produkto tipą lietuviškai."""},
+            {"role": "system", "content": """Tu esi langų uždangalų ir žaliuzių produktų atpažinimo EKSPERTAS. 
+Tavo užduotis - TIKSLIAI ir DETALIZUOTAI identifikuoti KIEKVIENĄ produktą nuotraukoje."""},
             {"role": "user", "content": [
-                {"type": "text", "text": """Išanalizuok šią nuotrauką ir BŪTINAI nurodyk:
+                {"type": "text", "text": """Analizuok šią nuotrauką kaip ŽALIUZIŲ EKSPERTAS ir BŪTINAI nurodyk:
 
-1. **PRODUKTO TIPAS** (pasirink vieną iš šių):
-   - Roletai (tekstiliniai, rule-up blinds)
-   - Roletai Diena-Naktis (zebra blinds, dual blinds)
-   - Horizontalios žaliuzės (horizontal blinds, venetian blinds)
-   - Vertikalios žaliuzės (vertical blinds)
-   - Plisuotos žaliuzės (pleated blinds)
-   - Romanetės (roman shades)
-   - Lamelės (panel blinds, vertical panel track)
-   - Užuolaidos
-   - Kita (nurodyk kas)
+1. **PRODUKTO TIPAS IR KIEKIS** (labai svarbu!):
+   ⚠️ Jei matai KELIS skirtingus produktus - BŪTINAI aprašyk KIEKVIENĄ ATSKIRAI!
+   Produktų tipai:
+   - Roletai (tekstiliniai, roll-up blinds)
+   - Roletai Diena-Naktis / Zebra (duo blinds su juostelėmis)
+   - Horizontalios žaliuzės / Venetian (horizontalios lamelės)
+   - Vertikalios žaliuzės (vertikalios lamelės)
+   - Plisuotos žaliuzės / Pleated (sulankstomos)
+   - Medinės žaliuzės / Wood blinds (medžio lamelės)
+   - Romanetės / Roman shades
+   - Lamelės / Panel blinds
+   - Užuolaidos / Curtains
 
-2. **SPALVA IR MEDŽIAGA**: kokios spalvos, ar matinė, skaidri, tamsinanti
+2. **SPALVOS, MEDŽIAGA, TEKSTŪRA**:
+   - Tikslios spalvos (balta, pilka, smėlio, mėlyna, etc.)
+   - Medžiaga (medis, audinys, PVC, aliuminis)
+   - Ar matinė, blizgi, skaidri, tamsinanti
 
-3. **APLINKA**: koks kambarys, apšvietimas, interjero stilius
+3. **MONTAVIMO VIETA IR KAMBARYS**:
+   - Kokio tipo kambarys (svetainė, miegamasis, virtuvė, biuras)
+   - Kaip sumontuota (sienoje, lubose, lange)
 
-4. **DETALĖS**: kas dar įdomaus - langas, vaizdas, dekoro elementai
+4. **VIZUALINĖS DETALĖS**:
+   - Apšvietimas (dienos šviesa, dirbtinė)
+   - Interjero stilius
+   - Vandens ženklas ar tekstas (jei yra)
+   - Vaizdas pro langą
 
-BŪTINAI pradėk nuo produkto tipo, pvz: "Matosi ROLETAI DIENA-NAKTIS..." arba "Nuotraukoje - VERTIKALIOS ŽALIUZĖS..." """},
+PRIVALOMA: Pradėk aprašymą nuo TIKSLAUS produkto tipo. 
+Pavyzdys: "Nuotraukoje matosi TRYS SKIRTINGI PRODUKTAI: 1) PLISUOTOS ŽALIUZĖS pilkos spalvos, 2) MEDINĖS HORIZONTALIOS ŽALIUZĖS šviesaus ąžuolo, 3) ROLETAI DIENA-NAKTIS balti..." """},
                 {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_bytes}}
             ]}
         ],
-        max_tokens=300
+        max_tokens=500
     )
     return response.choices[0].message.content.strip()
 
 def generate_captions(analysis_text, season, holiday):
     """Sukuria 3 teksto variantus lietuviškai pagal tikslią produkto analizę"""
-    holiday_context = f" ir šventę: {holiday}" if holiday != "Nėra" else ""
-    prompt = f"""
-Pagal šią TIKSLIĄ produkto analizę:
+    
+    # Sezoninis ir šventinis kontekstas
+    seasonal_tips = {
+        "Pavasaris": "Šviesios spalvos, gaivumas, atsinaujinimas, pavasario šviesumas",
+        "Vasara": "Apsauga nuo karščio, šviesus interjeras, vasaros saulė, energijos taupymas",
+        "Ruduo": "Jaukumas, šilti tonai, rudeniškas komfortas, namų atmosfera",
+        "Žiema": "Šilumos išsaugojimas, jaukumas, žiemos šviesa, energijos efektyvumas"
+    }
+    
+    holiday_context = ""
+    if holiday != "Nėra":
+        holiday_context = f"\n🎉 ŠVENTĖ: {holiday} - PRIVALOMA įtraukti šventinę tematiką į VISUS 3 tekstus!"
+    
+    season_tip = seasonal_tips.get(season, "")
+    
+    prompt = f"""Tu esi PROFESIONALUS turinio kūrėjas žaliuzių ir roletų verslui.
+
+📊 DETALI PRODUKTŲ ANALIZĖ:
 {analysis_text}
 
-Metų laikas: {season}{holiday_context}
+🌍 KONTEKSTAS:
+- Metų laikas: {season} ({season_tip})
+{holiday_context}
 
-Sukurk 3 įvairius socialinių tinklų įrašų variantus (iki 250 simbolių kiekvienas) apie šį KONKRETŲ produktą:
+🎯 UŽDUOTIS: Sukurk 3 SKIRTINGUS socialinių tinklų įrašų variantus (iki 280 simbolių kiekvienas):
 
-1) **MARKETINGINIS**: Profesionalus, pabrėžk produkto naudą ir savybes. Naudok TIKSLŲ produkto pavadinimą iš analizės.
+---
+**1) MARKETINGINIS** 💼
+- Profesionalus, verslo tonas
+- Pabrėžk KONKREČIŲ produktų PRIVALUMUS ir funkcijas
+- Jei yra KELI produktai - paminėk VISUS pagal svarbą
+- Naudok TIKSLIUS pavadinimus iš analizės (pvz: "Plisuotos žaliuzės", "Medinės venetian", "Roletai Diena-Naktis")
+- Susieti su {season} sezonu ir jo specifika
+{f"- BŪTINAI įtraukti {holiday} tematiką (dovanų idėjos, šventinis dekoras, spec. pasiūlymai)" if holiday != "Nėra" else ""}
+- 2-3 tinkamus hashtag'us (#Žaliuzės, #{season}, etc.)
 
-2) **DRAUGIŠKAS**: Šiltas, artimas, kaip kalbėtum su kaimynu. Paaiškink kaip šis produktas pagerina gyvenimą.
+---
+**2) DRAUGIŠKAS** 🏡
+- Šiltas, artimas tonas - lyg kalbėtum su kaimynu
+- Paaiškink kaip šie produktai pagerina kasdienį gyvenimą
+- Paminėk KONKREČIUS produktus iš nuotraukų
+- Praktinės naudos ({season} kontekste)
+{f"- Natūraliai susieti su {holiday} - šeimos jaukumas, švenčių nuotaika" if holiday != "Nėra" else ""}
+- 1-2 hashtag'us
 
-3) **SU HUMORU**: Linksmas, kreatyvus, bet vis tiek informatyvus apie produktą.
+---
+**3) SU HUMORU** 😄
+- Linksmas, įsimintinas, bet INFORMATYVUS
+- Išlaikyk produktų tipus ir pavadinimus
+- Žaismingas požiūris į {season} sezoną
+{f"- {holiday} tematika su humoru (bet profesionaliai!)" if holiday != "Nėra" else ""}
+- 2-3 hashtag'us su emoji
 
-SVARBU:
-- Naudok TIKSLŲ produkto pavadinimą (pvz. "Roletai Diena-Naktis", ne tiesiog "roletai")
-- Pridėk 1-2 tinkamus #hashtag'us
-- Jei yra spalvų/medžiagos info - panaudok
-{f"- Įtraukk šventės {holiday} tematiką natūraliai" if holiday != "Nėra" else ""}
+---
+
+‼️ KRITIŠKAI SVARBU:
+1. Jei analizėje minimi KELI SKIRTINGI produktai (pvz. "plisuotos žaliuzės", "medinės žaliuzės", "roletai") - PRIVALOMA paminėti VISUS
+2. Naudok TIKSLIUS pavadinimus iš analizės (ne bendrinius)
+3. {season} sezonas turi būti AIŠKIAI matomas KIEKVIENAME tekste
+{f"4. {holiday} šventė PRIVALOMA KIEKVIENAME variante!" if holiday != "Nėra" else ""}
+5. Kiekvienas variantas turi būti UNIKALUS ir SKIRTINGO stiliaus
 
 Atskirk variantus su "---"
-    """
+Rašyk LIETUVIŠKAI, natūraliai, profesionaliai.
+"""
+    
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.8,
-        max_tokens=800
+        messages=[
+            {"role": "system", "content": "Tu esi ekspertas kuriantis įtraukiantį turinį langų dekoravimo verslui Lietuvoje. Esi kūrybiškas, tikslus ir atsižvelgi į produktų specifiką bei sezonines tendencijas."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.85,
+        max_tokens=1200
     )
     return response.choices[0].message.content.strip()
 
