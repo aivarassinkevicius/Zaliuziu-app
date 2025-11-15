@@ -92,21 +92,30 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
             # PAPRASTA formulė: watermark_size procentai tiesiai nuo mažesnio nuotraukos matmens
             # pvz: 1000px nuotrauka, 80% slider → 800px šrifto aukštis (per didelis!)
             # Geriau: 1000px, 80 slider → 80px šriftas (normalus)
-            # TIESIAI: slider reikšmė = px dydis (bet ne mažiau kaip 20)
-            font_size = max(20, int(watermark_size))
+            # TIESIAI: slider reikšmė = px dydis
+            font_size = max(30, int(watermark_size))
             
-            # Bandome įkelti geresnį fontą
-            try:
-                font = ImageFont.truetype("arial.ttf", font_size)
-            except:
+            # Bandome įkelti geresnį fontą (PRIORITY: Bold)
+            font = None
+            font_paths = [
+                "C:/Windows/Fonts/arialbd.ttf",  # Arial Bold (Windows)
+                "C:/Windows/Fonts/arial.ttf",    # Arial Regular
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Linux Bold
+                "/System/Library/Fonts/Helvetica.ttc"  # Mac
+            ]
+            
+            for font_path in font_paths:
                 try:
-                    font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
+                    font = ImageFont.truetype(font_path, font_size)
+                    break
                 except:
-                    try:
-                        font = ImageFont.truetype("arialbd.ttf", font_size)  # Bold Arial
-                    except:
-                        # Jei nepavyko, naudojame default
-                        font = ImageFont.load_default()
+                    continue
+            
+            # Jei niekas neveikė - sukuriame DIDELĮ default
+            if font is None:
+                font = ImageFont.load_default()
+                # Default font nemažas - pakartojame tekstą kad būtų didesnis
+                watermark_text = watermark_text * 2
             
             # Pozicija - dešiniame apatiniame kampe
             try:
