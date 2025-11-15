@@ -558,17 +558,14 @@ if files_to_process:
                 use_container_width=True
             )
     
-    # AI Chat asistento skyrius - REALUS REDAGAVIMAS SU MASK
+    # AI Chat asistento skyrius - SUPAPRASTINTAS
     st.markdown("---")
-    st.markdown("### 🎨 AI Objektų Šalinimas (su piešimu)")
-    st.info("✏️ **Nupiešk ant nuotraukos** kur norite ištrinti objektą, tada AI užpildys tuščią vietą!")
+    st.markdown("### 🤖 AI Foto Redaktorius (DALL-E)")
+    st.info("💬 **Aprašyk ką norite pakeisti** - AI padarys! Pvz: 'remove the lamp', 'make background white'")
     
     # Inicializuojame
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
-    
-    if 'ai_edited_images' not in st.session_state:
-        st.session_state.ai_edited_images = []
     
     # Pasirinkti kurią nuotrauką redaguoti
     photo_to_edit = st.selectbox(
@@ -577,84 +574,63 @@ if files_to_process:
         format_func=lambda x: f"Nuotrauka {x+1}"
     )
     
-    # Parodyti nuotrauką ir leisti piešti
+    # Parodyti nuotrauką
     if len(files_to_process) > 0:
-        from streamlit_drawable_canvas import st_canvas
-        import numpy as np
-        
         selected_file = files_to_process[photo_to_edit]
         selected_file.seek(0)
-        img = Image.open(selected_file)
+        st.image(selected_file, caption="Originali nuotrauka", use_container_width=True)
         
-        # Konvertuojame į RGB
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-        
-        # Resize jei per didelė
-        display_width = 600
-        if img.width > display_width:
-            ratio = display_width / img.width
-            display_height = int(img.height * ratio)
-            img = img.resize((display_width, display_height), Image.Resampling.LANCZOS)
-        else:
-            display_width = img.width
-            display_height = img.height
-        
-        st.markdown("**✏️ Nupiešk RAUDONAI kur norite ištrinti:**")
-        
-        # Canvas piešimui - konvertuojame į numpy array
-        img_array = np.array(img)
-        
-        canvas_result = st_canvas(
-            fill_color="rgba(255, 0, 0, 0.5)",
-            stroke_width=20,
-            stroke_color="#FF0000",
-            background_image=Image.fromarray(img_array),
-            update_streamlit=True,
-            height=display_height,
-            width=display_width,
-            drawing_mode="freedraw",
-            key=f"canvas_{photo_to_edit}",
+        # Aprašymas ko norite
+        user_prompt = st.text_area(
+            "✍️ Ką norite pakeisti? (angliškai)",
+            placeholder="Pvz: remove the faucet and fill with floor texture\nPvz: remove lamp from left corner\nPvz: change background to pure white",
+            height=80
         )
         
-        # Instrukcijos
-        col1, col2 = st.columns(2)
-        with col1:
-            st.info("🖌️ Piešk raudonai per objektą kurį norite ištrinti")
-        with col2:
-            st.success("✅ Tada spausti 'Redaguoti su AI'")
-        
-        # Aprašymas ką AI turėtų padaryti
-        user_prompt = st.text_input(
-            "💬 Kaip užpildyti tuščią vietą? (angliškai)",
-            value="remove object and fill naturally",
-            help="Pvz: 'wooden floor', 'white wall', 'natural background'"
-        )
+        # Papildomi nustatymai
+        with st.expander("⚙️ Papildomi nustatymai"):
+            st.info("DALL-E automatiškai nuspręs kur keisti pagal jūsų aprašymą")
         
         edit_button = st.button("✨ Redaguoti su AI", type="primary", use_container_width=True)
         
-        if edit_button and canvas_result.image_data is not None:
-            with st.spinner("🎨 DALL-E šalina objektą... (10-20 sek)"):
+        if edit_button and user_prompt:
+            with st.spinner("🎨 DALL-E dirba... (10-20 sek)"):
                 try:
-                    # Gauname mask iš canvas
-                    mask_data = canvas_result.image_data
+                    # Supaprastinta versija - be mask, tik su prompt
+                    selected_file.seek(0)
+                    img = Image.open(selected_file)
                     
-                    # Konvertuojame mask į PIL Image
-                    mask_img = Image.fromarray(mask_data.astype('uint8'), 'RGBA')
+                    # Konvertuojame į RGBA
+                    if img.mode != 'RGBA':
+                        img = img.convert('RGBA')
                     
-                    # Sukuriame juoda-baltą mask (baltos vietos - kur trinti)
-                    mask_gray = mask_img.convert('L')
+                    # Resize jei reikia
+                    max_size = 1024
+                    if img.width > max_size or img.height > max_size:
+                        img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
                     
-                    # Išsaugome mask į BytesIO
-                    mask_bytes = io.BytesIO()
-                    mask_gray.save(mask_bytes, format='PNG')
-                    mask_bytes.seek(0)
+                    # Išsaugome
+                    img_bytes = io.BytesIO()
+                    img.save(img_bytes, format='PNG')
+                    img_bytes.seek(0)
+                    img_bytes.name = 'image.png'
                     
-                    # Redaguojame su AI
-                    edited_img, message = edit_image_with_ai(selected_file, mask_bytes, user_prompt)
+                    # DALL-E edit be mask - nuspręs pats kur keisti
+                    response = client.images.edit(
+                        image=img_bytes,
+                        prompt=user_prompt,
+                        n=1,
+                        size="1024x1024"
+                    )
                     
-                    if edited_img:
-                        st.success(message)
+                    # Gauname rezultatą
+                    image_url = response.data[0].url
+                    img_response = requests.get(image_url)
+                    
+                    if img_response.status_code == 200:
+                        edited_img = io.BytesIO(img_response.content)
+                        
+                        st.success("✅ Nuotrauka redaguota!")
                         
                         # Parodome rezultatą
                         col1, col2 = st.columns(2)
@@ -679,9 +655,8 @@ if files_to_process:
                         )
                         
                         st.info("💰 Kaina: ~$0.04")
-                        
                     else:
-                        st.error(message)
+                        st.error(f"❌ Klaida atsisiunčiant: {img_response.status_code}")
                         
                 except Exception as e:
                     st.error(f"❌ Klaida: {str(e)}")
@@ -689,7 +664,7 @@ if files_to_process:
                     st.error(traceback.format_exc())
         
         elif edit_button:
-            st.warning("⚠️ Pirmiausia nupiešk ant nuotraukos kur norite ištrinti!")
+            st.warning("⚠️ Parašykite ką norite pakeisti!")
     
     # Mygtukas išvalyti failus
     st.markdown("---")
