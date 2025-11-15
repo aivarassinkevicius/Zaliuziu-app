@@ -788,24 +788,42 @@ if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_cont
     progress_bar = st.progress(0)
     status_text = st.empty()
     
+# Apdorojimas tik jei yra failų ir trigger'is aktyvuotas
+if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_content and files_to_process and len(files_to_process) > 0:
+    st.session_state.trigger_ai_content = False  # Reset trigger
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
     all_analyses = []
     
-    # Rodyti nuotraukas apdorojimo metu
-    st.subheader(f"📸 Apdorojamos nuotraukos ({len(files_to_process)})")
-    cols = st.columns(min(len(files_to_process), 4))
+    # Analizuojame REDAGUOTAS nuotraukas (su vandens ženklu, spalvų koregavimu)
     for i, file in enumerate(files_to_process):
-        with cols[i]:
-            st.image(file, caption=f"Nuotrauka {i+1}", use_container_width=True)
-            
-    for i, file in enumerate(files_to_process):
-        status_text.text(f"🔍 Analizuojama nuotrauka {i+1}/{len(files_to_process)}...")
+        status_text.text(f"🔍 Analizuojama redaguota nuotrauka {i+1}/{len(files_to_process)}...")
         progress_bar.progress((i + 1) / (len(files_to_process) + 1))
         
         try:
-            # Konvertuojame į base64
-            image_b64 = image_to_base64(file)
+            file.seek(0)
             
-            # Analizuojame
+            # SVARBU: Vandens ženklas tik ant paskutinės nuotraukos (jei jų daugiau nei 1)
+            show_watermark = add_watermark and (len(files_to_process) == 1 or i == len(files_to_process) - 1)
+            
+            # Sukuriame redaguotą nuotrauką (su visais efektais)
+            edited = add_marketing_overlay(
+                file,
+                add_watermark=show_watermark,
+                add_border=add_border,
+                brightness=brightness,
+                contrast=contrast,
+                saturation=saturation,
+                watermark_text=watermark_text,
+                watermark_size=watermark_size
+            )
+            edited.seek(0)
+            
+            # Konvertuojame REDAGUOTĄ nuotrauką į base64
+            image_b64 = base64.b64encode(edited.read()).decode()
+            
+            # Analizuojame redaguotą nuotrauką
             analysis = analyze_image(image_b64)
             all_analyses.append(analysis)
             
