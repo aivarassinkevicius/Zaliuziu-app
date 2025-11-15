@@ -150,8 +150,8 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
         image_file.seek(0)
         return image_file
 
-def edit_image_with_ai(image_file, prompt):
-    """Redaguoja nuotrauką naudojant OpenAI DALL-E - TIKRAS objektų šalinimas"""
+def edit_image_with_ai(image_file, mask_file, prompt):
+    """Redaguoja nuotrauką naudojant OpenAI DALL-E su mask'u - TIKRAS objektų šalinimas"""
     try:
         # Konvertuojame nuotrauką
         image_file.seek(0)
@@ -163,19 +163,39 @@ def edit_image_with_ai(image_file, prompt):
         
         # DALL-E reikalauja 1024x1024 arba mažiau
         max_size = 1024
+        original_size = (img.width, img.height)
         if img.width > max_size or img.height > max_size:
             img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
         
-        # Išsaugome kaip PNG su tikru failo pavadinimu
+        # Išsaugome kaip PNG
         img_bytes = io.BytesIO()
         img.save(img_bytes, format='PNG')
         img_bytes.seek(0)
-        img_bytes.name = 'image.png'  # SVARBU: DALL-E reikia failo pavadinimo
+        img_bytes.name = 'image.png'
         
-        # Naudojame OpenAI DALL-E Edit - tikrą redagavimą
+        # Paruošiame mask'ą
+        mask_file.seek(0)
+        mask = Image.open(mask_file)
+        
+        # Resize mask į tą patį dydį kaip image
+        if mask.size != img.size:
+            mask = mask.resize(img.size, Image.Resampling.LANCZOS)
+        
+        # Konvertuojame mask į juoda-baltą (baltos vietos bus keičiamos)
+        if mask.mode != 'RGBA':
+            mask = mask.convert('RGBA')
+        
+        # Išsaugome mask
+        mask_bytes = io.BytesIO()
+        mask.save(mask_bytes, format='PNG')
+        mask_bytes.seek(0)
+        mask_bytes.name = 'mask.png'
+        
+        # Naudojame OpenAI DALL-E Edit su mask'u
         response = client.images.edit(
             image=img_bytes,
-            prompt=f"Professional photo editing: {prompt}. Keep the same style, lighting and quality. Only modify what was requested. Realistic, high quality.",
+            mask=mask_bytes,
+            prompt=f"Fill the masked area naturally matching the surrounding. {prompt}. Professional photo editing, realistic, high quality, seamless blend.",
             n=1,
             size="1024x1024"
         )
@@ -538,12 +558,12 @@ if files_to_process:
                 use_container_width=True
             )
     
-    # AI Chat asistento skyrius - REALUS REDAGAVIMAS
+    # AI Chat asistento skyrius - REALUS REDAGAVIMAS SU MASK
     st.markdown("---")
-    st.markdown("### 🤖 AI Foto Redaktorius (DALL-E)")
-    st.info("💬 **Tikras objektų šalinimas!** Pvz: 'remove the faucet', 'remove person from left', 'change background to white' (rašykite ANGLIŠKAI)")
+    st.markdown("### 🎨 AI Objektų Šalinimas (su piešimu)")
+    st.info("✏️ **Nupiešk ant nuotraukos** kur norite ištrinti objektą, tada AI užpildys tuščią vietą!")
     
-    # Inicializuojame chat istoriją
+    # Inicializuojame
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
     
@@ -552,86 +572,116 @@ if files_to_process:
     
     # Pasirinkti kurią nuotrauką redaguoti
     photo_to_edit = st.selectbox(
-        "📸 Pasirinkite nuotrauką redagavimui:",
+        "📸 Pasirinkite nuotrauką:",
         options=range(len(files_to_process)),
         format_func=lambda x: f"Nuotrauka {x+1}"
     )
     
-    # Chat input laukas
-    user_message = st.text_area(
-        "✍️ Jūsų prašymas AI (ANGLIŠKAI):",
-        placeholder="Pvz: remove the faucet from the photo\nPvz: change background to white\nPvz: remove person from left side",
-        height=100,
-        key="ai_chat_input"
-    )
-    
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        edit_button = st.button("✨ Redaguoti su AI (DALL-E)", type="primary", use_container_width=True)
-    with col2:
-        st.success("🔑 OpenAI")
-    
-    if edit_button and user_message:
-        with st.spinner(f"🎨 DALL-E redaguoja nuotrauką {photo_to_edit + 1}... (5-15 sek)"):
-            try:
-                # Paimame pasirinktą nuotrauką
-                selected_file = files_to_process[photo_to_edit]
-                selected_file.seek(0)
-                
-                # Redaguojame su AI
-                edited_img, message = edit_image_with_ai(selected_file, user_message)
-                
-                if edited_img:
-                    st.success(message)
+    # Parodyti nuotrauką ir leisti piešti
+    if len(files_to_process) > 0:
+        from streamlit_drawable_canvas import st_canvas
+        
+        selected_file = files_to_process[photo_to_edit]
+        selected_file.seek(0)
+        img = Image.open(selected_file)
+        
+        # Resize jei per didelė
+        display_width = 600
+        if img.width > display_width:
+            ratio = display_width / img.width
+            display_height = int(img.height * ratio)
+        else:
+            display_width = img.width
+            display_height = img.height
+        
+        st.markdown("**✏️ Nupiešk RAUDONAI kur norite ištrinti:**")
+        
+        # Canvas piešimui
+        canvas_result = st_canvas(
+            fill_color="rgba(255, 0, 0, 0.5)",
+            stroke_width=20,
+            stroke_color="#FF0000",
+            background_image=img,
+            update_streamlit=True,
+            height=display_height,
+            width=display_width,
+            drawing_mode="freedraw",
+            key=f"canvas_{photo_to_edit}",
+        )
+        
+        # Instrukcijos
+        col1, col2 = st.columns(2)
+        with col1:
+            st.info("🖌️ Piešk raudonai per objektą kurį norite ištrinti")
+        with col2:
+            st.success("✅ Tada spausti 'Redaguoti su AI'")
+        
+        # Aprašymas ką AI turėtų padaryti
+        user_prompt = st.text_input(
+            "💬 Kaip užpildyti tuščią vietą? (angliškai)",
+            value="remove object and fill naturally",
+            help="Pvz: 'wooden floor', 'white wall', 'natural background'"
+        )
+        
+        edit_button = st.button("✨ Redaguoti su AI", type="primary", use_container_width=True)
+        
+        if edit_button and canvas_result.image_data is not None:
+            with st.spinner("🎨 DALL-E šalina objektą... (10-20 sek)"):
+                try:
+                    # Gauname mask iš canvas
+                    mask_data = canvas_result.image_data
                     
-                    # Parodome rezultatą
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.markdown("**🖼️ Originali:**")
-                        selected_file.seek(0)
-                        st.image(selected_file, use_container_width=True)
+                    # Konvertuojame mask į PIL Image
+                    mask_img = Image.fromarray(mask_data.astype('uint8'), 'RGBA')
                     
-                    with col2:
-                        st.markdown("**✨ AI redaguota:**")
+                    # Sukuriame juoda-baltą mask (baltos vietos - kur trinti)
+                    mask_gray = mask_img.convert('L')
+                    
+                    # Išsaugome mask į BytesIO
+                    mask_bytes = io.BytesIO()
+                    mask_gray.save(mask_bytes, format='PNG')
+                    mask_bytes.seek(0)
+                    
+                    # Redaguojame su AI
+                    edited_img, message = edit_image_with_ai(selected_file, mask_bytes, user_prompt)
+                    
+                    if edited_img:
+                        st.success(message)
+                        
+                        # Parodome rezultatą
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.markdown("**🖼️ Originali:**")
+                            selected_file.seek(0)
+                            st.image(selected_file, use_container_width=True)
+                        
+                        with col2:
+                            st.markdown("**✨ AI redaguota:**")
+                            edited_img.seek(0)
+                            st.image(edited_img, use_container_width=True)
+                        
+                        # Download
                         edited_img.seek(0)
-                        st.image(edited_img, use_container_width=True)
-                    
-                    # Download mygtukas
-                    edited_img.seek(0)
-                    st.download_button(
-                        label="📥 Atsisiųsti AI redaguotą nuotrauką",
-                        data=edited_img.getvalue(),
-                        file_name=f"ai_edited_{photo_to_edit + 1}.png",
-                        mime="image/png",
-                        use_container_width=True
-                    )
-                    
-                    # Išsaugome į istoriją
-                    st.session_state.chat_history.append({
-                        'user': user_message,
-                        'ai': message,
-                        'photo_index': photo_to_edit + 1
-                    })
-                    
-                    # Parodome kainą
-                    st.info("💰 Kaina: ~$0.04 (DALL-E)")
-                    
-                else:
-                    st.error(message)
-                    
-            except Exception as e:
-                st.error(f"❌ Klaida: {str(e)}")
-                import traceback
-                st.error(traceback.format_exc())
-    
-    # Rodyti chat istoriją
-    if st.session_state.chat_history:
-        with st.expander("📜 Redagavimo istorija"):
-            for i, msg in enumerate(reversed(st.session_state.chat_history[-5:])):  # Paskutiniai 5
-                st.markdown(f"**🖼️ Nuotrauka {msg['photo_index']}:**")
-                st.markdown(f"**Jūs:** {msg['user']}")
-                st.markdown(f"**AI:** {msg['ai']}")
-                st.markdown("---")
+                        st.download_button(
+                            label="📥 Atsisiųsti",
+                            data=edited_img.getvalue(),
+                            file_name=f"edited_{photo_to_edit + 1}.png",
+                            mime="image/png",
+                            use_container_width=True
+                        )
+                        
+                        st.info("💰 Kaina: ~$0.04")
+                        
+                    else:
+                        st.error(message)
+                        
+                except Exception as e:
+                    st.error(f"❌ Klaida: {str(e)}")
+                    import traceback
+                    st.error(traceback.format_exc())
+        
+        elif edit_button:
+            st.warning("⚠️ Pirmiausia nupiešk ant nuotraukos kur norite ištrinti!")
     
     # Mygtukas išvalyti failus
     st.markdown("---")

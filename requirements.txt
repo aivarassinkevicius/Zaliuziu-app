@@ -5,3 +5,4 @@ Pillow==10.1.0
 streamlit-camera-input-live
 replicate
 requests
+streamlit-drawable-canvas
