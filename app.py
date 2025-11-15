@@ -3,8 +3,6 @@ import io, os, base64
 from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image
-import replicate
-import requests
 
 # Bandome importuoti camera input (jei neveiks, praleidžia)
 try:
@@ -16,7 +14,7 @@ except ImportError:
 # ---------- Nustatymai ----------
 load_dotenv()
 
-# Version: 2.2 - AI Image Editing with Replicate
+# Version: 2.3 - Simplified, no AI editing
 # Bandome gauti API raktą iš .env failo (vietinis) arba Streamlit secrets (cloud)
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
@@ -29,14 +27,6 @@ if not api_key:
 if not api_key:
     st.error("❌ OpenAI API raktas nerastas! Patikrinkite konfigūraciją.")
     st.stop()
-
-# Replicate API raktas
-replicate_key = os.getenv("REPLICATE_API_TOKEN")
-if not replicate_key:
-    try:
-        replicate_key = st.secrets.get("REPLICATE_API_TOKEN")
-    except:
-        pass
 
 client = OpenAI(api_key=api_key)
 
@@ -51,7 +41,7 @@ st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tin
 
 # ---------- Pagalbinės funkcijos ----------
 
-def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=80):
+def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=150):
     """
     Prideda marketinginius elementus prie nuotraukos:
     - Vandens ženklą (ryškų, baltą su šešėliu)
@@ -149,70 +139,6 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
         st.error(traceback.format_exc())
         image_file.seek(0)
         return image_file
-
-def edit_image_with_ai(image_file, mask_file, prompt):
-    """Redaguoja nuotrauką naudojant OpenAI DALL-E su mask'u - TIKRAS objektų šalinimas"""
-    try:
-        # Konvertuojame nuotrauką
-        image_file.seek(0)
-        img = Image.open(image_file)
-        
-        # Konvertuojame į RGBA (reikia DALL-E)
-        if img.mode != 'RGBA':
-            img = img.convert('RGBA')
-        
-        # DALL-E reikalauja 1024x1024 arba mažiau
-        max_size = 1024
-        original_size = (img.width, img.height)
-        if img.width > max_size or img.height > max_size:
-            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-        
-        # Išsaugome kaip PNG
-        img_bytes = io.BytesIO()
-        img.save(img_bytes, format='PNG')
-        img_bytes.seek(0)
-        img_bytes.name = 'image.png'
-        
-        # Paruošiame mask'ą
-        mask_file.seek(0)
-        mask = Image.open(mask_file)
-        
-        # Resize mask į tą patį dydį kaip image
-        if mask.size != img.size:
-            mask = mask.resize(img.size, Image.Resampling.LANCZOS)
-        
-        # Konvertuojame mask į juoda-baltą (baltos vietos bus keičiamos)
-        if mask.mode != 'RGBA':
-            mask = mask.convert('RGBA')
-        
-        # Išsaugome mask
-        mask_bytes = io.BytesIO()
-        mask.save(mask_bytes, format='PNG')
-        mask_bytes.seek(0)
-        mask_bytes.name = 'mask.png'
-        
-        # Naudojame OpenAI DALL-E Edit su mask'u
-        response = client.images.edit(
-            image=img_bytes,
-            mask=mask_bytes,
-            prompt=f"Fill the masked area naturally matching the surrounding. {prompt}. Professional photo editing, realistic, high quality, seamless blend.",
-            n=1,
-            size="1024x1024"
-        )
-        
-        # Gauname rezultatą
-        image_url = response.data[0].url
-        
-        # Atsisiunčiame
-        img_response = requests.get(image_url)
-        if img_response.status_code == 200:
-            edited_image = io.BytesIO(img_response.content)
-            return edited_image, "✅ Nuotrauka sėkmingai redaguota su DALL-E!"
-        else:
-            return None, f"❌ Nepavyko atsisiųsti: {img_response.status_code}"
-            
-    except Exception as e:
-        return None, f"❌ Klaida: {str(e)}"
 
 def analyze_image(image_bytes):
     """Naudoja GPT-4o-mini vaizdo analizei su konkrečiu produktų atpažinimu"""
@@ -313,7 +239,7 @@ st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
 add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=True, help="Pridės jūsų tekstą dešiniame apatiniame kampe")
 if add_watermark:
     watermark_text = st.sidebar.text_input("Vandens ženklo tekstas", value="#RūbaiLangams", help="Pvz: #RūbaiLangams arba © Jūsų Įmonė")
-    watermark_size = st.sidebar.slider("📏 Vandens ženklo dydis (px)", 20, 500, 120, 10, help="Šrifto dydis pikseliais. 120px = vidutinis, 200px = didelis")
+    watermark_size = st.sidebar.slider("📏 Vandens ženklo dydis (px)", 30, 300, 150, 10, help="Šrifto dydis pikseliais. 150px = vidutinis, 250px = DIDELIS")
 else:
     watermark_text = ""
     watermark_size = 120
@@ -557,114 +483,6 @@ if files_to_process:
                 key=f"download_{i}",
                 use_container_width=True
             )
-    
-    # AI Chat asistento skyrius - SUPAPRASTINTAS
-    st.markdown("---")
-    st.markdown("### 🤖 AI Foto Redaktorius (DALL-E)")
-    st.info("💬 **Aprašyk ką norite pakeisti** - AI padarys! Pvz: 'remove the lamp', 'make background white'")
-    
-    # Inicializuojame
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
-    
-    # Pasirinkti kurią nuotrauką redaguoti
-    photo_to_edit = st.selectbox(
-        "📸 Pasirinkite nuotrauką:",
-        options=range(len(files_to_process)),
-        format_func=lambda x: f"Nuotrauka {x+1}"
-    )
-    
-    # Parodyti nuotrauką
-    if len(files_to_process) > 0:
-        selected_file = files_to_process[photo_to_edit]
-        selected_file.seek(0)
-        st.image(selected_file, caption="Originali nuotrauka", use_container_width=True)
-        
-        # Aprašymas ko norite
-        user_prompt = st.text_area(
-            "✍️ Ką norite pakeisti? (angliškai)",
-            placeholder="Pvz: remove the faucet and fill with floor texture\nPvz: remove lamp from left corner\nPvz: change background to pure white",
-            height=80
-        )
-        
-        # Papildomi nustatymai
-        with st.expander("⚙️ Papildomi nustatymai"):
-            st.info("DALL-E automatiškai nuspręs kur keisti pagal jūsų aprašymą")
-        
-        edit_button = st.button("✨ Redaguoti su AI", type="primary", use_container_width=True)
-        
-        if edit_button and user_prompt:
-            with st.spinner("🎨 DALL-E dirba... (10-20 sek)"):
-                try:
-                    # Supaprastinta versija - be mask, tik su prompt
-                    selected_file.seek(0)
-                    img = Image.open(selected_file)
-                    
-                    # Konvertuojame į RGBA
-                    if img.mode != 'RGBA':
-                        img = img.convert('RGBA')
-                    
-                    # Resize jei reikia
-                    max_size = 1024
-                    if img.width > max_size or img.height > max_size:
-                        img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-                    
-                    # Išsaugome
-                    img_bytes = io.BytesIO()
-                    img.save(img_bytes, format='PNG')
-                    img_bytes.seek(0)
-                    img_bytes.name = 'image.png'
-                    
-                    # DALL-E edit be mask - nuspręs pats kur keisti
-                    response = client.images.edit(
-                        image=img_bytes,
-                        prompt=user_prompt,
-                        n=1,
-                        size="1024x1024"
-                    )
-                    
-                    # Gauname rezultatą
-                    image_url = response.data[0].url
-                    img_response = requests.get(image_url)
-                    
-                    if img_response.status_code == 200:
-                        edited_img = io.BytesIO(img_response.content)
-                        
-                        st.success("✅ Nuotrauka redaguota!")
-                        
-                        # Parodome rezultatą
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.markdown("**🖼️ Originali:**")
-                            selected_file.seek(0)
-                            st.image(selected_file, use_container_width=True)
-                        
-                        with col2:
-                            st.markdown("**✨ AI redaguota:**")
-                            edited_img.seek(0)
-                            st.image(edited_img, use_container_width=True)
-                        
-                        # Download
-                        edited_img.seek(0)
-                        st.download_button(
-                            label="📥 Atsisiųsti",
-                            data=edited_img.getvalue(),
-                            file_name=f"edited_{photo_to_edit + 1}.png",
-                            mime="image/png",
-                            use_container_width=True
-                        )
-                        
-                        st.info("💰 Kaina: ~$0.04")
-                    else:
-                        st.error(f"❌ Klaida atsisiunčiant: {img_response.status_code}")
-                        
-                except Exception as e:
-                    st.error(f"❌ Klaida: {str(e)}")
-                    import traceback
-                    st.error(traceback.format_exc())
-        
-        elif edit_button:
-            st.warning("⚠️ Parašykite ką norite pakeisti!")
     
     # Mygtukas išvalyti failus
     st.markdown("---")
