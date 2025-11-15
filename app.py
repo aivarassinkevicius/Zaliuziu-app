@@ -509,6 +509,14 @@ if files_to_process:
     st.info(f"✨ Automatinė tema: **{auto_theme}** (pagal jūsų nustatymus kairėje)")
     
     if len(files_to_process) >= 2:
+        # Stilius pasirinkimas
+        collage_style = st.selectbox(
+            "🎨 Collage stilius:",
+            ["Polaroid (kaip nuotraukos su rėmeliais)", "Grid (tvarkingas tinklelis)", "Scrapbook (kūrybiškas)"],
+            help="Pasirinkite collage stilių",
+            key="collage_style_selector"
+        )
+        
         collage_layout = st.selectbox(
             "📐 Išdėstymas:",
             ["2x2 Grid (4 nuotraukos)", "1x2 Horizontal (2 nuotraukos)", "2x1 Vertical (2 nuotraukos)", "1x3 Horizontal (3 nuotraukos)"],
@@ -662,17 +670,9 @@ if files_to_process:
                     collage.save(collage_bytes, format='JPEG', quality=95)
                     collage_bytes.seek(0)
                     
-                    st.success("✅ Collage sukurtas!")
-                    st.image(collage_bytes, caption="Jūsų Collage", use_container_width=True)
-                    
-                    collage_bytes.seek(0)
-                    st.download_button(
-                        label="📥 Atsisiųsti Collage",
-                        data=collage_bytes.getvalue(),
-                        file_name=f"collage_{season}_{holiday}.jpg",
-                        mime="image/jpeg",
-                        use_container_width=True
-                    )
+                    # Išsaugome į session_state
+                    st.session_state.collage_result = collage_bytes.getvalue()
+                    st.session_state.collage_filename = f"collage_{season}_{holiday}.jpg"
                     
                 except Exception as e:
                     st.error(f"❌ Klaida kuriant collage: {str(e)}")
@@ -681,10 +681,34 @@ if files_to_process:
     else:
         st.warning("⚠️ Collage reikia bent 2 nuotraukų!")
     
+    # Rodyti collage rezultatą (jei sukurtas)
+    if "collage_result" in st.session_state and st.session_state.collage_result:
+        st.markdown("---")
+        st.markdown("### ✅ Sukurtas Collage")
+        st.image(st.session_state.collage_result, caption="Jūsų Collage", use_container_width=True)
+        
+        st.download_button(
+            label="📥 Atsisiųsti Collage",
+            data=st.session_state.collage_result,
+            file_name=st.session_state.collage_filename,
+            mime="image/jpeg",
+            use_container_width=True,
+            key="download_collage_persistent"
+        )
+    
+    # AI TURINIO GENERAVIMAS
+    st.markdown("---")
+    st.markdown("### 📝 AI Turinio Generavimas")
+    st.info("💡 Sukurkite tekstus socialiniams tinklams pagal jūsų nuotraukas")
+    
     # Mygtukas išvalyti failus
     st.markdown("---")
-    if st.button("🗑️ Išvalyti visus failus", type="secondary", use_container_width=True):
+    if st.button("🗑️ Išvalyti visus failus ir rezultatus", type="secondary", use_container_width=True):
         st.session_state.uploaded_files = []
+        if "collage_result" in st.session_state:
+            del st.session_state.collage_result
+        if "ai_content_result" in st.session_state:
+            del st.session_state.ai_content_result
         st.rerun()
     
     if len(files_to_process) > 4:
@@ -733,26 +757,34 @@ if create_content and files_to_process and len(files_to_process) > 0:
         try:
             captions = generate_captions(combined_analysis, season, holiday)
             
-            st.success("✅ Turinys sėkmingai sukurtas!")
-            
-            # Rezultatai
-            st.subheader("📝 Socialinių tinklų įrašai")
-            
-            # Rodyti sugeneruotą turinį
-            st.markdown("### 🎯 Paruošti tekstai:")
-            st.text_area("Kopijuokite tekstą:", value=captions, height=200)
-            
-            # Analitikos informacija
-            with st.expander("📊 Detali analizė"):
-                st.markdown("**Vaizdų analizė:**")
-                for i, analysis in enumerate(all_analyses):
-                    st.markdown(f"**Nuotrauka {i+1}:** {analysis}")
+            # Išsaugome į session_state
+            st.session_state.ai_content_result = captions
+            st.session_state.ai_analyses = all_analyses
             
         except Exception as e:
             st.error(f"❌ Klaida generuojant turinį: {e}")
     
     progress_bar.empty()
     status_text.empty()
+
+# Rodyti AI turinio rezultatus (jei sukurti)
+if "ai_content_result" in st.session_state and st.session_state.ai_content_result:
+    st.markdown("---")
+    st.success("✅ Turinys sėkmingai sukurtas!")
+    
+    # Rezultatai
+    st.subheader("📝 Socialinių tinklų įrašai")
+    
+    # Rodyti sugeneruotą turinį
+    st.markdown("### 🎯 Paruošti tekstai:")
+    st.text_area("Kopijuokite tekstą:", value=st.session_state.ai_content_result, height=200, key="ai_content_persistent")
+    
+    # Analitikos informacija
+    if "ai_analyses" in st.session_state:
+        with st.expander("📊 Detali analizė"):
+            st.markdown("**Vaizdų analizė:**")
+            for i, analysis in enumerate(st.session_state.ai_analyses):
+                st.markdown(f"**Nuotrauka {i+1}:** {analysis}")
 
 elif create_content and (not files_to_process or len(files_to_process) == 0):
     st.warning("⚠️ Prašome pirmiausia įkelti bent vieną nuotrauką!")
