@@ -41,47 +41,71 @@ st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tin
 
 # ---------- Pagalbinės funkcijos ----------
 
-def compress_image(image_file, max_size_mb=1, max_dimension=1920):
+def add_marketing_overlay(image_file, add_logo=False, add_watermark=False, brightness=1.0, contrast=1.0, saturation=1.0):
     """
-    Sumažina nuotrauką iki nurodyto dydžio ir rezoliucijos.
-    Tai išsprendžia mobilių įkėlimo problemas ir sutaupo API kaštus.
+    Prideda marketinginius elementus prie nuotraukos:
+    - Logotipą (jei įkeltas)
+    - Vandens ženklą
+    - Spalvų koregavimą (šviesumas, kontrastas, sodrumas)
     """
     try:
+        from PIL import ImageEnhance, ImageDraw, ImageFont
+        
         # Atidarome nuotrauką
         img = Image.open(image_file)
         
-        # Konvertuojame į RGB jei reikia (pvz. PNG su alpha kanalu)
+        # Konvertuojame į RGB jei reikia
         if img.mode in ('RGBA', 'LA', 'P'):
             background = Image.new('RGB', img.size, (255, 255, 255))
             if img.mode == 'P':
                 img = img.convert('RGBA')
             background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
             img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
         
-        # Sumažiname rezoliuciją jei per didelė
-        if max(img.size) > max_dimension:
-            img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+        # Spalvų koregavimai
+        if brightness != 1.0:
+            enhancer = ImageEnhance.Brightness(img)
+            img = enhancer.enhance(brightness)
         
-        # Išsaugome į bytes su progressyviu mažinimu kokybės
-        output = io.BytesIO()
-        quality = 95
+        if contrast != 1.0:
+            enhancer = ImageEnhance.Contrast(img)
+            img = enhancer.enhance(contrast)
         
-        while quality > 20:
-            output.seek(0)
-            output.truncate()
-            img.save(output, format='JPEG', quality=quality, optimize=True)
+        if saturation != 1.0:
+            enhancer = ImageEnhance.Color(img)
+            img = enhancer.enhance(saturation)
+        
+        # Vandens ženklas
+        if add_watermark:
+            draw = ImageDraw.Draw(img)
+            width, height = img.size
             
-            size_mb = output.tell() / (1024 * 1024)
-            if size_mb <= max_size_mb:
-                break
-            quality -= 5
+            # Naudojame default fontą
+            watermark_text = "© Jūsų įmonė"
+            
+            # Pozicija - dešiniame apatiniame kampe
+            text_bbox = draw.textbbox((0, 0), watermark_text)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
+            
+            x = width - text_width - 20
+            y = height - text_height - 20
+            
+            # Piešiame šešėlį
+            draw.text((x+2, y+2), watermark_text, fill=(0, 0, 0, 128))
+            # Piešiame tekstą
+            draw.text((x, y), watermark_text, fill=(255, 255, 255, 200))
         
+        # Išsaugome į bytes
+        output = io.BytesIO()
+        img.save(output, format='JPEG', quality=95, optimize=True)
         output.seek(0)
         return output
         
     except Exception as e:
-        st.error(f"Klaida mažinant nuotrauką: {e}")
-        # Jei nepavyko sumažinti, grąžiname originalą
+        st.error(f"Klaida redaguojant nuotrauką: {e}")
         image_file.seek(0)
         return image_file
 
@@ -154,10 +178,9 @@ Atskirk variantus su "---"
     return response.choices[0].message.content.strip()
 
 def image_to_base64(image_file):
-    """Konvertuoja įkeltą failą į base64 su automatine kompresija"""
-    # Pirmiausia sumažiname nuotrauką
-    compressed = compress_image(image_file, max_size_mb=1, max_dimension=1920)
-    return base64.b64encode(compressed.getvalue()).decode()
+    """Konvertuoja įkeltą failą į base64 be kompresijos"""
+    image_file.seek(0)
+    return base64.b64encode(image_file.read()).decode()
 
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
@@ -178,6 +201,14 @@ holiday = st.sidebar.selectbox(
 )
 
 auto_process = st.sidebar.checkbox("🤖 Automatinis apdorojimas", value=True)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
+
+add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=False)
+brightness = st.sidebar.slider("☀️ Šviesumas", 0.5, 1.5, 1.0, 0.1)
+contrast = st.sidebar.slider("🎭 Kontrastas", 0.5, 1.5, 1.0, 0.1)
+saturation = st.sidebar.slider("🎨 Sodrumas", 0.5, 1.5, 1.0, 0.1)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotraukas su žaliuzėmis ar roletais.")
@@ -227,7 +258,6 @@ st.markdown("""
 # Patikriname ar yra įkeltų failų
 # Mobiliai optimizuotas failų įkėlimas
 st.markdown("### 📸 Įkelkite nuotraukas")
-st.info("💡 **Patarimas**: Nuotraukos automatiškai sumažinamos iki 1 MB - tai pagreitina įkėlimą ir sutaupo API kaštus!")
 
 # Sukuriame tabs skirtingoms įkėlimo opcijoms
 tab1, tab2, tab3 = st.tabs(["📁 Failų įkėlimas", "📷 Kamera", "🔧 Rankiniu būdu"])
@@ -300,10 +330,6 @@ with tab3:
                     st.session_state.manual_files = []
                 
                 if len(st.session_state.manual_files) < 4:
-                    # Informuojame apie kompresiją jei failas didelis
-                    if file_size_mb > 2:
-                        st.info("🗜️ Didelė nuotrauka - bus automatiškai sumažinta")
-                    
                     st.session_state.manual_files.append(single_file)
                     st.success(f"Pridėta! Iš viso: {len(st.session_state.manual_files)}")
                     st.rerun()
@@ -369,11 +395,11 @@ if files_to_process:
     
     col1, col2 = st.columns(2)
     with col1:
-        # Mygtukas atsisiųsti sumažintas nuotraukas
-        if st.button("💾 Atsisiųsti redaguotas nuotraukas", type="secondary"):
-            st.info("🗜️ Ruošiamos sumažintos nuotraukos...")
+        # Mygtukas atsisiųsti redaguotas nuotraukas
+        if st.button("🎨 Atsisiųsti redaguotas nuotraukas", type="secondary"):
+            st.info("🎨 Ruošiamos redaguotos nuotraukos...")
             
-            # Sukuriame ZIP archyvą su sumažintomis nuotraukomis
+            # Sukuriame ZIP archyvą su redaguotomis nuotraukomis
             import zipfile
             from datetime import datetime
             
@@ -381,20 +407,29 @@ if files_to_process:
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
                 for i, file in enumerate(files_to_process):
                     file.seek(0)
-                    compressed = compress_image(file, max_size_mb=1, max_dimension=1920)
-                    compressed.seek(0)
+                    
+                    # Redaguojame nuotrauką su marketinginiais elementais
+                    edited = add_marketing_overlay(
+                        file, 
+                        add_watermark=add_watermark,
+                        brightness=brightness,
+                        contrast=contrast,
+                        saturation=saturation
+                    )
+                    edited.seek(0)
                     
                     # Gauname originalų failo pavadinimą arba naudojame default
                     filename = getattr(file, 'name', f'nuotrauka_{i+1}.jpg')
-                    zip_file.writestr(f"compressed_{filename}", compressed.getvalue())
+                    base_name = filename.rsplit('.', 1)[0] if '.' in filename else filename
+                    zip_file.writestr(f"{base_name}_edited.jpg", edited.getvalue())
             
             zip_buffer.seek(0)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             
             st.download_button(
-                label="📥 Parsisiųsti ZIP archyvą",
+                label="📥 Parsisiųsti redaguotas nuotraukas (ZIP)",
                 data=zip_buffer.getvalue(),
-                file_name=f"sumažintos_nuotraukos_{timestamp}.zip",
+                file_name=f"redaguotos_nuotraukos_{timestamp}.zip",
                 mime="application/zip",
                 type="primary"
             )
