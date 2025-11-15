@@ -929,9 +929,6 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
             for i, analysis in enumerate(st.session_state.ai_analyses):
                 st.markdown(f"**Nuotrauka {i+1}:** {analysis}")
 
-elif create_content and (not files_to_process or len(files_to_process) == 0):
-    st.warning("⚠️ Prašome pirmiausia įkelti bent vieną nuotrauką!")
-
 # Footer
 st.markdown("---")
 st.markdown("🌿 *Sukūrta žaliuzių ir roletų verslui* | Powered by OpenAI")
