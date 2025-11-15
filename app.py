@@ -484,6 +484,104 @@ if files_to_process:
                 use_container_width=True
             )
     
+    # AI Chat asistento skyrius
+    st.markdown("---")
+    st.markdown("### 🤖 AI Foto Asistentas")
+    st.info("💬 Aprašykite kaip norite pakeisti nuotraukas (pvz: 'padaryk šviesiau', 'sumažink vandens ženklą', 'padidink kontrastą')")
+    
+    # Inicializuojame chat istoriją
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
+    # Chat input laukas
+    user_message = st.text_input("✍️ Jūsų prašymas:", placeholder="Pvz: padaryk nuotraukas šviesesnes ir sumažink vandens ženklą", key="ai_chat_input")
+    
+    if st.button("📤 Siųsti AI", type="primary", use_container_width=True) and user_message:
+        with st.spinner("🤔 AI analizuoja jūsų prašymą..."):
+            try:
+                # AI analizuoja prašymą ir siūlo parametrus
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": """Tu esi nuotraukų redagavimo asistentas. Analizuoji lietuvišką užklausą ir siūlai redagavimo parametrus.
+Gali keisti:
+- brightness (šviesumas): 0.5-1.5 (1.0 normalus, <1.0 tamsiau, >1.0 šviesiau)
+- contrast (kontrastas): 0.5-1.5 (1.0 normalus, <1.0 blankiau, >1.0 ryškiau)  
+- saturation (sodrumas): 0.5-1.5 (1.0 normalus, <1.0 pilkiau, >1.0 sodresni)
+- watermark_size (vandens ženklo dydis): 20-500 (pikseliais, 120 normalus)
+
+Atsakyk JSON formatu:
+{
+  "brightness": skaičius,
+  "contrast": skaičius,
+  "saturation": skaičius,
+  "watermark_size": skaičius,
+  "explanation": "trumpas lietuviškas paaiškinimas ką pakeitei"
+}"""},
+                        {"role": "user", "content": f"Dabartiniai nustatymai: šviesumas={brightness}, kontrastas={contrast}, sodrumas={saturation}, vandens ženklas={watermark_size}px.\n\nPrašymas: {user_message}"}
+                    ],
+                    max_tokens=300
+                )
+                
+                import json
+                ai_response = response.choices[0].message.content
+                
+                # Pabandome išgauti JSON
+                try:
+                    # Ieškome JSON tarp kodo žymių arba tiesiogiai
+                    if "```json" in ai_response:
+                        json_str = ai_response.split("```json")[1].split("```")[0].strip()
+                    elif "```" in ai_response:
+                        json_str = ai_response.split("```")[1].split("```")[0].strip()
+                    else:
+                        json_str = ai_response.strip()
+                    
+                    suggestions = json.loads(json_str)
+                    
+                    # Parodome AI pasiūlymą
+                    st.success(f"✅ AI siūlymas: {suggestions.get('explanation', 'Parametrai pakeisti')}")
+                    
+                    # Parodome numatomus pakeitimus
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("**Dabartiniai:**")
+                        st.write(f"☀️ Šviesumas: {brightness}")
+                        st.write(f"🎭 Kontrastas: {contrast}")
+                        st.write(f"🎨 Sodrumas: {saturation}")
+                        st.write(f"📏 Vandens ženklas: {watermark_size}px")
+                    
+                    with col2:
+                        st.markdown("**Nauji (AI siūlo):**")
+                        st.write(f"☀️ Šviesumas: {suggestions.get('brightness', brightness)}")
+                        st.write(f"🎭 Kontrastas: {suggestions.get('contrast', contrast)}")
+                        st.write(f"🎨 Sodrumas: {suggestions.get('saturation', saturation)}")
+                        st.write(f"📏 Vandens ženklas: {suggestions.get('watermark_size', watermark_size)}px")
+                    
+                    # Mygtukas pritaikyti
+                    if st.button("✨ Pritaikyti AI pakeitimus", type="primary", use_container_width=True):
+                        # Išsaugome į sidebar sesijos kintamuosius
+                        st.session_state.ai_brightness = suggestions.get('brightness', brightness)
+                        st.session_state.ai_contrast = suggestions.get('contrast', contrast)
+                        st.session_state.ai_saturation = suggestions.get('saturation', saturation)
+                        st.session_state.ai_watermark_size = suggestions.get('watermark_size', watermark_size)
+                        st.success("✅ Pakeitimai pritaikyti! Perkraukite puslapį kad pamatytumėte rezultatus.")
+                        st.info("💡 Arba rankiniu būdu pakeiskite slider'ius šoniniame meniu")
+                        
+                except json.JSONDecodeError:
+                    st.warning(f"AI atsakymas: {ai_response}")
+                    st.error("❌ Nepavyko interpretuoti AI atsakymo. Pabandykite kitaip suformuluoti prašymą.")
+                
+            except Exception as e:
+                st.error(f"❌ Klaida bendraujant su AI: {str(e)}")
+    
+    # Rodyti chat istoriją
+    if st.session_state.chat_history:
+        with st.expander("📜 Pokalbių istorija"):
+            for msg in st.session_state.chat_history:
+                st.markdown(f"**Jūs:** {msg['user']}")
+                st.markdown(f"**AI:** {msg['ai']}")
+                st.markdown("---")
+    
     # Mygtukas išvalyti failus
     st.markdown("---")
     if st.button("🗑️ Išvalyti visus failus", type="secondary", use_container_width=True):
