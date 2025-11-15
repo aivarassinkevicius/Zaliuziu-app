@@ -3,3 +3,5 @@ openai
 python-dotenv
 Pillow==10.1.0
 streamlit-camera-input-live
+replicate
+requests

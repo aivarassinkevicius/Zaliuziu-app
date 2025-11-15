@@ -3,6 +3,8 @@ import io, os, base64
 from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image
+import replicate
+import requests
 
 # Bandome importuoti camera input (jei neveiks, praleidžia)
 try:
@@ -14,7 +16,7 @@ except ImportError:
 # ---------- Nustatymai ----------
 load_dotenv()
 
-# Version: 2.1 - Mobile session state fix
+# Version: 2.2 - AI Image Editing with Replicate
 # Bandome gauti API raktą iš .env failo (vietinis) arba Streamlit secrets (cloud)
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
@@ -27,6 +29,14 @@ if not api_key:
 if not api_key:
     st.error("❌ OpenAI API raktas nerastas! Patikrinkite konfigūraciją.")
     st.stop()
+
+# Replicate API raktas
+replicate_key = os.getenv("REPLICATE_API_TOKEN")
+if not replicate_key:
+    try:
+        replicate_key = st.secrets.get("REPLICATE_API_TOKEN")
+    except:
+        pass
 
 client = OpenAI(api_key=api_key)
 
@@ -139,6 +149,61 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
         st.error(traceback.format_exc())
         image_file.seek(0)
         return image_file
+
+def edit_image_with_ai(image_file, prompt):
+    """Redaguoja nuotrauką naudojant Replicate AI (Stable Diffusion inpainting)"""
+    try:
+        if not replicate_key:
+            return None, "❌ Replicate API raktas nėra sukonfigūruotas. Pridėkite REPLICATE_API_TOKEN į secrets."
+        
+        # Konvertuojame nuotrauką į base64
+        image_file.seek(0)
+        img = Image.open(image_file)
+        
+        # Konvertuojame į RGB jei reikia
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # Sumažiname jei per didelė (Replicate limitas ~10MB)
+        max_size = 1024
+        if img.width > max_size or img.height > max_size:
+            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+        
+        # Konvertuojame į bytes
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        img_bytes = buffered.getvalue()
+        img_base64 = base64.b64encode(img_bytes).decode()
+        img_data_uri = f"data:image/png;base64,{img_base64}"
+        
+        # Naudojame Stable Diffusion Image-to-Image modelį
+        output = replicate.run(
+            "stability-ai/stable-diffusion:db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf",
+            input={
+                "image": img_data_uri,
+                "prompt": f"High quality photo editing: {prompt}. Professional photography, detailed, sharp focus, realistic.",
+                "negative_prompt": "blurry, low quality, distorted, ugly, bad anatomy, artifacts",
+                "num_outputs": 1,
+                "guidance_scale": 7.5,
+                "num_inference_steps": 50,
+                "prompt_strength": 0.8
+            }
+        )
+        
+        # Atsisiunčiame rezultatą
+        if output and len(output) > 0:
+            result_url = output[0]
+            response = requests.get(result_url)
+            if response.status_code == 200:
+                edited_image = io.BytesIO(response.content)
+                return edited_image, "✅ Nuotrauka sėkmingai redaguota!"
+            else:
+                return None, f"❌ Nepavyko atsisiųsti rezultato: {response.status_code}"
+        else:
+            return None, "❌ AI negrąžino rezultato"
+            
+    except Exception as e:
+        return None, f"❌ Klaida redaguojant su AI: {str(e)}"
 
 def analyze_image(image_bytes):
     """Naudoja GPT-4o-mini vaizdo analizei su konkrečiu produktų atpažinimu"""
@@ -484,100 +549,103 @@ if files_to_process:
                 use_container_width=True
             )
     
-    # AI Chat asistento skyrius
+    # AI Chat asistento skyrius - REALUS REDAGAVIMAS
     st.markdown("---")
-    st.markdown("### 🤖 AI Foto Asistentas")
-    st.info("💬 Aprašykite kaip norite pakeisti nuotraukas (pvz: 'padaryk šviesiau', 'sumažink vandens ženklą', 'padidink kontrastą')")
+    st.markdown("### 🤖 AI Foto Redaktorius")
+    st.info("💬 **Paprašykite AI pakeisti nuotraukas!** Pvz: 'pašalink čiaupą', 'pakeisk foną į baltą', 'pridėk daugiau šviesos', 'ištrink žmogų'")
     
     # Inicializuojame chat istoriją
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
     
-    # Chat input laukas
-    user_message = st.text_input("✍️ Jūsų prašymas:", placeholder="Pvz: padaryk nuotraukas šviesesnes ir sumažink vandens ženklą", key="ai_chat_input")
+    if 'ai_edited_images' not in st.session_state:
+        st.session_state.ai_edited_images = []
     
-    if st.button("📤 Siųsti AI", type="primary", use_container_width=True) and user_message:
-        with st.spinner("🤔 AI analizuoja jūsų prašymą..."):
-            try:
-                # AI analizuoja prašymą ir siūlo parametrus
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": """Tu esi nuotraukų redagavimo asistentas. Analizuoji lietuvišką užklausą ir siūlai redagavimo parametrus.
-Gali keisti:
-- brightness (šviesumas): 0.5-1.5 (1.0 normalus, <1.0 tamsiau, >1.0 šviesiau)
-- contrast (kontrastas): 0.5-1.5 (1.0 normalus, <1.0 blankiau, >1.0 ryškiau)  
-- saturation (sodrumas): 0.5-1.5 (1.0 normalus, <1.0 pilkiau, >1.0 sodresni)
-- watermark_size (vandens ženklo dydis): 20-500 (pikseliais, 120 normalus)
-
-Atsakyk JSON formatu:
-{
-  "brightness": skaičius,
-  "contrast": skaičius,
-  "saturation": skaičius,
-  "watermark_size": skaičius,
-  "explanation": "trumpas lietuviškas paaiškinimas ką pakeitei"
-}"""},
-                        {"role": "user", "content": f"Dabartiniai nustatymai: šviesumas={brightness}, kontrastas={contrast}, sodrumas={saturation}, vandens ženklas={watermark_size}px.\n\nPrašymas: {user_message}"}
-                    ],
-                    max_tokens=300
-                )
-                
-                import json
-                ai_response = response.choices[0].message.content
-                
-                # Pabandome išgauti JSON
+    # Pasirinkti kurią nuotrauką redaguoti
+    photo_to_edit = st.selectbox(
+        "📸 Pasirinkite nuotrauką redagavimui:",
+        options=range(len(files_to_process)),
+        format_func=lambda x: f"Nuotrauka {x+1}"
+    )
+    
+    # Chat input laukas
+    user_message = st.text_area(
+        "✍️ Jūsų prašymas AI:",
+        placeholder="Pvz: pašalink čiaupą iš nuotraukos\nPvz: pakeisk foną į baltą\nPvz: pridėk daugiau šviesos ir pašalink žmogų",
+        height=100,
+        key="ai_chat_input"
+    )
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        edit_button = st.button("✨ Redaguoti su AI", type="primary", use_container_width=True)
+    with col2:
+        if replicate_key:
+            st.success("🔑 API")
+        else:
+            st.error("❌ API")
+    
+    if edit_button and user_message:
+        if not replicate_key:
+            st.error("❌ Replicate API raktas nesukonfigūruotas! Pridėkite REPLICATE_API_TOKEN į Streamlit secrets.")
+        else:
+            with st.spinner(f"🎨 AI redaguoja nuotrauką {photo_to_edit + 1}... (gali užtrukti 10-30 sek)"):
                 try:
-                    # Ieškome JSON tarp kodo žymių arba tiesiogiai
-                    if "```json" in ai_response:
-                        json_str = ai_response.split("```json")[1].split("```")[0].strip()
-                    elif "```" in ai_response:
-                        json_str = ai_response.split("```")[1].split("```")[0].strip()
-                    else:
-                        json_str = ai_response.strip()
+                    # Paimame pasirinktą nuotrauką
+                    selected_file = files_to_process[photo_to_edit]
+                    selected_file.seek(0)
                     
-                    suggestions = json.loads(json_str)
+                    # Redaguojame su AI
+                    edited_img, message = edit_image_with_ai(selected_file, user_message)
                     
-                    # Parodome AI pasiūlymą
-                    st.success(f"✅ AI siūlymas: {suggestions.get('explanation', 'Parametrai pakeisti')}")
-                    
-                    # Parodome numatomus pakeitimus
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.markdown("**Dabartiniai:**")
-                        st.write(f"☀️ Šviesumas: {brightness}")
-                        st.write(f"🎭 Kontrastas: {contrast}")
-                        st.write(f"🎨 Sodrumas: {saturation}")
-                        st.write(f"📏 Vandens ženklas: {watermark_size}px")
-                    
-                    with col2:
-                        st.markdown("**Nauji (AI siūlo):**")
-                        st.write(f"☀️ Šviesumas: {suggestions.get('brightness', brightness)}")
-                        st.write(f"🎭 Kontrastas: {suggestions.get('contrast', contrast)}")
-                        st.write(f"🎨 Sodrumas: {suggestions.get('saturation', saturation)}")
-                        st.write(f"📏 Vandens ženklas: {suggestions.get('watermark_size', watermark_size)}px")
-                    
-                    # Mygtukas pritaikyti
-                    if st.button("✨ Pritaikyti AI pakeitimus", type="primary", use_container_width=True):
-                        # Išsaugome į sidebar sesijos kintamuosius
-                        st.session_state.ai_brightness = suggestions.get('brightness', brightness)
-                        st.session_state.ai_contrast = suggestions.get('contrast', contrast)
-                        st.session_state.ai_saturation = suggestions.get('saturation', saturation)
-                        st.session_state.ai_watermark_size = suggestions.get('watermark_size', watermark_size)
-                        st.success("✅ Pakeitimai pritaikyti! Perkraukite puslapį kad pamatytumėte rezultatus.")
-                        st.info("💡 Arba rankiniu būdu pakeiskite slider'ius šoniniame meniu")
+                    if edited_img:
+                        st.success(message)
                         
-                except json.JSONDecodeError:
-                    st.warning(f"AI atsakymas: {ai_response}")
-                    st.error("❌ Nepavyko interpretuoti AI atsakymo. Pabandykite kitaip suformuluoti prašymą.")
-                
-            except Exception as e:
-                st.error(f"❌ Klaida bendraujant su AI: {str(e)}")
+                        # Parodome rezultatą
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.markdown("**🖼️ Originali:**")
+                            selected_file.seek(0)
+                            st.image(selected_file, use_container_width=True)
+                        
+                        with col2:
+                            st.markdown("**✨ AI redaguota:**")
+                            edited_img.seek(0)
+                            st.image(edited_img, use_container_width=True)
+                        
+                        # Download mygtukas
+                        edited_img.seek(0)
+                        st.download_button(
+                            label="📥 Atsisiųsti AI redaguotą nuotrauką",
+                            data=edited_img.getvalue(),
+                            file_name=f"ai_edited_{photo_to_edit + 1}.png",
+                            mime="image/png",
+                            use_container_width=True
+                        )
+                        
+                        # Išsaugome į istoriją
+                        st.session_state.chat_history.append({
+                            'user': user_message,
+                            'ai': message,
+                            'photo_index': photo_to_edit + 1
+                        })
+                        
+                        # Parodome kainą
+                        st.info("💰 Kaina: ~$0.01-0.02")
+                        
+                    else:
+                        st.error(message)
+                        
+                except Exception as e:
+                    st.error(f"❌ Klaida: {str(e)}")
+                    import traceback
+                    st.error(traceback.format_exc())
     
     # Rodyti chat istoriją
     if st.session_state.chat_history:
-        with st.expander("📜 Pokalbių istorija"):
-            for msg in st.session_state.chat_history:
+        with st.expander("📜 Redagavimo istorija"):
+            for i, msg in enumerate(reversed(st.session_state.chat_history[-5:])):  # Paskutiniai 5
+                st.markdown(f"**🖼️ Nuotrauka {msg['photo_index']}:**")
                 st.markdown(f"**Jūs:** {msg['user']}")
                 st.markdown(f"**AI:** {msg['ai']}")
                 st.markdown("---")
