@@ -580,28 +580,36 @@ if files_to_process:
     # Parodyti nuotrauką ir leisti piešti
     if len(files_to_process) > 0:
         from streamlit_drawable_canvas import st_canvas
+        import numpy as np
         
         selected_file = files_to_process[photo_to_edit]
         selected_file.seek(0)
         img = Image.open(selected_file)
+        
+        # Konvertuojame į RGB
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
         
         # Resize jei per didelė
         display_width = 600
         if img.width > display_width:
             ratio = display_width / img.width
             display_height = int(img.height * ratio)
+            img = img.resize((display_width, display_height), Image.Resampling.LANCZOS)
         else:
             display_width = img.width
             display_height = img.height
         
         st.markdown("**✏️ Nupiešk RAUDONAI kur norite ištrinti:**")
         
-        # Canvas piešimui
+        # Canvas piešimui - konvertuojame į numpy array
+        img_array = np.array(img)
+        
         canvas_result = st_canvas(
             fill_color="rgba(255, 0, 0, 0.5)",
             stroke_width=20,
             stroke_color="#FF0000",
-            background_image=img,
+            background_image=Image.fromarray(img_array),
             update_streamlit=True,
             height=display_height,
             width=display_width,
