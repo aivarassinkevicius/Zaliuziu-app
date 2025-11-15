@@ -151,59 +151,47 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
         return image_file
 
 def edit_image_with_ai(image_file, prompt):
-    """Redaguoja nuotrauką naudojant Replicate AI (Stable Diffusion inpainting)"""
+    """Redaguoja nuotrauką naudojant OpenAI DALL-E - TIKRAS objektų šalinimas"""
     try:
-        if not replicate_key:
-            return None, "❌ Replicate API raktas nėra sukonfigūruotas. Pridėkite REPLICATE_API_TOKEN į secrets."
-        
-        # Konvertuojame nuotrauką į base64
+        # Konvertuojame nuotrauką
         image_file.seek(0)
         img = Image.open(image_file)
         
-        # Konvertuojame į RGB jei reikia
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
+        # Konvertuojame į RGBA (reikia DALL-E)
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
         
-        # Sumažiname jei per didelė (Replicate limitas ~10MB)
+        # DALL-E reikalauja 1024x1024 arba mažiau
         max_size = 1024
         if img.width > max_size or img.height > max_size:
             img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
         
-        # Konvertuojame į bytes
-        buffered = io.BytesIO()
-        img.save(buffered, format="PNG")
-        img_bytes = buffered.getvalue()
-        img_base64 = base64.b64encode(img_bytes).decode()
-        img_data_uri = f"data:image/png;base64,{img_base64}"
+        # Išsaugome kaip PNG
+        img_bytes = io.BytesIO()
+        img.save(img_bytes, format='PNG')
+        img_bytes.seek(0)
         
-        # Naudojame Stable Diffusion Image-to-Image modelį
-        output = replicate.run(
-            "stability-ai/stable-diffusion:db21e45d3f7023abc2a46ee38a23973f6dce16bb082a930b0c49861f96d1e5bf",
-            input={
-                "image": img_data_uri,
-                "prompt": f"High quality photo editing: {prompt}. Professional photography, detailed, sharp focus, realistic.",
-                "negative_prompt": "blurry, low quality, distorted, ugly, bad anatomy, artifacts",
-                "num_outputs": 1,
-                "guidance_scale": 7.5,
-                "num_inference_steps": 50,
-                "prompt_strength": 0.8
-            }
+        # Naudojame OpenAI DALL-E Edit - tikrą redagavimą
+        response = client.images.edit(
+            image=img_bytes,
+            prompt=f"Professional photo editing: {prompt}. Keep the same style, lighting and quality. Only modify what was requested. Realistic, high quality.",
+            n=1,
+            size="1024x1024"
         )
         
-        # Atsisiunčiame rezultatą
-        if output and len(output) > 0:
-            result_url = output[0]
-            response = requests.get(result_url)
-            if response.status_code == 200:
-                edited_image = io.BytesIO(response.content)
-                return edited_image, "✅ Nuotrauka sėkmingai redaguota!"
-            else:
-                return None, f"❌ Nepavyko atsisiųsti rezultato: {response.status_code}"
+        # Gauname rezultatą
+        image_url = response.data[0].url
+        
+        # Atsisiunčiame
+        img_response = requests.get(image_url)
+        if img_response.status_code == 200:
+            edited_image = io.BytesIO(img_response.content)
+            return edited_image, "✅ Nuotrauka sėkmingai redaguota su DALL-E!"
         else:
-            return None, "❌ AI negrąžino rezultato"
+            return None, f"❌ Nepavyko atsisiųsti: {img_response.status_code}"
             
     except Exception as e:
-        return None, f"❌ Klaida redaguojant su AI: {str(e)}"
+        return None, f"❌ Klaida: {str(e)}"
 
 def analyze_image(image_bytes):
     """Naudoja GPT-4o-mini vaizdo analizei su konkrečiu produktų atpažinimu"""
@@ -551,8 +539,8 @@ if files_to_process:
     
     # AI Chat asistento skyrius - REALUS REDAGAVIMAS
     st.markdown("---")
-    st.markdown("### 🤖 AI Foto Redaktorius")
-    st.info("💬 **Paprašykite AI pakeisti nuotraukas!** Pvz: 'pašalink čiaupą', 'pakeisk foną į baltą', 'pridėk daugiau šviesos', 'ištrink žmogų'")
+    st.markdown("### 🤖 AI Foto Redaktorius (DALL-E)")
+    st.info("💬 **Tikras objektų šalinimas!** Pvz: 'remove the faucet', 'remove person from left', 'change background to white' (rašykite ANGLIŠKAI)")
     
     # Inicializuojame chat istoriją
     if 'chat_history' not in st.session_state:
@@ -570,27 +558,21 @@ if files_to_process:
     
     # Chat input laukas
     user_message = st.text_area(
-        "✍️ Jūsų prašymas AI:",
-        placeholder="Pvz: pašalink čiaupą iš nuotraukos\nPvz: pakeisk foną į baltą\nPvz: pridėk daugiau šviesos ir pašalink žmogų",
+        "✍️ Jūsų prašymas AI (ANGLIŠKAI):",
+        placeholder="Pvz: remove the faucet from the photo\nPvz: change background to white\nPvz: remove person from left side",
         height=100,
         key="ai_chat_input"
     )
     
     col1, col2 = st.columns([3, 1])
     with col1:
-        edit_button = st.button("✨ Redaguoti su AI", type="primary", use_container_width=True)
+        edit_button = st.button("✨ Redaguoti su AI (DALL-E)", type="primary", use_container_width=True)
     with col2:
-        if replicate_key:
-            st.success("🔑 API")
-        else:
-            st.error("❌ API")
+        st.success("🔑 OpenAI")
     
     if edit_button and user_message:
-        if not replicate_key:
-            st.error("❌ Replicate API raktas nesukonfigūruotas! Pridėkite REPLICATE_API_TOKEN į Streamlit secrets.")
-        else:
-            with st.spinner(f"🎨 AI redaguoja nuotrauką {photo_to_edit + 1}... (gali užtrukti 10-30 sek)"):
-                try:
+        with st.spinner(f"🎨 DALL-E redaguoja nuotrauką {photo_to_edit + 1}... (5-15 sek)"):
+            try:
                     # Paimame pasirinktą nuotrauką
                     selected_file = files_to_process[photo_to_edit]
                     selected_file.seek(0)
@@ -631,7 +613,7 @@ if files_to_process:
                         })
                         
                         # Parodome kainą
-                        st.info("💰 Kaina: ~$0.01-0.02")
+                        st.info("💰 Kaina: ~$0.04 (DALL-E)")
                         
                     else:
                         st.error(message)
