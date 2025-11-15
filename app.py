@@ -41,7 +41,7 @@ st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tin
 
 # ---------- Pagalbinės funkcijos ----------
 
-def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text=""):
+def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=80):
     """
     Prideda marketinginius elementus prie nuotraukos:
     - Vandens ženklą (ryškų, baltą su šešėliu)
@@ -84,25 +84,27 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
             border_width = 20
             img = ImageOps.expand(img, border=border_width, fill=border_color)
         
-        # Vandens ženklas (RYŠKUS IR DIDELIS)
+        # Vandens ženklas (RYŠKUS IR REGULIUOJAMAS DYDIS)
         if add_watermark and watermark_text:
             draw = ImageDraw.Draw(img)
             width, height = img.size
             
+            # Skaičiuojame šrifto dydį pagal slider'į
+            # watermark_size yra procentai (10-200), konvertuojame į decimal (0.10-2.00)
+            size_multiplier = watermark_size / 100.0
+            base_size = int(min(width, height) * 0.08)  # Bazinis dydis 8%
+            font_size = max(20, int(base_size * size_multiplier))
+            
             # Bandome įkelti geresnį fontą arba naudojame default
             try:
-                # LABAI DIDELIS šriftas - 30% nuotraukos dydžio
-                font_size = max(100, int(min(width, height) * 0.30))
                 font = ImageFont.truetype("arial.ttf", font_size)
             except:
                 try:
                     # Bandome kitus fontus
-                    font_size = max(100, int(min(width, height) * 0.30))
                     font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
                 except:
-                    # Jei nepavyko, naudojame default bet didesni
+                    # Jei nepavyko, naudojame default
                     font = ImageFont.load_default()
-                    font_size = 100
             
             # Pozicija - dešiniame apatiniame kampe
             try:
@@ -235,8 +237,10 @@ st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
 add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=True, help="Pridės jūsų tekstą dešiniame apatiniame kampe")
 if add_watermark:
     watermark_text = st.sidebar.text_input("Vandens ženklo tekstas", value="#RūbaiLangams", help="Pvz: #RūbaiLangams arba © Jūsų Įmonė")
+    watermark_size = st.sidebar.slider("📏 Vandens ženklo dydis (%)", 10, 200, 80, 5, help="Procentai nuotraukos dydžio. 100% = labai didelis")
 else:
     watermark_text = ""
+    watermark_size = 80
 
 add_border = st.sidebar.checkbox("🖼️ Pridėti baltą rėmelį", value=False)
 
@@ -456,7 +460,8 @@ if files_to_process:
                 brightness=brightness,
                 contrast=contrast,
                 saturation=saturation,
-                watermark_text=watermark_text
+                watermark_text=watermark_text,
+                watermark_size=watermark_size
             )
             edited.seek(0)
             
