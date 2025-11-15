@@ -41,15 +41,15 @@ st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tin
 
 # ---------- Pagalbinės funkcijos ----------
 
-def add_marketing_overlay(image_file, add_logo=False, add_watermark=False, brightness=1.0, contrast=1.0, saturation=1.0):
+def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text=""):
     """
     Prideda marketinginius elementus prie nuotraukos:
-    - Logotipą (jei įkeltas)
-    - Vandens ženklą
+    - Vandens ženklą (ryškų, baltą su šešėliu)
+    - Rėmelį
     - Spalvų koregavimą (šviesumas, kontrastas, sodrumas)
     """
     try:
-        from PIL import ImageEnhance, ImageDraw, ImageFont
+        from PIL import ImageEnhance, ImageDraw, ImageFont, ImageFilter
         
         # Atidarome nuotrauką
         img = Image.open(image_file)
@@ -77,35 +77,57 @@ def add_marketing_overlay(image_file, add_logo=False, add_watermark=False, brigh
             enhancer = ImageEnhance.Color(img)
             img = enhancer.enhance(saturation)
         
-        # Vandens ženklas
-        if add_watermark:
+        # Pridedame rėmelį
+        if add_border:
+            from PIL import ImageOps
+            border_color = (255, 255, 255)  # Baltas rėmelis
+            border_width = 20
+            img = ImageOps.expand(img, border=border_width, fill=border_color)
+        
+        # Vandens ženklas (RYŠKUS)
+        if add_watermark and watermark_text:
             draw = ImageDraw.Draw(img)
             width, height = img.size
             
-            # Naudojame default fontą
-            watermark_text = "© Jūsų įmonė"
+            # Bandome įkelti geresnį fontą arba naudojame default
+            try:
+                # Didelis šriftas
+                font_size = max(40, int(min(width, height) * 0.03))
+                font = ImageFont.truetype("arial.ttf", font_size)
+            except:
+                # Jei nepavyko, naudojame default
+                font = ImageFont.load_default()
+                font_size = 20
             
             # Pozicija - dešiniame apatiniame kampe
-            text_bbox = draw.textbbox((0, 0), watermark_text)
+            try:
+                text_bbox = draw.textbbox((0, 0), watermark_text, font=font)
+            except:
+                text_bbox = (0, 0, len(watermark_text) * 10, 20)
+            
             text_width = text_bbox[2] - text_bbox[0]
             text_height = text_bbox[3] - text_bbox[1]
             
-            x = width - text_width - 20
-            y = height - text_height - 20
+            x = width - text_width - 30
+            y = height - text_height - 30
             
-            # Piešiame šešėlį
-            draw.text((x+2, y+2), watermark_text, fill=(0, 0, 0, 128))
-            # Piešiame tekstą
-            draw.text((x, y), watermark_text, fill=(255, 255, 255, 200))
+            # Piešiame STORESNI šešėlį (juodą)
+            for offset in [(3, 3), (2, 2), (1, 1), (4, 4)]:
+                draw.text((x + offset[0], y + offset[1]), watermark_text, fill=(0, 0, 0), font=font)
+            
+            # Piešiame BALTĄ RYŠKŲ tekstą
+            draw.text((x, y), watermark_text, fill=(255, 255, 255), font=font)
         
-        # Išsaugome į bytes
+        # Išsaugome į bytes su AUKŠTA kokybe
         output = io.BytesIO()
-        img.save(output, format='JPEG', quality=95, optimize=True)
+        img.save(output, format='JPEG', quality=98, optimize=False)
         output.seek(0)
         return output
         
     except Exception as e:
         st.error(f"Klaida redaguojant nuotrauką: {e}")
+        import traceback
+        st.error(traceback.format_exc())
         image_file.seek(0)
         return image_file
 
@@ -205,10 +227,18 @@ auto_process = st.sidebar.checkbox("🤖 Automatinis apdorojimas", value=True)
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
 
-add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=False)
-brightness = st.sidebar.slider("☀️ Šviesumas", 0.5, 1.5, 1.0, 0.1)
-contrast = st.sidebar.slider("🎭 Kontrastas", 0.5, 1.5, 1.0, 0.1)
-saturation = st.sidebar.slider("🎨 Sodrumas", 0.5, 1.5, 1.0, 0.1)
+add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=False, help="Pridės jūsų tekstą dešiniame apatiniame kampe")
+if add_watermark:
+    watermark_text = st.sidebar.text_input("Vandens ženklo tekstas", value="© Jūsų Įmonė", help="Pvz: © Jūsų Įmonė arba www.jusu-svetaine.lt")
+else:
+    watermark_text = ""
+
+add_border = st.sidebar.checkbox("🖼️ Pridėti baltą rėmelį", value=False)
+
+st.sidebar.markdown("**Spalvų koregavimas:**")
+brightness = st.sidebar.slider("☀️ Šviesumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 tamsiau, >1.0 šviesiau")
+contrast = st.sidebar.slider("🎭 Kontrastas", 0.5, 1.5, 1.0, 0.05, help="<1.0 blankiau, >1.0 ryškiau")
+saturation = st.sidebar.slider("🎨 Sodrumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 pilkiau, >1.0 sodresni spalvos")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotraukas su žaliuzėmis ar roletais.")
@@ -406,9 +436,11 @@ if files_to_process:
             edited = add_marketing_overlay(
                 file,
                 add_watermark=add_watermark,
+                add_border=add_border,
                 brightness=brightness,
                 contrast=contrast,
-                saturation=saturation
+                saturation=saturation,
+                watermark_text=watermark_text
             )
             edited.seek(0)
             
