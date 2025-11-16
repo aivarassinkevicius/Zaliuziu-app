@@ -14,7 +14,8 @@ except ImportError:
 # ---------- Nustatymai ----------
 load_dotenv()
 
-# Version: 2.3 - Simplified, no AI editing
+# Version: 2.4-dev - Social Media Template Generator
+# NEW: create_social_template() function for 1080x1080 Instagram templates
 # Bandome gauti API raktą iš .env failo (vietinis) arba Streamlit secrets (cloud)
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
@@ -223,27 +224,82 @@ def generate_captions(analysis_text, season, holiday):
         }
     }
     
-    # Švenčių kontrolė
+    # Švenčių kontrolė - VISOS ŠVENTĖS
     holiday_data = {
+        "Naujieji metai": {
+            "must_have": ["nauj metin", "nauj met", "2025", "2026"],
+            "forbidden": ["kalėd", "velyk", "vasara"],
+            "keywords": "Naujųjų metų, naujo gyvenimo, tikslų, pokyčių"
+        },
+        "Šv. Valentino diena": {
+            "must_have": ["valentin", "meilė", "meil", "romantik"],
+            "forbidden": ["kalėd", "velyk"],
+            "keywords": "Valentino dienos, meilės, romantikos, dovanų mylimam žmogui"
+        },
+        "Vasario 16-oji": {
+            "must_have": ["vasario 16", "nepriklausomyb", "lietuv"],
+            "forbidden": ["kalėd", "velyk"],
+            "keywords": "Vasario 16-osios, Lietuvos nepriklausomybės, valstybės, trispalvės"
+        },
+        "Kovo 11-oji": {
+            "must_have": ["kovo 11", "nepriklausomyb", "lietuv"],
+            "forbidden": ["kalėd", "velyk"],
+            "keywords": "Kovo 11-osios, Lietuvos nepriklausomybės atkūrimo, laisvės"
+        },
         "Velykos": {
             "must_have": ["velyk", "velykini", "pavasari"],
             "forbidden": ["kalėd", "nauj metin", "žiem"],
-            "keywords": "Velykų, pavasario šventės, šeimos susibūrimas"
+            "keywords": "Velykų, pavasario šventės, šeimos susibūrimo, atgimimo"
+        },
+        "Gegužės 1-oji": {
+            "must_have": ["gegužės 1", "gegužin", "darbo dien", "pavasa"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Gegužės 1-osios, Darbo dienos, pavasario, poilsio"
+        },
+        "Motinos diena": {
+            "must_have": ["motin", "mam", "dovana mamai"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Motinos dienos, mamos, šeimos, dovanų"
+        },
+        "Tėvo diena": {
+            "must_have": ["tėv", "tėt", "dovana tėčiui"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Tėvo dienos, tėčio, šeimos, dovanų"
+        },
+        "Joninės": {
+            "must_have": ["jonin", "vasaros švent", "rasos"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Joninių, vasaros šventės, tradicijų, gamtos"
+        },
+        "Liepos 6-oji": {
+            "must_have": ["liepos 6", "mindaug", "karaliaus", "valstybės"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Valstybės dienos, Mindaugo karūnavimo, Lietuvos"
+        },
+        "Žolinė": {
+            "must_have": ["žolin", "rugpjūt", "žolių"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Žolinės, žolių šventinimo, vasaros pabaigos"
+        },
+        "Rugsėjo 1-oji": {
+            "must_have": ["rugsėjo 1", "žinių dien", "mokykl", "mokslo met"],
+            "forbidden": ["kalėd", "velyk"],
+            "keywords": "Rugsėjo 1-osios, Žinių dienos, mokyklos, naujo mokslo metų"
+        },
+        "Šiurpnaktis (Halloween)": {
+            "must_have": ["šiurpnakt", "halloween", "helovyn", "spalio 31", "moliūg"],
+            "forbidden": ["kalėd", "velyk", "žiem"],
+            "keywords": "Šiurpnakčio, Halloween, rudens šventės, moliūgų, siaubo"
         },
         "Šv. Kalėdos": {
             "must_have": ["kalėd", "švent", "žiem"],
             "forbidden": ["velyk", "pavasa", "vasara"],
-            "keywords": "Kalėdų, žiemos švenčių, dovanų"
+            "keywords": "Kalėdų, žiemos švenčių, dovanų, šeimos"
         },
         "Kūčios": {
-            "must_have": ["kūč", "kalėd", "žiem"],
+            "must_have": ["kūč", "kalėd", "žiem", "šventini"],
             "forbidden": ["velyk", "pavasa"],
-            "keywords": "Kūčių, šventinės vakarienės, šeimos"
-        },
-        "Šv. Valentino diena": {
-            "must_have": ["valentin", "meilė"],
-            "forbidden": ["kalėd", "velyk"],
-            "keywords": "Valentino dienos, meilės, romantikos"
+            "keywords": "Kūčių, šventinės vakarienės, šeimos susibūrimo"
         }
     }
     
@@ -340,6 +396,175 @@ def image_to_base64(image_file):
     image_file.seek(0)
     return base64.b64encode(image_file.read()).decode()
 
+def create_social_template(images, text, layout="auto", text_position="bottom", font_size="normal", background_color="#FFFFFF"):
+    """
+    Sukuria 1080x1080 Instagram šabloną su nuotraukomis ir tekstu
+    
+    Args:
+        images: List of PIL Image objects
+        text: Tekstas, kuris bus pridėtas prie šablono
+        layout: "auto", "1", "2", "3", "4" - nuotraukų išdėstymas
+        text_position: "top" arba "bottom" - teksto pozicija
+        font_size: "small", "normal", "large" - teksto dydis
+        background_color: Hex spalva (pvz. "#FFFFFF")
+    
+    Returns:
+        BytesIO object su PNG šablonu
+    """
+    try:
+        # Canvas parametrai
+        canvas_size = 1080
+        margin = 50
+        text_area_height = 250  # Fiksuotas teksto srities aukštis
+        
+        # Konvertuojame hex į RGB
+        bg_color = tuple(int(background_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        
+        # Nustatome teksto dydį
+        font_sizes = {"small": 32, "normal": 40, "large": 52}
+        base_font_size = font_sizes.get(font_size.lower(), 40)
+        
+        # Automatinis layout pagal nuotraukų kiekį
+        if layout == "auto":
+            layout = str(len(images))
+        
+        # Sukuriame Canvas
+        canvas = Image.new('RGB', (canvas_size, canvas_size), bg_color)
+        
+        # Apskaičiuojame nuotraukų srities dydį
+        if text_position.lower() == "top":
+            photos_y_start = text_area_height
+            photos_height = canvas_size - text_area_height
+            text_y = margin
+        else:  # bottom
+            photos_y_start = 0
+            photos_height = canvas_size - text_area_height
+            text_y = photos_height + margin
+        
+        # NUOTRAUKŲ IŠDĖSTYMAS
+        photos_width = canvas_size
+        
+        if layout == "1" and len(images) >= 1:
+            # 1 nuotrauka - pilnas plotis
+            img = images[0].copy()
+            img = img.resize((photos_width, photos_height), Image.Resampling.LANCZOS)
+            canvas.paste(img, (0, photos_y_start))
+            
+        elif layout == "2" and len(images) >= 2:
+            # 2 nuotraukos - 2 stulpeliai
+            photo_width = photos_width // 2
+            for i in range(2):
+                img = images[i].copy()
+                img = img.resize((photo_width, photos_height), Image.Resampling.LANCZOS)
+                canvas.paste(img, (i * photo_width, photos_y_start))
+                
+        elif layout == "3" and len(images) >= 3:
+            # 3 nuotraukos - 1 viršuje, 2 apačioje
+            top_height = photos_height // 2
+            bottom_height = photos_height - top_height
+            
+            # Viršutinė nuotrauka
+            img = images[0].copy()
+            img = img.resize((photos_width, top_height), Image.Resampling.LANCZOS)
+            canvas.paste(img, (0, photos_y_start))
+            
+            # Dvi apatinės
+            photo_width = photos_width // 2
+            for i in range(2):
+                img = images[i + 1].copy()
+                img = img.resize((photo_width, bottom_height), Image.Resampling.LANCZOS)
+                canvas.paste(img, (i * photo_width, photos_y_start + top_height))
+                
+        elif layout == "4" and len(images) >= 4:
+            # 4 nuotraukos - 2x2 grid
+            photo_width = photos_width // 2
+            photo_height = photos_height // 2
+            
+            for i in range(4):
+                row = i // 2
+                col = i % 2
+                img = images[i].copy()
+                img = img.resize((photo_width, photo_height), Image.Resampling.LANCZOS)
+                canvas.paste(img, (col * photo_width, photos_y_start + row * photo_height))
+        
+        # TEKSTO PRIDĖJIMAS
+        draw = ImageDraw.Draw(canvas)
+        
+        # Įkeliame fontą
+        font = None
+        font_paths = [
+            "C:/Windows/Fonts/arialbd.ttf",
+            "C:/Windows/Fonts/arial.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/System/Library/Fonts/Helvetica.ttc"
+        ]
+        
+        for font_path in font_paths:
+            try:
+                font = ImageFont.truetype(font_path, base_font_size)
+                break
+            except:
+                continue
+        
+        if font is None:
+            font = ImageFont.load_default()
+        
+        # Automatinis teksto laužymas (word wrap)
+        text_width = canvas_size - (margin * 2)
+        wrapped_lines = []
+        
+        # Padalijame tekstą į eilutes
+        paragraphs = text.split('\n')
+        for paragraph in paragraphs:
+            words = paragraph.split(' ')
+            current_line = []
+            
+            for word in words:
+                test_line = ' '.join(current_line + [word])
+                bbox = draw.textbbox((0, 0), test_line, font=font)
+                line_width = bbox[2] - bbox[0]
+                
+                if line_width <= text_width:
+                    current_line.append(word)
+                else:
+                    if current_line:
+                        wrapped_lines.append(' '.join(current_line))
+                    current_line = [word]
+            
+            if current_line:
+                wrapped_lines.append(' '.join(current_line))
+        
+        # Piešiame tekstą su šešėliu
+        line_height = base_font_size + 10
+        current_y = text_y
+        
+        # Teksto spalva (tamsus fonas = balta, šviesus = juoda)
+        avg_bg = sum(bg_color) / 3
+        text_color = (255, 255, 255) if avg_bg < 128 else (30, 30, 30)
+        shadow_color = (0, 0, 0) if avg_bg >= 128 else (255, 255, 255)
+        
+        for line in wrapped_lines:
+            if current_y + line_height > canvas_size - margin:
+                break  # Per daug teksto
+            
+            # Šešėlis
+            draw.text((margin + 2, current_y + 2), line, fill=shadow_color, font=font)
+            # Tekstas
+            draw.text((margin, current_y), line, fill=text_color, font=font)
+            current_y += line_height
+        
+        # Išsaugome į BytesIO
+        output = io.BytesIO()
+        canvas.save(output, format='PNG', quality=95)
+        output.seek(0)
+        return output
+        
+    except Exception as e:
+        st.error(f"Klaida kuriant šabloną: {e}")
+        import traceback
+        st.error(traceback.format_exc())
+        return None
+
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
 
@@ -350,11 +575,25 @@ season = st.sidebar.selectbox(
 )
 
 holiday = st.sidebar.selectbox(
-    "🎉 Lietuviškos šventės (pasirinktinai)",
-    ["Nėra", "Naujieji metai", "Šv. Valentino diena", "Vasario 16-oji", "Kovo 11-oji", 
-     "Velykos", "Gegužės 1-oji (Darbo diena)", "Motinos diena", "Tėvo diena", 
-     "Joninės", "Liepos 6-oji (Karaliaus Mindaugo diena)", "Žolinė", "Rugsėjo 1-oji", 
-     "Šv. Kalėdos", "Kūčios"],
+    "🎉 Šventės (pasirinktinai)",
+    [
+        "Nėra", 
+        "Naujieji metai", 
+        "Šv. Valentino diena", 
+        "Vasario 16-oji", 
+        "Kovo 11-oji", 
+        "Velykos", 
+        "Gegužės 1-oji", 
+        "Motinos diena", 
+        "Tėvo diena", 
+        "Joninės", 
+        "Liepos 6-oji", 
+        "Žolinė", 
+        "Rugsėjo 1-oji", 
+        "Šiurpnaktis (Halloween)",
+        "Šv. Kalėdos", 
+        "Kūčios"
+    ],
     index=0
 )
 
@@ -883,7 +1122,18 @@ if files_to_process:
     
     # Mygtukas čia
     if st.button("🚀 Sukurti AI Turinį", type="primary", use_container_width=True, key="create_ai_content_btn"):
-        st.session_state.trigger_ai_content = True
+        # Patikriname ar pasikeitė nustatymai
+        current_settings = f"{season}_{holiday}"
+        last_settings = st.session_state.get("last_ai_settings", None)
+        
+        # Jei turime išsaugotas analizes IR pasikeitė nustatymai - tiesiog perkuriame tekstą
+        if last_settings and current_settings != last_settings and "ai_analyses" in st.session_state and st.session_state.ai_analyses:
+            st.session_state.trigger_ai_regenerate = True
+        else:
+            # Kitais atvejais - pilna analizė iš naujo
+            st.session_state.trigger_ai_content = True
+        
+        st.session_state.last_ai_settings = current_settings
     
     # Mygtukas išvalyti failus
     st.markdown("---")
@@ -899,6 +1149,24 @@ if files_to_process:
         st.warning("⚠️ Per daug failų! Pasirinkite iki 4 nuotraukų.")
         files_to_process = files_to_process[:4]
         st.session_state.uploaded_files = files_to_process
+
+# JEI TIK NUSTATYMAI PASIKEITĖ - greitai perkuriame tekstą su tais pačiais nuotraukų analizėmis
+if st.session_state.get("trigger_ai_regenerate", False):
+    status_text = st.empty()
+    status_text.text(f"🔄 Perkuriamas turinys su naujais nustatymais ({season} / {holiday})...")
+    
+    combined_analysis = " ".join(st.session_state.ai_analyses)
+    
+    try:
+        captions = generate_captions(combined_analysis, season, holiday)
+        st.session_state.ai_content_result = captions
+        st.success(f"✅ Turinys atnaujintas! Sezonas: {season}, Šventė: {holiday}")
+    except Exception as e:
+        st.error(f"❌ Klaida perkuriant turinį: {e}")
+    
+    status_text.empty()
+    st.session_state.trigger_ai_regenerate = False
+    st.rerun()
 
 # Apdorojimas tik jei yra failų ir trigger'is aktyvuotas
 if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_content and files_to_process and len(files_to_process) > 0:
@@ -984,6 +1252,148 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
             st.markdown("**Vaizdų analizė:**")
             for i, analysis in enumerate(st.session_state.ai_analyses):
                 st.markdown(f"**Nuotrauka {i+1}:** {analysis}")
+    
+    # SOCIAL MEDIA ŠABLONO GENERAVIMAS
+    st.markdown("---")
+    st.markdown("### 🎨 Social Media Šablono Generavimas")
+    st.info("📱 Sukurkite 1080×1080 Instagram paruoštą šabloną su nuotraukomis ir tekstu!")
+    
+    # UI kontrolės šablonui
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        template_layout = st.selectbox(
+            "📐 Nuotraukų išdėstymas:",
+            ["auto", "1 foto", "2 foto", "3 foto", "4 foto"],
+            help="Automatinis - pagal įkeltų nuotraukų kiekį"
+        )
+    
+    with col2:
+        template_text_position = st.radio(
+            "📍 Teksto vieta:",
+            ["Top", "Bottom"],
+            index=1,
+            help="Viršuje arba apačioje"
+        )
+    
+    with col3:
+        template_font_size = st.radio(
+            "🔤 Teksto dydis:",
+            ["Small", "Normal", "Large"],
+            index=1,
+            help="Mažas, vidutinis ar didelis"
+        )
+    
+    template_bg_color = st.color_picker(
+        "🎨 Fono spalva:",
+        "#FFFFFF",
+        help="Pasirinkite fono spalvą tekstui"
+    )
+    
+    # Pasirenkame kurį tekstą naudoti
+    template_text_option = st.radio(
+        "📝 Kuris tekstas bus šablone?",
+        ["Pilnas AI turinys", "Tik pirmas variantas", "Tik antras variantas", "Tik trečias variantas", "Rankinis tekstas"],
+        index=0
+    )
+    
+    # Jei rankinis tekstas
+    if template_text_option == "Rankinis tekstas":
+        template_custom_text = st.text_area(
+            "✍️ Įveskite tekstą šablonui:",
+            height=100,
+            placeholder="Jūsų tekstas čia..."
+        )
+    else:
+        template_custom_text = None
+    
+    # Mygtukas generuoti šabloną
+    if st.button("🚀 Generuoti Social Media Šabloną", type="primary", use_container_width=True, key="generate_template_btn"):
+        with st.spinner("🎨 Kuriamas šablonas..."):
+            try:
+                # Paruošiame nuotraukas
+                template_images = []
+                for idx, file in enumerate(files_to_process):
+                    file.seek(0)
+                    
+                    # Vandens ženklas tik ant paskutinės
+                    show_watermark = add_watermark and (idx == len(files_to_process) - 1)
+                    
+                    edited = add_marketing_overlay(
+                        file,
+                        add_watermark=show_watermark,
+                        add_border=False,
+                        brightness=brightness,
+                        contrast=contrast,
+                        saturation=saturation,
+                        watermark_text=watermark_text,
+                        watermark_size=watermark_size
+                    )
+                    edited.seek(0)
+                    img = Image.open(edited)
+                    template_images.append(img)
+                
+                # Pasiruošiame tekstą
+                if template_custom_text:
+                    final_text = template_custom_text
+                elif template_text_option == "Pilnas AI turinys":
+                    final_text = st.session_state.ai_content_result
+                elif template_text_option == "Tik pirmas variantas":
+                    variants = st.session_state.ai_content_result.split("---")
+                    final_text = variants[0].strip() if variants else st.session_state.ai_content_result
+                elif template_text_option == "Tik antras variantas":
+                    variants = st.session_state.ai_content_result.split("---")
+                    final_text = variants[1].strip() if len(variants) > 1 else st.session_state.ai_content_result
+                elif template_text_option == "Tik trečias variantas":
+                    variants = st.session_state.ai_content_result.split("---")
+                    final_text = variants[2].strip() if len(variants) > 2 else st.session_state.ai_content_result
+                else:
+                    final_text = st.session_state.ai_content_result
+                
+                # Konvertuojame layout
+                layout_map = {
+                    "auto": "auto",
+                    "1 foto": "1",
+                    "2 foto": "2",
+                    "3 foto": "3",
+                    "4 foto": "4"
+                }
+                layout_value = layout_map.get(template_layout, "auto")
+                
+                # Generuojame šabloną
+                template_result = create_social_template(
+                    images=template_images,
+                    text=final_text,
+                    layout=layout_value,
+                    text_position=template_text_position.lower(),
+                    font_size=template_font_size.lower(),
+                    background_color=template_bg_color
+                )
+                
+                if template_result:
+                    st.session_state.template_result = template_result.getvalue()
+                    st.session_state.template_filename = f"social_template_{season}_{holiday}.png"
+                    st.success("✅ Šablonas sukurtas sėkmingai!")
+                    
+            except Exception as e:
+                st.error(f"❌ Klaida kuriant šabloną: {e}")
+                import traceback
+                st.error(traceback.format_exc())
+    
+    # Rodyti sugeneruotą šabloną
+    if "template_result" in st.session_state and st.session_state.template_result:
+        st.markdown("---")
+        st.markdown("### ✅ Sugeneruotas Social Media Šablonas")
+        st.image(st.session_state.template_result, caption="1080×1080 Instagram šablonas", use_container_width=True)
+        
+        st.download_button(
+            label="📥 Atsisiųsti šabloną (PNG)",
+            data=st.session_state.template_result,
+            file_name=st.session_state.template_filename,
+            mime="image/png",
+            use_container_width=True,
+            key="download_template"
+        )
 
 # Footer
 st.markdown("---")
