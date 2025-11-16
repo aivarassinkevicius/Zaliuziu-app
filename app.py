@@ -396,22 +396,26 @@ def image_to_base64(image_file):
     image_file.seek(0)
     return base64.b64encode(image_file.read()).decode()
 
-def create_social_template(images, text, layout="auto", text_position="bottom", font_size="normal", background_color="#FFFFFF"):
+def create_social_template(images, text, layout="auto", text_position="bottom", font_size="normal", background_color="#FFFFFF", style="Classic"):
     """
     Sukuria 1080x1080 Instagram šabloną su nuotraukomis ir tekstu
     
     Args:
         images: List of PIL Image objects
         text: Tekstas, kuris bus pridėtas prie šablono
-        layout: "auto", "1", "2", "3", "4" - nuotraukų išdėstymas
-        text_position: "top" arba "bottom" - teksto pozicija
+        layout: "auto", "1", "2", "3", "4", "2_vertical", "collage" - nuotraukų išdėstymas
+        text_position: "top", "bottom", "center" - teksto pozicija
         font_size: "small", "normal", "large" - teksto dydis
         background_color: Hex spalva (pvz. "#FFFFFF")
+        style: "Classic", "Gradient", "Rounded corners", "Shadow effect", "Vignette", "Polaroid"
     
     Returns:
         BytesIO object su PNG šablonu
     """
     try:
+        import random
+        from PIL import ImageFilter
+        
         # Canvas parametrai
         canvas_size = 1080
         margin = 50
@@ -431,61 +435,175 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         # Sukuriame Canvas
         canvas = Image.new('RGB', (canvas_size, canvas_size), bg_color)
         
-        # Apskaičiuojame nuotraukų srities dydį
-        if text_position.lower() == "top":
+        # Apskaičiuojame nuotraukų srities dydį pagal teksto poziciją
+        if text_position.lower() == "center":
+            photos_y_start = 0
+            photos_height = canvas_size
+            text_y = canvas_size // 2 - 100
+            text_overlay = True
+        elif text_position.lower() == "top":
             photos_y_start = text_area_height
             photos_height = canvas_size - text_area_height
             text_y = margin
+            text_overlay = False
         else:  # bottom
             photos_y_start = 0
             photos_height = canvas_size - text_area_height
             text_y = photos_height + margin
+            text_overlay = False
         
         # NUOTRAUKŲ IŠDĖSTYMAS
         photos_width = canvas_size
+        rounded_radius = 30 if "rounded" in style.lower() else 0
+        
+        def apply_rounded_corners(img, radius):
+            """Prideda apvalius kampus nuotraukai"""
+            mask = Image.new('L', img.size, 0)
+            draw = ImageDraw.Draw(mask)
+            draw.rounded_rectangle([(0, 0), img.size], radius=radius, fill=255)
+            img.putalpha(mask)
+            return img
+        
+        def apply_photo_style(img, style_name):
+            """Pritaiko stilių nuotraukai"""
+            if "vignette" in style_name.lower():
+                # Pridedame vignette efektą
+                vignette = Image.new('L', img.size, 255)
+                draw = ImageDraw.Draw(vignette)
+                width, height = img.size
+                for i in range(min(width, height) // 4):
+                    alpha = int(255 * (1 - i / (min(width, height) / 4)))
+                    draw.rectangle([i, i, width-i, height-i], outline=alpha)
+                img = Image.composite(img, Image.new('RGB', img.size, (0, 0, 0)), vignette)
+            
+            if "shadow" in style_name.lower():
+                # Šešėlio efektas (simuliacija)
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(1.2)
+            
+            return img
         
         if layout == "1" and len(images) >= 1:
             # 1 nuotrauka - pilnas plotis
             img = images[0].copy()
+            img = apply_photo_style(img, style)
             img = img.resize((photos_width, photos_height), Image.Resampling.LANCZOS)
-            canvas.paste(img, (0, photos_y_start))
+            
+            if rounded_radius > 0:
+                img = img.convert("RGBA")
+                img = apply_rounded_corners(img, rounded_radius)
+                temp_canvas = Image.new('RGBA', (canvas_size, canvas_size), bg_color + (255,))
+                temp_canvas.paste(img, (0, photos_y_start), img)
+                canvas = temp_canvas.convert("RGB")
+            else:
+                canvas.paste(img, (0, photos_y_start))
             
         elif layout == "2" and len(images) >= 2:
             # 2 nuotraukos - 2 stulpeliai
             photo_width = photos_width // 2
+            gap = 10
+            photo_width = (photos_width - gap) // 2
+            
             for i in range(2):
                 img = images[i].copy()
+                img = apply_photo_style(img, style)
                 img = img.resize((photo_width, photos_height), Image.Resampling.LANCZOS)
-                canvas.paste(img, (i * photo_width, photos_y_start))
+                canvas.paste(img, (i * (photo_width + gap), photos_y_start))
+        
+        elif layout == "2_vertical" and len(images) >= 2:
+            # 2 nuotraukos - viršuje ir apačioje
+            photo_height = photos_height // 2
+            gap = 10
+            photo_height = (photos_height - gap) // 2
+            
+            for i in range(2):
+                img = images[i].copy()
+                img = apply_photo_style(img, style)
+                img = img.resize((photos_width, photo_height), Image.Resampling.LANCZOS)
+                canvas.paste(img, (0, photos_y_start + i * (photo_height + gap)))
                 
         elif layout == "3" and len(images) >= 3:
             # 3 nuotraukos - 1 viršuje, 2 apačioje
             top_height = photos_height // 2
-            bottom_height = photos_height - top_height
+            bottom_height = photos_height - top_height - 10
+            gap = 10
             
             # Viršutinė nuotrauka
             img = images[0].copy()
+            img = apply_photo_style(img, style)
             img = img.resize((photos_width, top_height), Image.Resampling.LANCZOS)
             canvas.paste(img, (0, photos_y_start))
             
             # Dvi apatinės
-            photo_width = photos_width // 2
+            photo_width = (photos_width - gap) // 2
             for i in range(2):
                 img = images[i + 1].copy()
+                img = apply_photo_style(img, style)
                 img = img.resize((photo_width, bottom_height), Image.Resampling.LANCZOS)
-                canvas.paste(img, (i * photo_width, photos_y_start + top_height))
+                canvas.paste(img, (i * (photo_width + gap), photos_y_start + top_height + gap))
                 
         elif layout == "4" and len(images) >= 4:
             # 4 nuotraukos - 2x2 grid
-            photo_width = photos_width // 2
-            photo_height = photos_height // 2
+            gap = 10
+            photo_width = (photos_width - gap) // 2
+            photo_height = (photos_height - gap) // 2
             
             for i in range(4):
                 row = i // 2
                 col = i % 2
                 img = images[i].copy()
+                img = apply_photo_style(img, style)
                 img = img.resize((photo_width, photo_height), Image.Resampling.LANCZOS)
-                canvas.paste(img, (col * photo_width, photos_y_start + row * photo_height))
+                canvas.paste(img, (col * (photo_width + gap), photos_y_start + row * (photo_height + gap)))
+        
+        elif layout == "collage":
+            # Atsitiktinis kolažas
+            random.seed()
+            for i, img in enumerate(images[:4]):
+                size = random.randint(400, 600)
+                angle = random.randint(-15, 15)
+                
+                img_resized = img.copy()
+                img_resized = apply_photo_style(img_resized, style)
+                img_resized = img_resized.resize((size, size), Image.Resampling.LANCZOS)
+                
+                if "polaroid" in style.lower():
+                    # Polaroid efektas
+                    border = 20
+                    polaroid = Image.new('RGB', (size + border*2, size + border*2 + 40), (255, 255, 255))
+                    polaroid.paste(img_resized, (border, border))
+                    img_resized = polaroid
+                
+                rotated = img_resized.rotate(angle, expand=True, fillcolor=bg_color)
+                
+                max_x = canvas_size - rotated.width
+                max_y = photos_height - rotated.height
+                x = random.randint(0, max(1, max_x))
+                y = photos_y_start + random.randint(0, max(1, max_y))
+                
+                canvas.paste(rotated, (x, y))
+        
+        # GRADIENT FONAS (jei pasirinktas)
+        if "gradient" in style.lower() and not text_overlay:
+            gradient = Image.new('RGB', (canvas_size, text_area_height), bg_color)
+            draw_grad = ImageDraw.Draw(gradient)
+            
+            r, g, b = bg_color
+            for i in range(text_area_height):
+                ratio = i / text_area_height
+                new_r = int(r * (1 - ratio * 0.3))
+                new_g = int(g * (1 - ratio * 0.3))
+                new_b = int(b * (1 - ratio * 0.3))
+                
+                if text_position.lower() == "top":
+                    draw_grad.line([(0, i), (canvas_size, i)], fill=(new_r, new_g, new_b))
+                else:
+                    draw_grad.line([(0, text_area_height - i - 1), (canvas_size, text_area_height - i - 1)], fill=(new_r, new_g, new_b))
+            
+            if text_position.lower() == "top":
+                canvas.paste(gradient, (0, 0))
+            else:
+                canvas.paste(gradient, (0, photos_height))
         
         # TEKSTO PRIDĖJIMAS
         draw = ImageDraw.Draw(canvas)
@@ -534,24 +652,58 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
             if current_line:
                 wrapped_lines.append(' '.join(current_line))
         
-        # Piešiame tekstą su šešėliu
-        line_height = base_font_size + 10
-        current_y = text_y
-        
         # Teksto spalva (tamsus fonas = balta, šviesus = juoda)
         avg_bg = sum(bg_color) / 3
         text_color = (255, 255, 255) if avg_bg < 128 else (30, 30, 30)
-        shadow_color = (0, 0, 0) if avg_bg >= 128 else (255, 255, 255)
+        shadow_color = (0, 0, 0, 180) if avg_bg >= 128 else (255, 255, 255, 180)
+        
+        # Jei overlay - pridedame pusskaidrų foną tekstui
+        if text_overlay:
+            # Apskaičiuojame teksto bloko dydį
+            line_height = base_font_size + 10
+            total_text_height = len(wrapped_lines) * line_height + margin * 2
+            
+            overlay_bg = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
+            overlay_draw = ImageDraw.Draw(overlay_bg)
+            
+            # Tamsus pusskaidrus stačiakampis
+            overlay_y_start = text_y - margin
+            overlay_draw.rectangle(
+                [(0, overlay_y_start), (canvas_size, overlay_y_start + total_text_height)],
+                fill=(0, 0, 0, 160)
+            )
+            
+            canvas = canvas.convert('RGBA')
+            canvas = Image.alpha_composite(canvas, overlay_bg)
+            draw = ImageDraw.Draw(canvas)
+            
+            text_color = (255, 255, 255)  # Baltas tekstas ant tamsaus
+        
+        # Piešiame tekstą su šešėliu
+        line_height = base_font_size + 10
+        current_y = text_y
         
         for line in wrapped_lines:
             if current_y + line_height > canvas_size - margin:
                 break  # Per daug teksto
             
-            # Šešėlis
-            draw.text((margin + 2, current_y + 2), line, fill=shadow_color, font=font)
+            # Storasis šešėlis jei "shadow effect"
+            if "shadow" in style.lower():
+                for offset_x in range(-3, 4, 2):
+                    for offset_y in range(-3, 4, 2):
+                        if offset_x != 0 or offset_y != 0:
+                            draw.text((margin + offset_x, current_y + offset_y), line, fill=(0, 0, 0), font=font)
+            else:
+                # Įprastas šešėlis
+                draw.text((margin + 2, current_y + 2), line, fill=shadow_color[:3] if len(shadow_color) > 3 else shadow_color, font=font)
+            
             # Tekstas
             draw.text((margin, current_y), line, fill=text_color, font=font)
             current_y += line_height
+        
+        # Konvertuojame atgal į RGB jei buvo RGBA
+        if canvas.mode == 'RGBA':
+            canvas = canvas.convert('RGB')
         
         # Išsaugome į BytesIO
         output = io.BytesIO()
@@ -1264,16 +1416,16 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
     with col1:
         template_layout = st.selectbox(
             "📐 Nuotraukų išdėstymas:",
-            ["auto", "1 foto", "2 foto", "3 foto", "4 foto"],
+            ["auto", "1 foto", "2 foto", "3 foto", "4 foto", "2 foto vertical", "Kolažas (atsitiktinai)"],
             help="Automatinis - pagal įkeltų nuotraukų kiekį"
         )
     
     with col2:
         template_text_position = st.radio(
             "📍 Teksto vieta:",
-            ["Top", "Bottom"],
+            ["Top", "Bottom", "Center (overlay)"],
             index=1,
-            help="Viršuje arba apačioje"
+            help="Viršuje, apačioje arba centre ant nuotraukų"
         )
     
     with col3:
@@ -1284,11 +1436,21 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
             help="Mažas, vidutinis ar didelis"
         )
     
-    template_bg_color = st.color_picker(
-        "🎨 Fono spalva:",
-        "#FFFFFF",
-        help="Pasirinkite fono spalvą tekstui"
-    )
+    col4, col5 = st.columns(2)
+    
+    with col4:
+        template_bg_color = st.color_picker(
+            "🎨 Fono spalva:",
+            "#FFFFFF",
+            help="Pasirinkite fono spalvą tekstui"
+        )
+    
+    with col5:
+        template_style = st.selectbox(
+            "✨ Šablono stilius:",
+            ["Classic", "Gradient", "Rounded corners", "Shadow effect", "Vignette", "Polaroid"],
+            help="Prideda vizualinius efektus"
+        )
     
     # Pasirenkame kurį tekstą naudoti
     template_text_option = st.radio(
@@ -1350,13 +1512,21 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
                 else:
                     final_text = st.session_state.ai_content_result
                 
+                # Išvalome nereikalingus teksto elementus (VARIANTAS 1, 2, 3, etc.)
+                import re
+                final_text = re.sub(r'VARIANTAS\s+\d+\s*[-:]*\s*', '', final_text, flags=re.IGNORECASE)
+                final_text = re.sub(r'^\d+[\.\)]\s*', '', final_text, flags=re.MULTILINE)  # Numeriai pradžioje eilučių
+                final_text = final_text.strip()
+                
                 # Konvertuojame layout
                 layout_map = {
                     "auto": "auto",
                     "1 foto": "1",
                     "2 foto": "2",
                     "3 foto": "3",
-                    "4 foto": "4"
+                    "4 foto": "4",
+                    "2 foto vertical": "2_vertical",
+                    "Kolažas (atsitiktinai)": "collage"
                 }
                 layout_value = layout_map.get(template_layout, "auto")
                 
@@ -1365,9 +1535,10 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
                     images=template_images,
                     text=final_text,
                     layout=layout_value,
-                    text_position=template_text_position.lower(),
+                    text_position=template_text_position.lower().replace(" (overlay)", ""),
                     font_size=template_font_size.lower(),
-                    background_color=template_bg_color
+                    background_color=template_bg_color,
+                    style=template_style
                 )
                 
                 if template_result:
