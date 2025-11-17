@@ -646,31 +646,46 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
             "Arial Bold": [
                 "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",  # Linux/Cloud PIRMAS
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
                 "C:/Windows/Fonts/arialbd.ttf",  # Windows
                 "/System/Library/Fonts/Helvetica.ttc"  # Mac
             ],
             "Times New Roman": [
                 "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
                 "C:/Windows/Fonts/times.ttf",
+                "C:/Windows/Fonts/timesbd.ttf",
                 "/System/Library/Fonts/Times.ttc"
             ],
             "Georgia": [
+                "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
                 "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+                "C:/Windows/Fonts/georgiab.ttf",
                 "C:/Windows/Fonts/georgia.ttf",
                 "/System/Library/Fonts/Georgia.ttf"
             ],
             "Courier New": [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
                 "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf",
+                "C:/Windows/Fonts/courbd.ttf",
                 "C:/Windows/Fonts/cour.ttf",
                 "/System/Library/Fonts/Courier.ttc"
             ],
             "Verdana": [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                "C:/Windows/Fonts/verdanab.ttf",
                 "C:/Windows/Fonts/verdana.ttf",
                 "/System/Library/Fonts/Helvetica.ttc"
             ],
             "Comic Sans MS": [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "C:/Windows/Fonts/comicbd.ttf",
                 "C:/Windows/Fonts/comic.ttf",
                 "/System/Library/Fonts/Helvetica.ttc"
             ]
@@ -681,16 +696,32 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         # CRITICAL: Naudojame font_size (ne base_font_size!)
         actual_font_size = int(font_size)
         
-        # CRITICAL: Tikrai užkrauname fontą
+        # CRITICAL: Tikrai užkrauname fontą su OS patikra
+        import os
+        
+        # DIAGNOSTIKA: Parodome VISUS galimus šriftus
+        print(f"\n{'='*60}")
+        print(f"FONT LOADING DEBUG: {font_family} su {actual_font_size}px")
+        print(f"{'='*60}")
+        
         font_loaded = False
-        for font_path in font_paths:
+        for i, font_path in enumerate(font_paths, 1):
+            # Pirma tikriname ar failas egzistuoja
+            exists = os.path.exists(font_path)
+            print(f"{i}. {font_path}")
+            print(f"   Egzistuoja: {'✅ TAIP' if exists else '❌ NE'}")
+            
+            if not exists:
+                continue
+                
             try:
                 font = ImageFont.truetype(font_path, actual_font_size)
-                print(f"DEBUG: ✅ SUCCESS! Užkrautas {font_path} su dydžiu {actual_font_size}px")
+                print(f"   Rezultatas: ✅ SUCCESS! Užkrautas su {actual_font_size}px")
+                print(f"{'='*60}\n")
                 font_loaded = True
                 break
             except Exception as e:
-                print(f"DEBUG: ❌ SKIP {font_path}: {str(e)[:50]}")
+                print(f"   Rezultatas: ❌ ERROR - {str(e)[:60]}")
                 continue
         
         # Jei NIEKUR nepavyko - ERROR
