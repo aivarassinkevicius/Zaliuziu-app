@@ -715,13 +715,13 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
                 font = ImageFont.load_default()
         
         # Automatinis teksto laužymas (word wrap)
-        # KVADRATIŠKAS stulpelis - dar siaurina
+        # KVADRATIŠKAS stulpelis su PLATESNIU plotu
         if text_align in ["top_right", "top_left", "bottom_right", "bottom_left"]:
-            # 28% pločio - kvadratiškas (vietoj 35%)
-            text_width = int(canvas_size * 0.28) - (margin * 2)
+            # 42% pločio - kvadratiškam tekstui optimalu (vietoj 28%)
+            text_width = int(canvas_size * 0.42) - (margin * 2)
         elif text_align in ["center", "full_center"]:
-            # Centre - vidutinis plotis (50%)
-            text_width = int(canvas_size * 0.50) - (margin * 2)
+            # Centre - vidutinis plotis (55%)
+            text_width = int(canvas_size * 0.55) - (margin * 2)
         else:
             # Top/Bottom - pilnas plotis
             text_width = canvas_size - (margin * 2)
@@ -826,13 +826,54 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
             canvas = Image.alpha_composite(canvas, overlay_bg)
             draw = ImageDraw.Draw(canvas)
         
-        # Piešiame tekstą su šešėliu
+        # Piešiame tekstą su šešėliu + JUSTIFY
         current_y = text_y
         
-        for line in wrapped_lines:
+        for i, line in enumerate(wrapped_lines):
             if current_y + line_height > canvas_size - margin:
                 break  # Per daug teksto
             
+            # JUSTIFY logika - tik ne paskutinei eilutei
+            is_last_line = (i == len(wrapped_lines) - 1)
+            
+            if not is_last_line and len(line.split()) > 1:
+                # Skaičiuojame normalų eilutės plotį
+                normal_width = draw.textbbox((0, 0), line, font=font)[2] - draw.textbbox((0, 0), line, font=font)[0]
+                
+                # Jei eilutė užima >70% pločio - justify'jame
+                if normal_width > text_width * 0.7:
+                    words = line.split()
+                    num_gaps = len(words) - 1
+                    
+                    if num_gaps > 0:
+                        # Skaičiuojame kiek vietos reikia užpildyti
+                        words_only = ''.join(words)
+                        words_width = draw.textbbox((0, 0), words_only, font=font)[2] - draw.textbbox((0, 0), words_only, font=font)[0]
+                        extra_space = (text_width - words_width) / num_gaps
+                        
+                        # Piešiame žodžius su papildomais tarpais
+                        x_pos = text_x_start
+                        for word_idx, word in enumerate(words):
+                            # Šešėlis
+                            if "shadow" in style.lower():
+                                for offset_x in range(-3, 4, 2):
+                                    for offset_y in range(-3, 4, 2):
+                                        if offset_x != 0 or offset_y != 0:
+                                            draw.text((x_pos + offset_x, current_y + offset_y), word, fill=(0, 0, 0), font=font)
+                            else:
+                                draw.text((x_pos + 2, current_y + 2), word, fill=shadow_color[:3] if len(shadow_color) > 3 else shadow_color, font=font)
+                            
+                            # Tekstas
+                            draw.text((x_pos, current_y), word, fill=final_text_color, font=font)
+                            
+                            # Kitas žodis
+                            word_width = draw.textbbox((0, 0), word, font=font)[2] - draw.textbbox((0, 0), word, font=font)[0]
+                            x_pos += word_width + extra_space
+                        
+                        current_y += line_height
+                        continue
+            
+            # Įprastas piešimas (paskutinė eilutė arba trumpa)
             # Storasis šešėlis jei "shadow effect"
             if "shadow" in style.lower():
                 for offset_x in range(-3, 4, 2):
