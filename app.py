@@ -427,11 +427,14 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         bg_color = tuple(int(background_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
         text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
         
-        # Nustatome teksto dydį (dabar jau int)
-        base_font_size = int(font_size) if font_size else 40
+        # Nustatome teksto dydį - UŽTIKRINAME INT
+        try:
+            base_font_size = int(font_size)
+        except:
+            base_font_size = 40
         
         # DEBUG
-        print(f"DEBUG: font_size parametras = {font_size}, base_font_size = {base_font_size}")
+        print(f"DEBUG: font_size parametras = {font_size} (type: {type(font_size)}), base_font_size = {base_font_size}")
         
         # Automatinis layout pagal nuotraukų kiekį
         if layout == "auto":
@@ -698,69 +701,64 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         shadow_color = (0, 0, 0, 180) if avg_text > 128 else (255, 255, 255, 180)
         
         # Apskaičiuojame teksto bloko dydį
-        line_height = base_font_size + 10
-        total_text_height = len(wrapped_lines) * line_height + margin * 2
+        line_height = int(base_font_size * 1.2)  # 20% tarpas (mažiau nei buvo)
+        total_text_height = len(wrapped_lines) * line_height + margin
         
-        # Jei kampuose - naudojame apribotą plotį
-        if text_align in ["top_right", "top_left", "bottom_right", "bottom_left"]:
-            max_line_width = int(canvas_size * 0.55)
-            total_text_width = max_line_width
+        # Apskaičiuojame tikrą teksto plotį (kompaktiškai)
+        if wrapped_lines:
+            max_line_width = max([draw.textbbox((0, 0), line, font=font)[2] - draw.textbbox((0, 0), line, font=font)[0] for line in wrapped_lines])
+            padding = margin // 2  # Mažesnis padding
+            total_text_width = max_line_width + padding * 2
         else:
-            # Kitais atvejais - apskaičiuojame tikrą plotį
-            if wrapped_lines:
-                total_text_width = max([draw.textbbox((0, 0), line, font=font)[2] - draw.textbbox((0, 0), line, font=font)[0] for line in wrapped_lines]) + margin * 2
-            else:
-                total_text_width = canvas_size
+            total_text_width = canvas_size
         
         # Jei overlay - pridedame pusskaidrų foną tekstui pagal poziciją
         if text_overlay:
             overlay_bg = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
             overlay_draw = ImageDraw.Draw(overlay_bg)
             
-            # Nustatome overlay poziciją pagal text_align
+            # Nustatome overlay poziciją pagal text_align (kompaktiškai)
+            padding = margin // 2
             if text_align == "top_right":
-                overlay_x = canvas_size - total_text_width - margin
-                overlay_y = margin
-                text_x_start = overlay_x + margin
-                text_y = overlay_y + margin
+                overlay_x = canvas_size - total_text_width - padding
+                overlay_y = padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
             elif text_align == "top_left":
-                overlay_x = margin
-                overlay_y = margin
-                text_x_start = overlay_x + margin
-                text_y = overlay_y + margin
+                overlay_x = padding
+                overlay_y = padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
             elif text_align == "bottom_right":
-                overlay_x = canvas_size - total_text_width - margin
-                overlay_y = canvas_size - total_text_height - margin
-                text_x_start = overlay_x + margin
-                text_y = overlay_y + margin
+                overlay_x = canvas_size - total_text_width - padding
+                overlay_y = canvas_size - total_text_height - padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
             elif text_align == "bottom_left":
-                overlay_x = margin
-                overlay_y = canvas_size - total_text_height - margin
-                text_x_start = overlay_x + margin
-                text_y = overlay_y + margin
+                overlay_x = padding
+                overlay_y = canvas_size - total_text_height - padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
             elif text_align == "top":
-                overlay_x = 0
-                overlay_y = margin
-                text_x_start = margin
-                text_y = overlay_y + margin
-                total_text_width = canvas_size
+                overlay_x = (canvas_size - total_text_width) // 2
+                overlay_y = padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
             elif text_align == "bottom":
-                overlay_x = 0
-                overlay_y = canvas_size - total_text_height - margin
-                text_x_start = margin
-                text_y = overlay_y + margin
-                total_text_width = canvas_size
+                overlay_x = (canvas_size - total_text_width) // 2
+                overlay_y = canvas_size - total_text_height - padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
             elif text_align == "full_center":
-                overlay_x = 0
+                overlay_x = (canvas_size - total_text_width) // 2
                 overlay_y = canvas_size // 2 - total_text_height // 2
-                text_x_start = margin
-                text_y = overlay_y + margin
-                total_text_width = canvas_size
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
             else:  # center
                 overlay_x = canvas_size // 2 - total_text_width // 2
                 overlay_y = canvas_size // 2 - total_text_height // 2
-                text_x_start = overlay_x + margin
-                text_y = overlay_y + margin
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
             
             # Piešiame pusskaidrų fono stačiakampį
             overlay_draw.rectangle(
