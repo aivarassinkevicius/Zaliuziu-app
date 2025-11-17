@@ -428,7 +428,10 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
         
         # Nustatome teksto dydį (dabar jau int)
-        base_font_size = font_size if isinstance(font_size, int) else 40
+        base_font_size = int(font_size) if font_size else 40
+        
+        # DEBUG
+        print(f"DEBUG: font_size parametras = {font_size}, base_font_size = {base_font_size}")
         
         # Automatinis layout pagal nuotraukų kiekį
         if layout == "auto":
@@ -633,15 +636,23 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         for font_path in font_paths:
             try:
                 font = ImageFont.truetype(font_path, base_font_size)
+                print(f"DEBUG: Užkrautas {font_path} su dydžiu {base_font_size}")
                 break
-            except:
+            except Exception as e:
+                print(f"DEBUG: Nepavyko {font_path}: {e}")
                 continue
         
         if font is None:
+            print(f"DEBUG: Naudojamas default font")
             font = ImageFont.load_default()
         
         # Automatinis teksto laužymas (word wrap)
-        text_width = canvas_size - (margin * 2)
+        # Jei kampuose - siaurina kolona (35% pločio)
+        if text_align in ["top_right", "top_left", "bottom_right", "bottom_left"]:
+            text_width = int(canvas_size * 0.35) - (margin * 2)  # Siaura kolona kampuose
+        else:
+            text_width = canvas_size - (margin * 2)
+        
         wrapped_lines = []
         
         # Padalijame tekstą į eilutes
@@ -675,7 +686,17 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         # Apskaičiuojame teksto bloko dydį
         line_height = base_font_size + 10
         total_text_height = len(wrapped_lines) * line_height + margin * 2
-        total_text_width = max([draw.textbbox((0, 0), line, font=font)[2] - draw.textbbox((0, 0), line, font=font)[0] for line in wrapped_lines]) + margin * 2 if wrapped_lines else canvas_size
+        
+        # Jei kampuose - naudojame apribotą plotį
+        if text_align in ["top_right", "top_left", "bottom_right", "bottom_left"]:
+            max_line_width = int(canvas_size * 0.55)
+            total_text_width = max_line_width
+        else:
+            # Kitais atvejais - apskaičiuojame tikrą plotį
+            if wrapped_lines:
+                total_text_width = max([draw.textbbox((0, 0), line, font=font)[2] - draw.textbbox((0, 0), line, font=font)[0] for line in wrapped_lines]) + margin * 2
+            else:
+                total_text_width = canvas_size
         
         # Jei overlay - pridedame pusskaidrų foną tekstui pagal poziciją
         if text_overlay:
