@@ -447,22 +447,36 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         
         # Nustatome teksto poziciją
         pos = text_position.lower()
-        if "top" in pos and "right" in pos:
+        print(f"DEBUG: Gauta pozicija: '{text_position}' -> '{pos}'")
+        
+        # Lietuviški žodžiai
+        has_top = "top" in pos or "viršus" in pos or "viršutinis" in pos or "virsus" in pos or "virsutinis" in pos
+        has_bottom = "bottom" in pos or "apačia" in pos or "apatinis" in pos or "apacia" in pos
+        has_right = "right" in pos or "dešinys" in pos or "desinys" in pos or "dešin" in pos or "desin" in pos
+        has_left = "left" in pos or "kairys" in pos or "kair" in pos
+        has_center = "center" in pos or "centras" in pos or "vidurys" in pos
+        has_full = "full" in pos or "pilnas" in pos
+        
+        if has_top and has_right:
             text_align = "top_right"
-        elif "top" in pos and "left" in pos:
+        elif has_top and has_left:
             text_align = "top_left"
-        elif "bottom" in pos and "right" in pos:
+        elif has_bottom and has_right:
             text_align = "bottom_right"
-        elif "bottom" in pos and "left" in pos:
+        elif has_bottom and has_left:
             text_align = "bottom_left"
-        elif "top" in pos or "viršus" in pos or "virsus" in pos:
+        elif has_top:
             text_align = "top"
-        elif "bottom" in pos or "apačia" in pos or "apacia" in pos:
+        elif has_bottom:
             text_align = "bottom"
-        elif "full" in pos or "pilnas" in pos:
+        elif has_full:
             text_align = "full_center"
+        elif has_center:
+            text_align = "center"
         else:
             text_align = "center"
+        
+        print(f"DEBUG: Nustatyta text_align: {text_align}")
         
         # NUOTRAUKŲ IŠDĖSTYMAS
         photos_width = canvas_size
@@ -1501,7 +1515,7 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
     with col2:
         template_text_position = st.selectbox(
             "📍 Teksto vieta:",
-            ["Viršus", "Apačia", "Centras", "Dešinys viršutinis kampas", "Dešinys apatinis kampas", "Kairys viršutinis kampas", "Kairys apatinis kampas", "Pilnas centras"],
+            ["top", "bottom", "center", "top_right", "bottom_right", "top_left", "bottom_left", "full_center"],
             index=1,
             help="Pasirinkite kur bus tekstas (visos pozicijos su overlay)"
         )
@@ -1627,6 +1641,17 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
                     "Kolažas (atsitiktinai)": "collage"
                 }
                 layout_value = layout_map.get(template_layout, "auto")
+                
+                # Debug info
+                print(f"\n=== ŠABLONO PARAMETRAI ===")
+                print(f"Layout: {layout_value}")
+                print(f"Pozicija: '{template_text_position}'")
+                print(f"Font dydis: {template_font_size} (type: {type(template_font_size)})")
+                print(f"Font šeima: {template_font_family}")
+                print(f"Teksto spalva: {template_text_color}")
+                print(f"Fono spalva: {template_bg_color}")
+                print(f"Stilius: {template_style}")
+                print(f"========================\n")
                 
                 # Generuojame šabloną
                 template_result = create_social_template(
