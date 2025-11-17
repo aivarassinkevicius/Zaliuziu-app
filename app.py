@@ -715,10 +715,15 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
                 font = ImageFont.load_default()
         
         # Automatinis teksto laužymas (word wrap)
-        # Jei kampuose - siaurina kolona (35% pločio)
+        # KVADRATIŠKAS stulpelis - dar siaurina
         if text_align in ["top_right", "top_left", "bottom_right", "bottom_left"]:
-            text_width = int(canvas_size * 0.35) - (margin * 2)  # Siaura kolona kampuose
+            # 28% pločio - kvadratiškas (vietoj 35%)
+            text_width = int(canvas_size * 0.28) - (margin * 2)
+        elif text_align in ["center", "full_center"]:
+            # Centre - vidutinis plotis (50%)
+            text_width = int(canvas_size * 0.50) - (margin * 2)
         else:
+            # Top/Bottom - pilnas plotis
             text_width = canvas_size - (margin * 2)
         
         wrapped_lines = []
