@@ -430,12 +430,12 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         
         # Nustatome teksto dydį - UŽTIKRINAME INT
         try:
-            base_font_size = int(font_size)
+            actual_font_size = int(font_size)
         except:
-            base_font_size = 40
+            actual_font_size = 40
         
         # DEBUG
-        print(f"DEBUG: font_size parametras = {font_size} (type: {type(font_size)}), base_font_size = {base_font_size}")
+        print(f"DEBUG: font_size parametras = {font_size} (type: {type(font_size)}), actual_font_size = {actual_font_size}")
         
         # Automatinis layout pagal nuotraukų kiekį
         if layout == "auto":
@@ -678,12 +678,15 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         
         font_paths = font_map.get(font_family, font_map["Arial Bold"])
         
+        # CRITICAL: Naudojame font_size (ne base_font_size!)
+        actual_font_size = int(font_size)
+        
         # CRITICAL: Tikrai užkrauname fontą
         font_loaded = False
         for font_path in font_paths:
             try:
-                font = ImageFont.truetype(font_path, base_font_size)
-                print(f"DEBUG: ✅ SUCCESS! Užkrautas {font_path} su dydžiu {base_font_size}px")
+                font = ImageFont.truetype(font_path, actual_font_size)
+                print(f"DEBUG: ✅ SUCCESS! Užkrautas {font_path} su dydžiu {actual_font_size}px")
                 font_loaded = True
                 break
             except Exception as e:
@@ -692,7 +695,7 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         
         # Jei NIEKUR nepavyko - ERROR
         if not font_loaded:
-            error_msg = f"⚠️ CRITICAL ERROR: Negaliu užkrauti JOKIO šrifto su {base_font_size}px!"
+            error_msg = f"⚠️ CRITICAL ERROR: Negaliu užkrauti JOKIO šrifto su {actual_font_size}px!"
             print(f"DEBUG: {error_msg}")
             st.error(error_msg)
             # Last resort - bet kuris šriftas su dydžiu
@@ -704,8 +707,8 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
                     "C:/Windows/Fonts/arial.ttf"
                 ]:
                     try:
-                        font = ImageFont.truetype(fallback, base_font_size)
-                        print(f"DEBUG: ✅ FALLBACK sukurtas: {fallback} su {base_font_size}px")
+                        font = ImageFont.truetype(fallback, actual_font_size)
+                        print(f"DEBUG: ✅ FALLBACK sukurtas: {fallback} su {actual_font_size}px")
                         st.warning(f"Naudojamas fallback šriftas: {fallback}")
                         break
                     except:
@@ -776,7 +779,7 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         shadow_color = (0, 0, 0, 180) if avg_text > 128 else (255, 255, 255, 180)
         
         # Apskaičiuojame teksto bloko dydį
-        line_height = int(base_font_size * 1.2)  # 20% tarpas (mažiau nei buvo)
+        line_height = int(actual_font_size * 1.2)  # 20% tarpas (mažiau nei buvo)
         total_text_height = len(wrapped_lines) * line_height + margin
         
         # Apskaičiuojame tikrą teksto plotį (kompaktiškai)
