@@ -396,7 +396,7 @@ def image_to_base64(image_file):
     image_file.seek(0)
     return base64.b64encode(image_file.read()).decode()
 
-def create_social_template(images, text, layout="auto", text_position="bottom", font_size="normal", background_color="#FFFFFF", style="Classic"):
+def create_social_template(images, text, layout="auto", text_position="bottom", font_size=40, background_color="#FFFFFF", style="Classic", font_family="Arial Bold", text_color="#000000"):
     """
     Sukuria 1080x1080 Instagram šabloną su nuotraukomis ir tekstu
     
@@ -404,10 +404,12 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         images: List of PIL Image objects
         text: Tekstas, kuris bus pridėtas prie šablono
         layout: "auto", "1", "2", "3", "4", "2_vertical", "collage" - nuotraukų išdėstymas
-        text_position: "top", "bottom", "center" - teksto pozicija
-        font_size: "small", "normal", "large" - teksto dydis
-        background_color: Hex spalva (pvz. "#FFFFFF")
+        text_position: "top", "bottom", "center", "top_right", "bottom_right", "top_left", "bottom_left", "full_center" - teksto pozicija
+        font_size: Tikslus šrifto dydis pikseliais (int)
+        background_color: Hex spalva fono (pvz. "#FFFFFF")
         style: "Classic", "Gradient", "Rounded corners", "Shadow effect", "Vignette", "Polaroid"
+        font_family: Šrifto šeima ("Arial Bold", "Times New Roman", etc.)
+        text_color: Hex spalva teksto (pvz. "#000000")
     
     Returns:
         BytesIO object su PNG šablonu
@@ -423,10 +425,10 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         
         # Konvertuojame hex į RGB
         bg_color = tuple(int(background_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
         
-        # Nustatome teksto dydį
-        font_sizes = {"small": 32, "normal": 40, "large": 52}
-        base_font_size = font_sizes.get(font_size.lower(), 40)
+        # Nustatome teksto dydį (dabar jau int)
+        base_font_size = font_size if isinstance(font_size, int) else 40
         
         # Automatinis layout pagal nuotraukų kiekį
         if layout == "auto":
@@ -435,22 +437,29 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         # Sukuriame Canvas
         canvas = Image.new('RGB', (canvas_size, canvas_size), bg_color)
         
-        # Apskaičiuojame nuotraukų srities dydį pagal teksto poziciją
-        if text_position.lower() == "center":
-            photos_y_start = 0
-            photos_height = canvas_size
-            text_y = canvas_size // 2 - 100
-            text_overlay = True
-        elif text_position.lower() == "top":
-            photos_y_start = text_area_height
-            photos_height = canvas_size - text_area_height
-            text_y = margin
-            text_overlay = False
-        else:  # bottom
-            photos_y_start = 0
-            photos_height = canvas_size - text_area_height
-            text_y = photos_height + margin
-            text_overlay = False
+        # Apskaičiuojame nuotraukų srities dydį pagal teksto poziciją (VISOS SU OVERLAY)
+        photos_y_start = 0
+        photos_height = canvas_size
+        text_overlay = True
+        
+        # Nustatome teksto poziciją
+        pos = text_position.lower()
+        if "top" in pos and "right" in pos:
+            text_align = "top_right"
+        elif "top" in pos and "left" in pos:
+            text_align = "top_left"
+        elif "bottom" in pos and "right" in pos:
+            text_align = "bottom_right"
+        elif "bottom" in pos and "left" in pos:
+            text_align = "bottom_left"
+        elif "top" in pos or "viršus" in pos or "virsus" in pos:
+            text_align = "top"
+        elif "bottom" in pos or "apačia" in pos or "apacia" in pos:
+            text_align = "bottom"
+        elif "full" in pos or "pilnas" in pos:
+            text_align = "full_center"
+        else:
+            text_align = "center"
         
         # NUOTRAUKŲ IŠDĖSTYMAS
         photos_width = canvas_size
@@ -608,14 +617,18 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         # TEKSTO PRIDĖJIMAS
         draw = ImageDraw.Draw(canvas)
         
-        # Įkeliame fontą
+        # Įkeliame fontą pagal pasirinkimą
         font = None
-        font_paths = [
-            "C:/Windows/Fonts/arialbd.ttf",
-            "C:/Windows/Fonts/arial.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-            "/System/Library/Fonts/Helvetica.ttc"
-        ]
+        font_map = {
+            "Arial Bold": ["C:/Windows/Fonts/arialbd.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/System/Library/Fonts/Helvetica.ttc"],
+            "Times New Roman": ["C:/Windows/Fonts/times.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf", "/System/Library/Fonts/Times.ttc"],
+            "Georgia": ["C:/Windows/Fonts/georgia.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf", "/System/Library/Fonts/Georgia.ttf"],
+            "Courier New": ["C:/Windows/Fonts/cour.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", "/System/Library/Fonts/Courier.ttc"],
+            "Verdana": ["C:/Windows/Fonts/verdana.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/System/Library/Fonts/Helvetica.ttc"],
+            "Comic Sans MS": ["C:/Windows/Fonts/comic.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/System/Library/Fonts/Helvetica.ttc"]
+        }
+        
+        font_paths = font_map.get(font_family, font_map["Arial Bold"])
         
         for font_path in font_paths:
             try:
@@ -652,35 +665,79 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
             if current_line:
                 wrapped_lines.append(' '.join(current_line))
         
-        # Teksto spalva (tamsus fonas = balta, šviesus = juoda)
-        avg_bg = sum(bg_color) / 3
-        text_color = (255, 255, 255) if avg_bg < 128 else (30, 30, 30)
-        shadow_color = (0, 0, 0, 180) if avg_bg >= 128 else (255, 255, 255, 180)
+        # Naudojame vartotojo pasirinktą teksto spalvą
+        final_text_color = text_rgb
         
-        # Jei overlay - pridedame pusskaidrų foną tekstui
+        # Šešėlio spalva - priešinga teksto spalvai
+        avg_text = sum(text_rgb) / 3
+        shadow_color = (0, 0, 0, 180) if avg_text > 128 else (255, 255, 255, 180)
+        
+        # Apskaičiuojame teksto bloko dydį
+        line_height = base_font_size + 10
+        total_text_height = len(wrapped_lines) * line_height + margin * 2
+        total_text_width = max([draw.textbbox((0, 0), line, font=font)[2] - draw.textbbox((0, 0), line, font=font)[0] for line in wrapped_lines]) + margin * 2 if wrapped_lines else canvas_size
+        
+        # Jei overlay - pridedame pusskaidrų foną tekstui pagal poziciją
         if text_overlay:
-            # Apskaičiuojame teksto bloko dydį
-            line_height = base_font_size + 10
-            total_text_height = len(wrapped_lines) * line_height + margin * 2
-            
             overlay_bg = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
             overlay_draw = ImageDraw.Draw(overlay_bg)
             
-            # Tamsus pusskaidrus stačiakampis
-            overlay_y_start = text_y - margin
+            # Nustatome overlay poziciją pagal text_align
+            if text_align == "top_right":
+                overlay_x = canvas_size - total_text_width - margin
+                overlay_y = margin
+                text_x_start = overlay_x + margin
+                text_y = overlay_y + margin
+            elif text_align == "top_left":
+                overlay_x = margin
+                overlay_y = margin
+                text_x_start = overlay_x + margin
+                text_y = overlay_y + margin
+            elif text_align == "bottom_right":
+                overlay_x = canvas_size - total_text_width - margin
+                overlay_y = canvas_size - total_text_height - margin
+                text_x_start = overlay_x + margin
+                text_y = overlay_y + margin
+            elif text_align == "bottom_left":
+                overlay_x = margin
+                overlay_y = canvas_size - total_text_height - margin
+                text_x_start = overlay_x + margin
+                text_y = overlay_y + margin
+            elif text_align == "top":
+                overlay_x = 0
+                overlay_y = margin
+                text_x_start = margin
+                text_y = overlay_y + margin
+                total_text_width = canvas_size
+            elif text_align == "bottom":
+                overlay_x = 0
+                overlay_y = canvas_size - total_text_height - margin
+                text_x_start = margin
+                text_y = overlay_y + margin
+                total_text_width = canvas_size
+            elif text_align == "full_center":
+                overlay_x = 0
+                overlay_y = canvas_size // 2 - total_text_height // 2
+                text_x_start = margin
+                text_y = overlay_y + margin
+                total_text_width = canvas_size
+            else:  # center
+                overlay_x = canvas_size // 2 - total_text_width // 2
+                overlay_y = canvas_size // 2 - total_text_height // 2
+                text_x_start = overlay_x + margin
+                text_y = overlay_y + margin
+            
+            # Piešiame pusskaidrų fono stačiakampį
             overlay_draw.rectangle(
-                [(0, overlay_y_start), (canvas_size, overlay_y_start + total_text_height)],
-                fill=(0, 0, 0, 160)
+                [(overlay_x, overlay_y), (overlay_x + total_text_width, overlay_y + total_text_height)],
+                fill=bg_color + (180,)
             )
             
             canvas = canvas.convert('RGBA')
             canvas = Image.alpha_composite(canvas, overlay_bg)
             draw = ImageDraw.Draw(canvas)
-            
-            text_color = (255, 255, 255)  # Baltas tekstas ant tamsaus
         
         # Piešiame tekstą su šešėliu
-        line_height = base_font_size + 10
         current_y = text_y
         
         for line in wrapped_lines:
@@ -692,13 +749,13 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
                 for offset_x in range(-3, 4, 2):
                     for offset_y in range(-3, 4, 2):
                         if offset_x != 0 or offset_y != 0:
-                            draw.text((margin + offset_x, current_y + offset_y), line, fill=(0, 0, 0), font=font)
+                            draw.text((text_x_start + offset_x, current_y + offset_y), line, fill=(0, 0, 0), font=font)
             else:
                 # Įprastas šešėlis
-                draw.text((margin + 2, current_y + 2), line, fill=shadow_color[:3] if len(shadow_color) > 3 else shadow_color, font=font)
+                draw.text((text_x_start + 2, current_y + 2), line, fill=shadow_color[:3] if len(shadow_color) > 3 else shadow_color, font=font)
             
-            # Tekstas
-            draw.text((margin, current_y), line, fill=text_color, font=font)
+            # Tekstas su vartotojo pasirinkta spalva
+            draw.text((text_x_start, current_y), line, fill=final_text_color, font=font)
             current_y += line_height
         
         # Konvertuojame atgal į RGB jei buvo RGBA
@@ -1421,35 +1478,53 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
         )
     
     with col2:
-        template_text_position = st.radio(
+        template_text_position = st.selectbox(
             "📍 Teksto vieta:",
-            ["Top", "Bottom", "Center (overlay)"],
+            ["Viršus", "Apačia", "Centras", "Dešinys viršutinis kampas", "Dešinys apatinis kampas", "Kairys viršutinis kampas", "Kairys apatinis kampas", "Pilnas centras"],
             index=1,
-            help="Viršuje, apačioje arba centre ant nuotraukų"
+            help="Pasirinkite kur bus tekstas (visos pozicijos su overlay)"
         )
     
     with col3:
-        template_font_size = st.radio(
-            "🔤 Teksto dydis:",
-            ["Small", "Normal", "Large"],
-            index=1,
-            help="Mažas, vidutinis ar didelis"
+        template_style = st.selectbox(
+            "✨ Šablono stilius:",
+            ["Classic", "Gradient", "Rounded corners", "Shadow effect", "Vignette", "Polaroid"],
+            help="Prideda vizualinius efektus"
         )
     
     col4, col5 = st.columns(2)
     
     with col4:
+        template_font_size = st.slider(
+            "🔤 Teksto dydis (px):",
+            min_value=20,
+            max_value=100,
+            value=40,
+            step=2,
+            help="Šrifto dydis pikseliais"
+        )
+    
+    with col5:
+        template_font_family = st.selectbox(
+            "🔠 Šriftas:",
+            ["Arial Bold", "Times New Roman", "Georgia", "Courier New", "Verdana", "Comic Sans MS"],
+            help="Pasirinkite teksto šriftą"
+        )
+    
+    col6, col7 = st.columns(2)
+    
+    with col6:
         template_bg_color = st.color_picker(
             "🎨 Fono spalva:",
             "#FFFFFF",
             help="Pasirinkite fono spalvą tekstui"
         )
     
-    with col5:
-        template_style = st.selectbox(
-            "✨ Šablono stilius:",
-            ["Classic", "Gradient", "Rounded corners", "Shadow effect", "Vignette", "Polaroid"],
-            help="Prideda vizualinius efektus"
+    with col7:
+        template_text_color = st.color_picker(
+            "✏️ Teksto spalva:",
+            "#000000",
+            help="Pasirinkite raidžių spalvą"
         )
     
     # Pasirenkame kurį tekstą naudoti
@@ -1512,10 +1587,12 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
                 else:
                     final_text = st.session_state.ai_content_result
                 
-                # Išvalome nereikalingus teksto elementus (VARIANTAS 1, 2, 3, etc.)
+                # Išvalome nereikalingus teksto elementus (VARIANTAS 1, 2, 3, MARKETINGINIS, etc.)
                 import re
                 final_text = re.sub(r'VARIANTAS\s+\d+\s*[-:]*\s*', '', final_text, flags=re.IGNORECASE)
                 final_text = re.sub(r'^\d+[\.\)]\s*', '', final_text, flags=re.MULTILINE)  # Numeriai pradžioje eilučių
+                # Pašaliname tipo etiketes (MARKETINGINIS, DRAUGIŠKAS, SU HUMORU)
+                final_text = re.sub(r'(MARKETINGINIS|DRAUGIŠKAS|DRAUGI[ŠS]KAS|SU HUMORU)\s*[💼🏡😄🎭]*\s*[-:]*\s*', '', final_text, flags=re.IGNORECASE)
                 final_text = final_text.strip()
                 
                 # Konvertuojame layout
@@ -1535,10 +1612,12 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
                     images=template_images,
                     text=final_text,
                     layout=layout_value,
-                    text_position=template_text_position.lower().replace(" (overlay)", ""),
-                    font_size=template_font_size.lower(),
+                    text_position=template_text_position,
+                    font_size=template_font_size,
                     background_color=template_bg_color,
-                    style=template_style
+                    style=template_style,
+                    font_family=template_font_family,
+                    text_color=template_text_color
                 )
                 
                 if template_result:
