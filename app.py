@@ -638,39 +638,81 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         # TEKSTO PRIDĖJIMAS
         draw = ImageDraw.Draw(canvas)
         
-        # Įkeliame fontą pagal pasirinkimą
+        # Įkeliame fontą pagal pasirinkimą - UNIVERSAL PATHS
         font = None
+        
+        # PIRMENYBĖ: Linux/Cloud šriftai (Streamlit Cloud), tada Windows
         font_map = {
-            "Arial Bold": ["C:/Windows/Fonts/arialbd.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/System/Library/Fonts/Helvetica.ttc"],
-            "Times New Roman": ["C:/Windows/Fonts/times.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf", "/System/Library/Fonts/Times.ttc"],
-            "Georgia": ["C:/Windows/Fonts/georgia.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf", "/System/Library/Fonts/Georgia.ttf"],
-            "Courier New": ["C:/Windows/Fonts/cour.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", "/System/Library/Fonts/Courier.ttc"],
-            "Verdana": ["C:/Windows/Fonts/verdana.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/System/Library/Fonts/Helvetica.ttc"],
-            "Comic Sans MS": ["C:/Windows/Fonts/comic.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/System/Library/Fonts/Helvetica.ttc"]
+            "Arial Bold": [
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",  # Linux/Cloud PIRMAS
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "C:/Windows/Fonts/arialbd.ttf",  # Windows
+                "/System/Library/Fonts/Helvetica.ttc"  # Mac
+            ],
+            "Times New Roman": [
+                "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+                "C:/Windows/Fonts/times.ttf",
+                "/System/Library/Fonts/Times.ttc"
+            ],
+            "Georgia": [
+                "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+                "C:/Windows/Fonts/georgia.ttf",
+                "/System/Library/Fonts/Georgia.ttf"
+            ],
+            "Courier New": [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+                "C:/Windows/Fonts/cour.ttf",
+                "/System/Library/Fonts/Courier.ttc"
+            ],
+            "Verdana": [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "C:/Windows/Fonts/verdana.ttf",
+                "/System/Library/Fonts/Helvetica.ttc"
+            ],
+            "Comic Sans MS": [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "C:/Windows/Fonts/comic.ttf",
+                "/System/Library/Fonts/Helvetica.ttc"
+            ]
         }
         
         font_paths = font_map.get(font_family, font_map["Arial Bold"])
         
+        # CRITICAL: Tikrai užkrauname fontą
+        font_loaded = False
         for font_path in font_paths:
             try:
                 font = ImageFont.truetype(font_path, base_font_size)
-                print(f"DEBUG: ✅ Užkrautas {font_path} su dydžiu {base_font_size}")
+                print(f"DEBUG: ✅ SUCCESS! Užkrautas {font_path} su dydžiu {base_font_size}px")
+                font_loaded = True
                 break
             except Exception as e:
-                print(f"DEBUG: ❌ Nepavyko {font_path}: {e}")
+                print(f"DEBUG: ❌ SKIP {font_path}: {str(e)[:50]}")
                 continue
         
-        if font is None:
-            print(f"DEBUG: ⚠️ CRITICAL - Naudojamas default font (dydis neveiks!)")
-            # Default font su bandymu naudoti dydį
-            font = ImageFont.load_default()
-            # Bandome sukurti BENT KĄ su dydžiu
+        # Jei NIEKUR nepavyko - ERROR
+        if not font_loaded:
+            error_msg = f"⚠️ CRITICAL ERROR: Negaliu užkrauti JOKIO šrifto su {base_font_size}px!"
+            print(f"DEBUG: {error_msg}")
+            st.error(error_msg)
+            # Last resort - bet kuris šriftas su dydžiu
             try:
-                # Fallback į Arial paprastą
-                font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", base_font_size)
-                print(f"DEBUG: ✅ Fallback Arial veikia su {base_font_size}px")
+                # Bandome bet kokį Linux šriftą
+                for fallback in [
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                    "C:/Windows/Fonts/arial.ttf"
+                ]:
+                    try:
+                        font = ImageFont.truetype(fallback, base_font_size)
+                        print(f"DEBUG: ✅ FALLBACK sukurtas: {fallback} su {base_font_size}px")
+                        st.warning(f"Naudojamas fallback šriftas: {fallback}")
+                        break
+                    except:
+                        continue
             except:
-                print(f"DEBUG: ❌ Visiškas FAIL - default font be dydžio kontrolės")
+                st.error("FATAL: Default font be dydžio kontrolės!")
+                font = ImageFont.load_default()
         
         # Automatinis teksto laužymas (word wrap)
         # Jei kampuose - siaurina kolona (35% pločio)
