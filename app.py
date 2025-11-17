@@ -715,13 +715,32 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
                 font = ImageFont.load_default()
         
         # Automatinis teksto laužymas (word wrap)
-        # KVADRATIŠKAS stulpelis su PLATESNIU plotu
+        # DINAMIŠKAS stulpelis - prisitaiko prie teksto ilgio
+        
+        # Pirma paskaičiuojame optimalų plotį pagal tekstą
+        words = text.split()
+        avg_word_length = sum(len(word) for word in words) / max(len(words), 1)
+        total_chars = len(text)
+        
+        # Optimizuojame plotį pagal teksto ilgį
         if text_align in ["top_right", "top_left", "bottom_right", "bottom_left"]:
-            # 42% pločio - kvadratiškam tekstui optimalu (vietoj 28%)
-            text_width = int(canvas_size * 0.42) - (margin * 2)
+            # Kampuose - dinamiškai nuo 30% iki 50%
+            if total_chars < 100:
+                ratio = 0.30  # Trumpas tekstas - siaurina
+            elif total_chars < 200:
+                ratio = 0.38
+            else:
+                ratio = 0.45  # Ilgas tekstas - platesnė
+            text_width = int(canvas_size * ratio) - (margin * 2)
         elif text_align in ["center", "full_center"]:
-            # Centre - vidutinis plotis (55%)
-            text_width = int(canvas_size * 0.55) - (margin * 2)
+            # Centre - nuo 40% iki 60%
+            if total_chars < 100:
+                ratio = 0.40
+            elif total_chars < 200:
+                ratio = 0.50
+            else:
+                ratio = 0.60
+            text_width = int(canvas_size * ratio) - (margin * 2)
         else:
             # Top/Bottom - pilnas plotis
             text_width = canvas_size - (margin * 2)
@@ -833,15 +852,16 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
             if current_y + line_height > canvas_size - margin:
                 break  # Per daug teksto
             
-            # JUSTIFY logika - tik ne paskutinei eilutei
+            # JUSTIFY logika - tik ne paskutinei eilutei IR tik jei tarpai normalūs
             is_last_line = (i == len(wrapped_lines) - 1)
             
             if not is_last_line and len(line.split()) > 1:
                 # Skaičiuojame normalų eilutės plotį
                 normal_width = draw.textbbox((0, 0), line, font=font)[2] - draw.textbbox((0, 0), line, font=font)[0]
                 
-                # Jei eilutė užima >70% pločio - justify'jame
-                if normal_width > text_width * 0.7:
+                # Jei eilutė užima >80% pločio - justify'jame (buvo 70%)
+                # Ir PATIKRINA kad tarpai nebus per dideli
+                if normal_width > text_width * 0.80:
                     words = line.split()
                     num_gaps = len(words) - 1
                     
@@ -849,29 +869,34 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
                         # Skaičiuojame kiek vietos reikia užpildyti
                         words_only = ''.join(words)
                         words_width = draw.textbbox((0, 0), words_only, font=font)[2] - draw.textbbox((0, 0), words_only, font=font)[0]
-                        extra_space = (text_width - words_width) / num_gaps
+                        extra_space_needed = text_width - words_width
+                        extra_space = extra_space_needed / num_gaps
                         
-                        # Piešiame žodžius su papildomais tarpais
-                        x_pos = text_x_start
-                        for word_idx, word in enumerate(words):
-                            # Šešėlis
-                            if "shadow" in style.lower():
-                                for offset_x in range(-3, 4, 2):
-                                    for offset_y in range(-3, 4, 2):
-                                        if offset_x != 0 or offset_y != 0:
-                                            draw.text((x_pos + offset_x, current_y + offset_y), word, fill=(0, 0, 0), font=font)
-                            else:
-                                draw.text((x_pos + 2, current_y + 2), word, fill=shadow_color[:3] if len(shadow_color) > 3 else shadow_color, font=font)
-                            
-                            # Tekstas
-                            draw.text((x_pos, current_y), word, fill=final_text_color, font=font)
-                            
-                            # Kitas žodis
-                            word_width = draw.textbbox((0, 0), word, font=font)[2] - draw.textbbox((0, 0), word, font=font)[0]
-                            x_pos += word_width + extra_space
+                        # PATIKRINA: ar tarpai nebus per dideli (max 2x normalaus tarpo)
+                        normal_space = draw.textbbox((0, 0), " ", font=font)[2] - draw.textbbox((0, 0), " ", font=font)[0]
                         
-                        current_y += line_height
-                        continue
+                        if extra_space <= normal_space * 2.5:  # Tik jei tarpai normalūs
+                            # Piešiame žodžius su papildomais tarpais
+                            x_pos = text_x_start
+                            for word_idx, word in enumerate(words):
+                                # Šešėlis
+                                if "shadow" in style.lower():
+                                    for offset_x in range(-3, 4, 2):
+                                        for offset_y in range(-3, 4, 2):
+                                            if offset_x != 0 or offset_y != 0:
+                                                draw.text((x_pos + offset_x, current_y + offset_y), word, fill=(0, 0, 0), font=font)
+                                else:
+                                    draw.text((x_pos + 2, current_y + 2), word, fill=shadow_color[:3] if len(shadow_color) > 3 else shadow_color, font=font)
+                                
+                                # Tekstas
+                                draw.text((x_pos, current_y), word, fill=final_text_color, font=font)
+                                
+                                # Kitas žodis
+                                word_width = draw.textbbox((0, 0), word, font=font)[2] - draw.textbbox((0, 0), word, font=font)[0]
+                                x_pos += word_width + extra_space
+                            
+                            current_y += line_height
+                            continue
             
             # Įprastas piešimas (paskutinė eilutė arba trumpa)
             # Storasis šešėlis jei "shadow effect"
