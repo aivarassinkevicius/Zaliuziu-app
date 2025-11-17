@@ -653,15 +653,23 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         for font_path in font_paths:
             try:
                 font = ImageFont.truetype(font_path, base_font_size)
-                print(f"DEBUG: Užkrautas {font_path} su dydžiu {base_font_size}")
+                print(f"DEBUG: ✅ Užkrautas {font_path} su dydžiu {base_font_size}")
                 break
             except Exception as e:
-                print(f"DEBUG: Nepavyko {font_path}: {e}")
+                print(f"DEBUG: ❌ Nepavyko {font_path}: {e}")
                 continue
         
         if font is None:
-            print(f"DEBUG: Naudojamas default font")
+            print(f"DEBUG: ⚠️ CRITICAL - Naudojamas default font (dydis neveiks!)")
+            # Default font su bandymu naudoti dydį
             font = ImageFont.load_default()
+            # Bandome sukurti BENT KĄ su dydžiu
+            try:
+                # Fallback į Arial paprastą
+                font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", base_font_size)
+                print(f"DEBUG: ✅ Fallback Arial veikia su {base_font_size}px")
+            except:
+                print(f"DEBUG: ❌ Visiškas FAIL - default font be dydžio kontrolės")
         
         # Automatinis teksto laužymas (word wrap)
         # Jei kampuose - siaurina kolona (35% pločio)
