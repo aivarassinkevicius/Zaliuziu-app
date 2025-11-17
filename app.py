@@ -396,7 +396,7 @@ def image_to_base64(image_file):
     image_file.seek(0)
     return base64.b64encode(image_file.read()).decode()
 
-def create_social_template(images, text, layout="auto", text_position="bottom", font_size=40, background_color="#FFFFFF", style="Classic", font_family="Arial Bold", text_color="#000000"):
+def create_social_template(images, text, layout="auto", text_position="bottom", font_size=40, background_color="#FFFFFF", style="Classic", font_family="Arial Bold", text_color="#000000", bg_opacity=180):
     """
     Sukuria 1080x1080 Instagram šabloną su nuotraukomis ir tekstu
     
@@ -410,6 +410,7 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         style: "Classic", "Gradient", "Rounded corners", "Shadow effect", "Vignette", "Polaroid"
         font_family: Šrifto šeima ("Arial Bold", "Times New Roman", etc.)
         text_color: Hex spalva teksto (pvz. "#000000")
+        bg_opacity: Fono overlay permatomumas 0-255 (0=permatomas, 255=nepermatomas)
     
     Returns:
         BytesIO object su PNG šablonu
@@ -768,10 +769,10 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
                 text_x_start = overlay_x + padding
                 text_y = overlay_y + padding // 2
             
-            # Piešiame pusskaidrų fono stačiakampį
+            # Piešiame pusskaidrų fono stačiakampį su vartotojo pasirinktu permatomumu
             overlay_draw.rectangle(
                 [(overlay_x, overlay_y), (overlay_x + total_text_width, overlay_y + total_text_height)],
-                fill=bg_color + (180,)
+                fill=bg_color + (bg_opacity,)  # Naudojame vartotojo pasirinkta alpha
             )
             
             canvas = canvas.convert('RGBA')
@@ -1552,7 +1553,7 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
             help="Pasirinkite teksto šriftą"
         )
     
-    col6, col7 = st.columns(2)
+    col6, col7, col8 = st.columns(3)
     
     with col6:
         template_bg_color = st.color_picker(
@@ -1566,6 +1567,16 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
             "✏️ Teksto spalva:",
             "#000000",
             help="Pasirinkite raidžių spalvą"
+        )
+    
+    with col8:
+        template_bg_opacity = st.slider(
+            "🔳 Fono permatomumas:",
+            min_value=0,
+            max_value=255,
+            value=180,
+            step=10,
+            help="0 = visiškai permatomas, 255 = nepermatomas"
         )
     
     # Pasirenkame kurį tekstą naudoti
@@ -1648,6 +1659,9 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
                 }
                 layout_value = layout_map.get(template_layout, "auto")
                 
+                # UI Debug - matysi naršyklėje!
+                st.info(f"🔍 DEBUG: Font dydis = **{template_font_size}px**, Šriftas = **{template_font_family}**, Pozicija = **{template_text_position}**")
+                
                 # Debug info
                 print(f"\n=== ŠABLONO PARAMETRAI ===")
                 print(f"Layout: {layout_value}")
@@ -1669,7 +1683,8 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
                     background_color=template_bg_color,
                     style=template_style,
                     font_family=template_font_family,
-                    text_color=template_text_color
+                    text_color=template_text_color,
+                    bg_opacity=template_bg_opacity
                 )
                 
                 if template_result:
