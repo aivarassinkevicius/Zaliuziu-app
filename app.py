@@ -26,33 +26,31 @@ def ai_generate_layout(num_images, texts):
     try:
         layout = json.loads(response.choices[0].message.content)
     except Exception:
-        # Fallback: centered grid
-        canvas_w, canvas_h = 1080, 1080  # Default, will be overwritten by actual format
-        img_size = min(canvas_w, canvas_h) // (num_images + 1)
-        margin = img_size // 4
-        layout = {
-            "nuotraukos": [],
-            "tekstai": []
-        }
-        # Center images horizontally and vertically
+        # Fallback: estetiškas centrinis išdėstymas su padding ir automatinėmis spalvomis
+        canvas_w, canvas_h = 1080, 1080
+        padding = 80
+        gap = 40
+        img_size = int((canvas_w - 2*padding - (num_images-1)*gap) / max(num_images,1))
+        layout = {"nuotraukos": [], "tekstai": []}
+        # Išdėstome nuotraukas centre su tarpais
         for i in range(num_images):
-            x = int((canvas_w - img_size) // 2 + (i - (num_images-1)/2) * (img_size + margin))
-            y = int((canvas_h - img_size) // 2)
+            x = padding + i*(img_size + gap)
+            y = int(canvas_h*0.22)
             layout["nuotraukos"].append({
-                "x": max(0, min(x, canvas_w-img_size)),
-                "y": max(0, min(y, canvas_h-img_size)),
+                "x": x,
+                "y": y,
                 "w": img_size,
                 "h": img_size,
-                "rotation": random.randint(-8,8)
+                "rotation": random.randint(-5,5)
             })
-        # Center texts below images
+        # Tekstus dedame po nuotraukomis, centre, su didesniu tarpu
         for i in range(len(texts)):
             layout["tekstai"].append({
-                "x": int(canvas_w * 0.5),
-                "y": int(canvas_h * 0.8 + i*60),
-                "size": 48 if i == 0 else 32,
+                "x": int(canvas_w * (0.25 + 0.5*i)),
+                "y": int(canvas_h*0.22 + img_size + 60),
+                "size": 54 if i == 0 else 40,
                 "font": "DejaVuSans-Bold.ttf",
-                "color": "#FFFFFF" if i == 0 else "#CCCCCC"
+                "color": "#222222" if i == 0 else "#444444"
             })
     return layout
 
