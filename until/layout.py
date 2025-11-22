@@ -20,7 +20,9 @@ def draw_text_auto(img, text, font_path="Roboto-Bold.ttf"):
     except Exception:
         font = ImageFont.truetype(fallback_font, font_size)
 
-    w, h = draw.textsize(text, font=font)
+    bbox = draw.textbbox((0, 0), text, font=font)
+    w = bbox[2] - bbox[0]
+    h = bbox[3] - bbox[1]
     position = ((W - w) / 2, H * 0.60)
 
     # Teksto fonas (lengvas permatomumas)
