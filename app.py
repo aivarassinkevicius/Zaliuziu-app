@@ -1,8 +1,8 @@
 import streamlit as st
-import io, os, base64, random
+import io, os, base64
 from openai import OpenAI
 from dotenv import load_dotenv
-from PIL import Image, ImageEnhance, ImageDraw, ImageFont, ImageFilter, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
 
 # Bandome importuoti camera input (jei neveiks, praleidžia)
 try:
@@ -14,7 +14,8 @@ except ImportError:
 # ---------- Nustatymai ----------
 load_dotenv()
 
-# Version: 2.3 - Simplified, no AI editing
+# Version: 2.4-dev - Social Media Template Generator
+# NEW: create_social_template() function for 1080x1080 Instagram templates
 # Bandome gauti API raktą iš .env failo (vietinis) arba Streamlit secrets (cloud)
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
@@ -49,6 +50,8 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
     - Spalvų koregavimą (šviesumas, kontrastas, sodrumas)
     """
     try:
+        from PIL import ImageEnhance, ImageDraw, ImageFont, ImageFilter
+        
         # Atidarome nuotrauką
         img = Image.open(image_file)
         
@@ -77,6 +80,7 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
         
         # Pridedame rėmelį
         if add_border:
+            from PIL import ImageOps
             border_color = (255, 255, 255)  # Baltas rėmelis
             border_width = 20
             img = ImageOps.expand(img, border=border_width, fill=border_color)
@@ -151,66 +155,239 @@ def analyze_image(image_bytes):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": """Tu esi langų uždangalų ir žaliuzių produktų atpažinimo specialistas. 
-Tavo užduotis - TIKSLIAI identifikuoti produkto tipą lietuviškai."""},
+            {"role": "system", "content": """Tu esi langų uždangalų ir žaliuzių produktų atpažinimo EKSPERTAS. 
+Tavo užduotis - TIKSLIAI ir DETALIZUOTAI identifikuoti KIEKVIENĄ produktą nuotraukoje."""},
             {"role": "user", "content": [
-                {"type": "text", "text": """Išanalizuok šią nuotrauką ir BŪTINAI nurodyk:
+                {"type": "text", "text": """Analizuok šią nuotrauką kaip ŽALIUZIŲ EKSPERTAS ir BŪTINAI nurodyk:
 
-1. **PRODUKTO TIPAS** (pasirink vieną iš šių):
-   - Roletai (tekstiliniai, rule-up blinds)
-   - Roletai Diena-Naktis (zebra blinds, dual blinds)
-   - Horizontalios žaliuzės (horizontal blinds, venetian blinds)
-   - Vertikalios žaliuzės (vertical blinds)
-   - Plisuotos žaliuzės (pleated blinds)
-   - Romanetės (roman shades)
-   - Lamelės (panel blinds, vertical panel track)
-   - Užuolaidos
-   - Kita (nurodyk kas)
+1. **PRODUKTO TIPAS IR KIEKIS** (labai svarbu!):
+   ⚠️ Jei matai KELIS skirtingus produktus - BŪTINAI aprašyk KIEKVIENĄ ATSKIRAI!
+   Produktų tipai:
+   - Roletai (tekstiliniai, roll-up blinds)
+   - Roletai Diena-Naktis / Zebra (duo blinds su juostelėmis)
+   - Horizontalios žaliuzės / Venetian (horizontalios lamelės)
+   - Vertikalios žaliuzės (vertikalios lamelės)
+   - Plisuotos žaliuzės / Pleated (sulankstomos)
+   - Medinės žaliuzės / Wood blinds (medžio lamelės)
+   - Romanetės / Roman shades
+   - Lamelės / Panel blinds
+   - Užuolaidos / Curtains
 
-2. **SPALVA IR MEDŽIAGA**: kokios spalvos, ar matinė, skaidri, tamsinanti
+2. **SPALVOS, MEDŽIAGA, TEKSTŪRA**:
+   - Tikslios spalvos (balta, pilka, smėlio, mėlyna, etc.)
+   - Medžiaga (medis, audinys, PVC, aliuminis)
+   - Ar matinė, blizgi, skaidri, tamsinanti
 
-3. **APLINKA**: koks kambarys, apšvietimas, interjero stilius
+3. **MONTAVIMO VIETA IR KAMBARYS**:
+   - Kokio tipo kambarys (svetainė, miegamasis, virtuvė, biuras)
+   - Kaip sumontuota (sienoje, lubose, lange)
 
-4. **DETALĖS**: kas dar įdomaus - langas, vaizdas, dekoro elementai
+4. **VIZUALINĖS DETALĖS**:
+   - Apšvietimas (dienos šviesa, dirbtinė)
+   - Interjero stilius
+   - Vandens ženklas ar tekstas (jei yra)
+   - Vaizdas pro langą
 
-BŪTINAI pradėk nuo produkto tipo, pvz: "Matosi ROLETAI DIENA-NAKTIS..." arba "Nuotraukoje - VERTIKALIOS ŽALIUZĖS..." """},
+PRIVALOMA: Pradėk aprašymą nuo TIKSLAUS produkto tipo. 
+Pavyzdys: "Nuotraukoje matosi TRYS SKIRTINGI PRODUKTAI: 1) PLISUOTOS ŽALIUZĖS pilkos spalvos, 2) MEDINĖS HORIZONTALIOS ŽALIUZĖS šviesaus ąžuolo, 3) ROLETAI DIENA-NAKTIS balti..." """},
                 {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + image_bytes}}
             ]}
         ],
-        max_tokens=300
+        max_tokens=500
     )
     return response.choices[0].message.content.strip()
 
 def generate_captions(analysis_text, season, holiday):
     """Sukuria 3 teksto variantus lietuviškai pagal tikslią produkto analizę"""
-    holiday_context = f" ir šventę: {holiday}" if holiday != "Nėra" else ""
-    prompt = f"""
-Pagal šią TIKSLIĄ produkto analizę:
+    
+    # ULTRA GRIEŽTA sezonų ir švenčių kontrolė
+    season_data = {
+        "Pavasaris": {
+            "must_have": ["pavasari", "atsinaujinim", "šviesi", "gaivu", "pavasario"],
+            "forbidden": ["žiem", "šalt", "snieg", "kalėd", "ruduo", "ruden", "vasara", "vasar", "karšt"],
+            "message": "pavasario gaivumą ir šviesumą"
+        },
+        "Vasara": {
+            "must_have": ["vasara", "vasar", "saulė", "šilum", "vėsin", "karšt"],
+            "forbidden": ["žiem", "šalt", "snieg", "kalėd", "pavasa", "ruduo", "ruden"],
+            "message": "vasaros šviesumą ir vėsumą"
+        },
+        "Ruduo": {
+            "must_have": ["ruden", "jauk", "šilt", "rudeni", "ruduo"],
+            "forbidden": ["žiem", "kalėd", "pavasa", "vasara", "karšt", "sniegas"],
+            "message": "rudenio jaukumą"
+        },
+        "Žiema": {
+            "must_have": ["žiem", "šalt", "šilum", "kalėd"],
+            "forbidden": ["pavasa", "vasara", "ruden", "karšt", "velyk"],
+            "message": "žiemos šilumą"
+        }
+    }
+    
+    # Švenčių kontrolė - VISOS ŠVENTĖS
+    holiday_data = {
+        "Naujieji metai": {
+            "must_have": ["nauj metin", "nauj met", "2025", "2026"],
+            "forbidden": ["kalėd", "velyk", "vasara"],
+            "keywords": "Naujųjų metų, naujo gyvenimo, tikslų, pokyčių"
+        },
+        "Šv. Valentino diena": {
+            "must_have": ["valentin", "meilė", "meil", "romantik"],
+            "forbidden": ["kalėd", "velyk"],
+            "keywords": "Valentino dienos, meilės, romantikos, dovanų mylimam žmogui"
+        },
+        "Vasario 16-oji": {
+            "must_have": ["vasario 16", "nepriklausomyb", "lietuv"],
+            "forbidden": ["kalėd", "velyk"],
+            "keywords": "Vasario 16-osios, Lietuvos nepriklausomybės, valstybės, trispalvės"
+        },
+        "Kovo 11-oji": {
+            "must_have": ["kovo 11", "nepriklausomyb", "lietuv"],
+            "forbidden": ["kalėd", "velyk"],
+            "keywords": "Kovo 11-osios, Lietuvos nepriklausomybės atkūrimo, laisvės"
+        },
+        "Velykos": {
+            "must_have": ["velyk", "velykini", "pavasari"],
+            "forbidden": ["kalėd", "nauj metin", "žiem"],
+            "keywords": "Velykų, pavasario šventės, šeimos susibūrimo, atgimimo"
+        },
+        "Gegužės 1-oji": {
+            "must_have": ["gegužės 1", "gegužin", "darbo dien", "pavasa"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Gegužės 1-osios, Darbo dienos, pavasario, poilsio"
+        },
+        "Motinos diena": {
+            "must_have": ["motin", "mam", "dovana mamai"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Motinos dienos, mamos, šeimos, dovanų"
+        },
+        "Tėvo diena": {
+            "must_have": ["tėv", "tėt", "dovana tėčiui"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Tėvo dienos, tėčio, šeimos, dovanų"
+        },
+        "Joninės": {
+            "must_have": ["jonin", "vasaros švent", "rasos"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Joninių, vasaros šventės, tradicijų, gamtos"
+        },
+        "Liepos 6-oji": {
+            "must_have": ["liepos 6", "mindaug", "karaliaus", "valstybės"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Valstybės dienos, Mindaugo karūnavimo, Lietuvos"
+        },
+        "Žolinė": {
+            "must_have": ["žolin", "rugpjūt", "žolių"],
+            "forbidden": ["kalėd", "žiem"],
+            "keywords": "Žolinės, žolių šventinimo, vasaros pabaigos"
+        },
+        "Rugsėjo 1-oji": {
+            "must_have": ["rugsėjo 1", "žinių dien", "mokykl", "mokslo met"],
+            "forbidden": ["kalėd", "velyk"],
+            "keywords": "Rugsėjo 1-osios, Žinių dienos, mokyklos, naujo mokslo metų"
+        },
+        "Šiurpnaktis (Halloween)": {
+            "must_have": ["šiurpnakt", "halloween", "helovyn", "spalio 31", "moliūg"],
+            "forbidden": ["kalėd", "velyk", "žiem"],
+            "keywords": "Šiurpnakčio, Halloween, rudens šventės, moliūgų, siaubo"
+        },
+        "Šv. Kalėdos": {
+            "must_have": ["kalėd", "švent", "žiem"],
+            "forbidden": ["velyk", "pavasa", "vasara"],
+            "keywords": "Kalėdų, žiemos švenčių, dovanų, šeimos"
+        },
+        "Kūčios": {
+            "must_have": ["kūč", "kalėd", "žiem", "šventini"],
+            "forbidden": ["velyk", "pavasa"],
+            "keywords": "Kūčių, šventinės vakarienės, šeimos susibūrimo"
+        }
+    }
+    
+    current_season = season_data.get(season, season_data["Pavasaris"])
+    current_holiday = holiday_data.get(holiday, None) if holiday != "Nėra" else None
+    
+    # Sukuriame ULTRA GRIEŽTĄ prompt'ą
+    forbidden_list = current_season["forbidden"].copy()
+    must_have_list = current_season["must_have"].copy()
+    
+    if current_holiday:
+        forbidden_list.extend(current_holiday["forbidden"])
+        must_have_list.extend(current_holiday["must_have"])
+        holiday_text = f"""
+🎄 PRIVALOMA ŠVENTĖ: {holiday}
+Kiekviename tekste TURI būti: {current_holiday["keywords"]}
+NIEKADA nerašyk apie: {', '.join(current_holiday["forbidden"])}
+"""
+    else:
+        holiday_text = "Šventės nėra - nerašyk apie jokias šventes!"
+    
+    prompt = f"""KRITIŠKAI SVARBU! Perskaityk šias taisykles 3 KARTUS prieš rašydamas:
+
+═══════════════════════════════════════
+🚨 ABSOLIUČIOS TAISYKLĖS (NEGALIMA PAŽEISTI!) 🚨
+═══════════════════════════════════════
+
+📅 SEZONAS: {season.upper()}
+✅ PRIVALOMA naudoti šiuos žodžius: {', '.join(must_have_list)}
+❌ GRIEŽTAI DRAUDŽIAMA naudoti: {', '.join(forbidden_list)}
+
+{holiday_text}
+
+📋 PRODUKTAI (iš nuotraukų):
 {analysis_text}
 
-Metų laikas: {season}{holiday_context}
+═══════════════════════════════════════
+📝 UŽDUOTIS: Sukurk 3 tekstus (iki 250 simbolių kiekvienas)
+═══════════════════════════════════════
 
-Sukurk 3 įvairius socialinių tinklų įrašų variantus (iki 250 simbolių kiekvienas) apie šį KONKRETŲ produktą:
+**TEKSTO PAVYZDYS KĄ RAŠYTI:**
+"Pavasario gaivumas su mūsų žaliuzėmis! 🌸 Šviesios spalvos, atsinaujinimas, nauji sprendimai Velykų proga!"
 
-1) **MARKETINGINIS**: Profesionalus, pabrėžk produkto naudą ir savybes. Naudok TIKSLŲ produkto pavadinimą iš analizės.
+**TEKSTO PAVYZDYS KO NERAŠYTI:**
+"Žiemos šiluma..." ❌ (jei sezonas PAVASARIS!)
+"Kalėdų dovanos..." ❌ (jei šventė VELYKOS!)
 
-2) **DRAUGIŠKAS**: Šiltas, artimas, kaip kalbėtum su kaimynu. Paaiškink kaip šis produktas pagerina gyvenimą.
+═══════════════════════════════════════
 
-3) **SU HUMORU**: Linksmas, kreatyvus, bet vis tiek informatyvus apie produktą.
+VARIANTAS 1 - MARKETINGINIS 💼
+- Profesionalus tonas
+- Produktų privalumai + {current_season["message"]}
+{f"- {holiday} šventės kontekstas" if holiday != "Nėra" else ""}
+- 2-3 hashtag'us
 
-SVARBU:
-- Naudok TIKSLŲ produkto pavadinimą (pvz. "Roletai Diena-Naktis", ne tiesiog "roletai")
-- Pridėk 1-2 tinkamus #hashtag'us
-- Jei yra spalvų/medžiagos info - panaudok
-{f"- Įtraukk šventės {holiday} tematiką natūraliai" if holiday != "Nėra" else ""}
+VARIANTAS 2 - DRAUGIŠKAS 🏡
+- Šiltas tonas
+- Praktiška nauda + {current_season["message"]}
+{f"- {holiday} jaukumas" if holiday != "Nėra" else ""}
+- 1-2 hashtag'us
+
+VARIANTAS 3 - SU HUMORU 😄
+- Linksmas tonas
+- Juokas + {current_season["message"]}
+{f"- {holiday} su šypsena" if holiday != "Nėra" else ""}
+- 2-3 hashtag'us
+
+═══════════════════════════════════════
+⚠️ PRIEŠ SIŲSDAMAS ATSAKYMĄ - PATIKRINK:
+═══════════════════════════════════════
+1. Ar KIEKVIENAME tekste yra bent vienas iš: {', '.join(must_have_list[:3])}?
+2. Ar NĖRA nei vieno iš: {', '.join(forbidden_list[:5])}?
+3. Ar produktai paminėti tiksliais pavadinimais?
+
+Jei bent vienas patikrinimas FAILED - PERRAŠYK tekstus!
 
 Atskirk variantus su "---"
-    """
+Rašyk LIETUVIŠKAI.
+"""
+    
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.8,
-        max_tokens=800
+        messages=[
+            {"role": "system", "content": f"Tu esi AI asistentas. ABSOLIUTI TAISYKLĖ: Dabar yra {season} sezonas{f' ir {holiday} šventė' if holiday != 'Nėra' else ''}. Tu NIEKADA nerašai apie kitus sezonus ar šventes. Jei bandysi pažeisti - tekstas bus atmestas."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.5,  # DAR sumažinta - maksimalus tikslumas
+        max_tokens=1200
     )
     return response.choices[0].message.content.strip()
 
@@ -218,6 +395,527 @@ def image_to_base64(image_file):
     """Konvertuoja įkeltą failą į base64 be kompresijos"""
     image_file.seek(0)
     return base64.b64encode(image_file.read()).decode()
+
+def create_social_template(images, text, layout="auto", text_position="bottom", font_size=40, background_color="#FFFFFF", style="Classic", font_family="Arial Bold", text_color="#000000", bg_opacity=180):
+    """
+    Sukuria 1080x1080 Instagram šabloną su nuotraukomis ir tekstu
+    
+    Args:
+        images: List of PIL Image objects
+        text: Tekstas, kuris bus pridėtas prie šablono
+        layout: "auto", "1", "2", "3", "4", "2_vertical", "collage" - nuotraukų išdėstymas
+        text_position: "top", "bottom", "center", "top_right", "bottom_right", "top_left", "bottom_left", "full_center" - teksto pozicija
+        font_size: Tikslus šrifto dydis pikseliais (int)
+        background_color: Hex spalva fono (pvz. "#FFFFFF")
+        style: "Classic", "Gradient", "Rounded corners", "Shadow effect", "Vignette", "Polaroid"
+        font_family: Šrifto šeima ("Arial Bold", "Times New Roman", etc.)
+        text_color: Hex spalva teksto (pvz. "#000000")
+        bg_opacity: Fono overlay permatomumas 0-255 (0=permatomas, 255=nepermatomas)
+    
+    Returns:
+        BytesIO object su PNG šablonu
+    """
+    try:
+        import random
+        from PIL import ImageFilter
+        
+        # Canvas parametrai
+        canvas_size = 1080
+        margin = 50
+        text_area_height = 250  # Fiksuotas teksto srities aukštis
+        
+        # Konvertuojame hex į RGB
+        bg_color = tuple(int(background_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        
+        # Nustatome teksto dydį - UŽTIKRINAME INT
+        try:
+            actual_font_size = int(font_size)
+        except:
+            actual_font_size = 40
+        
+        # DEBUG
+        print(f"DEBUG: font_size parametras = {font_size} (type: {type(font_size)}), actual_font_size = {actual_font_size}")
+        
+        # Automatinis layout pagal nuotraukų kiekį
+        if layout == "auto":
+            layout = str(len(images))
+        
+        # Sukuriame Canvas
+        canvas = Image.new('RGB', (canvas_size, canvas_size), bg_color)
+        
+        # Apskaičiuojame nuotraukų srities dydį pagal teksto poziciją (VISOS SU OVERLAY)
+        photos_y_start = 0
+        photos_height = canvas_size
+        text_overlay = True
+        
+        # Nustatome teksto poziciją
+        pos = text_position.lower()
+        print(f"DEBUG: Gauta pozicija: '{text_position}' -> '{pos}'")
+        
+        # Lietuviški žodžiai
+        has_top = "top" in pos or "viršus" in pos or "viršutinis" in pos or "virsus" in pos or "virsutinis" in pos
+        has_bottom = "bottom" in pos or "apačia" in pos or "apatinis" in pos or "apacia" in pos
+        has_right = "right" in pos or "dešinys" in pos or "desinys" in pos or "dešin" in pos or "desin" in pos
+        has_left = "left" in pos or "kairys" in pos or "kair" in pos
+        has_center = "center" in pos or "centras" in pos or "vidurys" in pos
+        has_full = "full" in pos or "pilnas" in pos
+        
+        if has_top and has_right:
+            text_align = "top_right"
+        elif has_top and has_left:
+            text_align = "top_left"
+        elif has_bottom and has_right:
+            text_align = "bottom_right"
+        elif has_bottom and has_left:
+            text_align = "bottom_left"
+        elif has_top:
+            text_align = "top"
+        elif has_bottom:
+            text_align = "bottom"
+        elif has_full:
+            text_align = "full_center"
+        elif has_center:
+            text_align = "center"
+        else:
+            text_align = "center"
+        
+        print(f"DEBUG: Nustatyta text_align: {text_align}")
+        
+        # NUOTRAUKŲ IŠDĖSTYMAS
+        photos_width = canvas_size
+        rounded_radius = 30 if "rounded" in style.lower() else 0
+        
+        def apply_rounded_corners(img, radius):
+            """Prideda apvalius kampus nuotraukai"""
+            mask = Image.new('L', img.size, 0)
+            draw = ImageDraw.Draw(mask)
+            draw.rounded_rectangle([(0, 0), img.size], radius=radius, fill=255)
+            img.putalpha(mask)
+            return img
+        
+        def apply_photo_style(img, style_name):
+            """Pritaiko stilių nuotraukai"""
+            if "vignette" in style_name.lower():
+                # Pridedame vignette efektą
+                vignette = Image.new('L', img.size, 255)
+                draw = ImageDraw.Draw(vignette)
+                width, height = img.size
+                for i in range(min(width, height) // 4):
+                    alpha = int(255 * (1 - i / (min(width, height) / 4)))
+                    draw.rectangle([i, i, width-i, height-i], outline=alpha)
+                img = Image.composite(img, Image.new('RGB', img.size, (0, 0, 0)), vignette)
+            
+            if "shadow" in style_name.lower():
+                # Šešėlio efektas (simuliacija)
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(1.2)
+            
+            return img
+        
+        if layout == "1" and len(images) >= 1:
+            # 1 nuotrauka - pilnas plotis
+            img = images[0].copy()
+            img = apply_photo_style(img, style)
+            img = img.resize((photos_width, photos_height), Image.Resampling.LANCZOS)
+            
+            if rounded_radius > 0:
+                img = img.convert("RGBA")
+                img = apply_rounded_corners(img, rounded_radius)
+                temp_canvas = Image.new('RGBA', (canvas_size, canvas_size), bg_color + (255,))
+                temp_canvas.paste(img, (0, photos_y_start), img)
+                canvas = temp_canvas.convert("RGB")
+            else:
+                canvas.paste(img, (0, photos_y_start))
+            
+        elif layout == "2" and len(images) >= 2:
+            # 2 nuotraukos - 2 stulpeliai
+            photo_width = photos_width // 2
+            gap = 10
+            photo_width = (photos_width - gap) // 2
+            
+            for i in range(2):
+                img = images[i].copy()
+                img = apply_photo_style(img, style)
+                img = img.resize((photo_width, photos_height), Image.Resampling.LANCZOS)
+                canvas.paste(img, (i * (photo_width + gap), photos_y_start))
+        
+        elif layout == "2_vertical" and len(images) >= 2:
+            # 2 nuotraukos - viršuje ir apačioje
+            photo_height = photos_height // 2
+            gap = 10
+            photo_height = (photos_height - gap) // 2
+            
+            for i in range(2):
+                img = images[i].copy()
+                img = apply_photo_style(img, style)
+                img = img.resize((photos_width, photo_height), Image.Resampling.LANCZOS)
+                canvas.paste(img, (0, photos_y_start + i * (photo_height + gap)))
+                
+        elif layout == "3" and len(images) >= 3:
+            # 3 nuotraukos - 1 viršuje, 2 apačioje
+            top_height = photos_height // 2
+            bottom_height = photos_height - top_height - 10
+            gap = 10
+            
+            # Viršutinė nuotrauka
+            img = images[0].copy()
+            img = apply_photo_style(img, style)
+            img = img.resize((photos_width, top_height), Image.Resampling.LANCZOS)
+            canvas.paste(img, (0, photos_y_start))
+            
+            # Dvi apatinės
+            photo_width = (photos_width - gap) // 2
+            for i in range(2):
+                img = images[i + 1].copy()
+                img = apply_photo_style(img, style)
+                img = img.resize((photo_width, bottom_height), Image.Resampling.LANCZOS)
+                canvas.paste(img, (i * (photo_width + gap), photos_y_start + top_height + gap))
+                
+        elif layout == "4" and len(images) >= 4:
+            # 4 nuotraukos - 2x2 grid
+            gap = 10
+            photo_width = (photos_width - gap) // 2
+            photo_height = (photos_height - gap) // 2
+            
+            for i in range(4):
+                row = i // 2
+                col = i % 2
+                img = images[i].copy()
+                img = apply_photo_style(img, style)
+                img = img.resize((photo_width, photo_height), Image.Resampling.LANCZOS)
+                canvas.paste(img, (col * (photo_width + gap), photos_y_start + row * (photo_height + gap)))
+        
+        elif layout == "collage":
+            # Atsitiktinis kolažas
+            random.seed()
+            for i, img in enumerate(images[:4]):
+                size = random.randint(400, 600)
+                angle = random.randint(-15, 15)
+                
+                img_resized = img.copy()
+                img_resized = apply_photo_style(img_resized, style)
+                img_resized = img_resized.resize((size, size), Image.Resampling.LANCZOS)
+                
+                if "polaroid" in style.lower():
+                    # Polaroid efektas
+                    border = 20
+                    polaroid = Image.new('RGB', (size + border*2, size + border*2 + 40), (255, 255, 255))
+                    polaroid.paste(img_resized, (border, border))
+                    img_resized = polaroid
+                
+                rotated = img_resized.rotate(angle, expand=True, fillcolor=bg_color)
+                
+                max_x = canvas_size - rotated.width
+                max_y = photos_height - rotated.height
+                x = random.randint(0, max(1, max_x))
+                y = photos_y_start + random.randint(0, max(1, max_y))
+                
+                canvas.paste(rotated, (x, y))
+        
+        # GRADIENT FONAS (jei pasirinktas)
+        if "gradient" in style.lower() and not text_overlay:
+            gradient = Image.new('RGB', (canvas_size, text_area_height), bg_color)
+            draw_grad = ImageDraw.Draw(gradient)
+            
+            r, g, b = bg_color
+            for i in range(text_area_height):
+                ratio = i / text_area_height
+                new_r = int(r * (1 - ratio * 0.3))
+                new_g = int(g * (1 - ratio * 0.3))
+                new_b = int(b * (1 - ratio * 0.3))
+                
+                if text_position.lower() == "top":
+                    draw_grad.line([(0, i), (canvas_size, i)], fill=(new_r, new_g, new_b))
+                else:
+                    draw_grad.line([(0, text_area_height - i - 1), (canvas_size, text_area_height - i - 1)], fill=(new_r, new_g, new_b))
+            
+            if text_position.lower() == "top":
+                canvas.paste(gradient, (0, 0))
+            else:
+                canvas.paste(gradient, (0, photos_height))
+        
+        # TEKSTO PRIDĖJIMAS
+        draw = ImageDraw.Draw(canvas)
+        
+        # Įkeliame fontą pagal pasirinkimą - UNIVERSAL PATHS
+        font = None
+        
+        # PIRMENYBĖ: Linux/Cloud šriftai (Streamlit Cloud), tada Windows
+        font_map = {
+            "Arial Bold": [
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",  # Linux/Cloud PIRMAS
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+                "C:/Windows/Fonts/arialbd.ttf",  # Windows
+                "/System/Library/Fonts/Helvetica.ttc"  # Mac
+            ],
+            "Times New Roman": [
+                "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
+                "C:/Windows/Fonts/times.ttf",
+                "C:/Windows/Fonts/timesbd.ttf",
+                "/System/Library/Fonts/Times.ttc"
+            ],
+            "Georgia": [
+                "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+                "C:/Windows/Fonts/georgiab.ttf",
+                "C:/Windows/Fonts/georgia.ttf",
+                "/System/Library/Fonts/Georgia.ttf"
+            ],
+            "Courier New": [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf",
+                "C:/Windows/Fonts/courbd.ttf",
+                "C:/Windows/Fonts/cour.ttf",
+                "/System/Library/Fonts/Courier.ttc"
+            ],
+            "Verdana": [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                "C:/Windows/Fonts/verdanab.ttf",
+                "C:/Windows/Fonts/verdana.ttf",
+                "/System/Library/Fonts/Helvetica.ttc"
+            ],
+            "Comic Sans MS": [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "C:/Windows/Fonts/comicbd.ttf",
+                "C:/Windows/Fonts/comic.ttf",
+                "/System/Library/Fonts/Helvetica.ttc"
+            ]
+        }
+        
+        font_paths = font_map.get(font_family, font_map["Arial Bold"])
+        
+        # CRITICAL: Naudojame font_size (ne base_font_size!)
+        actual_font_size = int(font_size)
+        
+        # CRITICAL: Tikrai užkrauname fontą su OS patikra
+        import os
+        
+        # DIAGNOSTIKA: Parodome VISUS galimus šriftus
+        print(f"\n{'='*60}")
+        print(f"FONT LOADING DEBUG: {font_family} su {actual_font_size}px")
+        print(f"{'='*60}")
+        
+        font_loaded = False
+        for i, font_path in enumerate(font_paths, 1):
+            # Pirma tikriname ar failas egzistuoja
+            exists = os.path.exists(font_path)
+            print(f"{i}. {font_path}")
+            print(f"   Egzistuoja: {'✅ TAIP' if exists else '❌ NE'}")
+            
+            if not exists:
+                continue
+                
+            try:
+                font = ImageFont.truetype(font_path, actual_font_size)
+                print(f"   Rezultatas: ✅ SUCCESS! Užkrautas su {actual_font_size}px")
+                print(f"{'='*60}\n")
+                font_loaded = True
+                break
+            except Exception as e:
+                print(f"   Rezultatas: ❌ ERROR - {str(e)[:60]}")
+                continue
+        
+        # Jei NIEKUR nepavyko - ERROR
+        if not font_loaded:
+            error_msg = f"⚠️ CRITICAL ERROR: Negaliu užkrauti JOKIO šrifto su {actual_font_size}px!"
+            print(f"DEBUG: {error_msg}")
+            st.error(error_msg)
+            # Last resort - bet kuris šriftas su dydžiu
+            try:
+                # Bandome bet kokį Linux šriftą
+                for fallback in [
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                    "C:/Windows/Fonts/arial.ttf"
+                ]:
+                    try:
+                        font = ImageFont.truetype(fallback, actual_font_size)
+                        print(f"DEBUG: ✅ FALLBACK sukurtas: {fallback} su {actual_font_size}px")
+                        st.warning(f"Naudojamas fallback šriftas: {fallback}")
+                        break
+                    except:
+                        continue
+            except:
+                st.error("FATAL: Default font be dydžio kontrolės!")
+                font = ImageFont.load_default()
+        
+        # Automatinis teksto laužymas (word wrap)
+        # PLATESNIS stulpelis - 4-6 žodžiai eilutėje = mažesni tarpai su justify
+        
+        # Pirma paskaičiuojame optimalų plotį pagal tekstą
+        words = text.split()
+        avg_word_length = sum(len(word) for word in words) / max(len(words), 1)
+        total_chars = len(text)
+        
+        # Optimizuojame plotį - PLATESNĖ versija (4-6 žodžiai eilutėje)
+        if text_align in ["top_right", "top_left", "bottom_right", "bottom_left"]:
+            # Kampuose - 45-55% (daug žodžių = maži tarpai)
+            if total_chars < 100:
+                ratio = 0.45
+            elif total_chars < 200:
+                ratio = 0.50
+            else:
+                ratio = 0.55
+            text_width = int(canvas_size * ratio) - (margin * 2)
+        elif text_align in ["center", "full_center"]:
+            # Centre - 50-65%
+            if total_chars < 100:
+                ratio = 0.50
+            elif total_chars < 200:
+                ratio = 0.57
+            else:
+                ratio = 0.65
+            text_width = int(canvas_size * ratio) - (margin * 2)
+        else:
+            # Top/Bottom - pilnas plotis
+            text_width = canvas_size - (margin * 2)
+        
+        wrapped_lines = []
+        
+        # Padalijame tekstą į eilutes
+        paragraphs = text.split('\n')
+        for paragraph in paragraphs:
+            words = paragraph.split(' ')
+            current_line = []
+            
+            for word in words:
+                test_line = ' '.join(current_line + [word])
+                bbox = draw.textbbox((0, 0), test_line, font=font)
+                line_width = bbox[2] - bbox[0]
+                
+                if line_width <= text_width:
+                    current_line.append(word)
+                else:
+                    if current_line:
+                        wrapped_lines.append(' '.join(current_line))
+                    current_line = [word]
+            
+            if current_line:
+                wrapped_lines.append(' '.join(current_line))
+        
+        # Naudojame vartotojo pasirinktą teksto spalvą
+        final_text_color = text_rgb
+        
+        # Šešėlio spalva - priešinga teksto spalvai
+        avg_text = sum(text_rgb) / 3
+        shadow_color = (0, 0, 0, 180) if avg_text > 128 else (255, 255, 255, 180)
+        
+        # Apskaičiuojame teksto bloko dydį
+        line_height = int(actual_font_size * 1.2)  # 20% tarpas (mažiau nei buvo)
+        total_text_height = len(wrapped_lines) * line_height + margin
+        
+        # Apskaičiuojame tikrą teksto plotį (kompaktiškai)
+        if wrapped_lines:
+            max_line_width = max([draw.textbbox((0, 0), line, font=font)[2] - draw.textbbox((0, 0), line, font=font)[0] for line in wrapped_lines])
+            padding = margin // 2  # Mažesnis padding
+            total_text_width = max_line_width + padding * 2
+        else:
+            total_text_width = canvas_size
+        
+        # Jei overlay - pridedame pusskaidrų foną tekstui pagal poziciją
+        if text_overlay:
+            overlay_bg = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
+            overlay_draw = ImageDraw.Draw(overlay_bg)
+            
+            # Nustatome overlay poziciją pagal text_align (kompaktiškai)
+            padding = margin // 2
+            if text_align == "top_right":
+                overlay_x = canvas_size - total_text_width - padding
+                overlay_y = padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
+            elif text_align == "top_left":
+                overlay_x = padding
+                overlay_y = padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
+            elif text_align == "bottom_right":
+                overlay_x = canvas_size - total_text_width - padding
+                overlay_y = canvas_size - total_text_height - padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
+            elif text_align == "bottom_left":
+                overlay_x = padding
+                overlay_y = canvas_size - total_text_height - padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
+            elif text_align == "top":
+                overlay_x = (canvas_size - total_text_width) // 2
+                overlay_y = padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
+            elif text_align == "bottom":
+                overlay_x = (canvas_size - total_text_width) // 2
+                overlay_y = canvas_size - total_text_height - padding
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
+            elif text_align == "full_center":
+                overlay_x = (canvas_size - total_text_width) // 2
+                overlay_y = canvas_size // 2 - total_text_height // 2
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
+            else:  # center
+                overlay_x = canvas_size // 2 - total_text_width // 2
+                overlay_y = canvas_size // 2 - total_text_height // 2
+                text_x_start = overlay_x + padding
+                text_y = overlay_y + padding // 2
+            
+            # Piešiame pusskaidrų fono stačiakampį su vartotojo pasirinktu permatomumu
+            overlay_draw.rectangle(
+                [(overlay_x, overlay_y), (overlay_x + total_text_width, overlay_y + total_text_height)],
+                fill=bg_color + (bg_opacity,)  # Naudojame vartotojo pasirinkta alpha
+            )
+            
+            canvas = canvas.convert('RGBA')
+            canvas = Image.alpha_composite(canvas, overlay_bg)
+            draw = ImageDraw.Draw(canvas)
+        
+        # Piešiame tekstą su šešėliu + JUSTIFY
+        current_y = text_y
+        
+        for i, line in enumerate(wrapped_lines):
+            if current_y + line_height > canvas_size - margin:
+                break  # Per daug teksto
+            
+            # PAPRASTAS LEFT ALIGN - normalūs tarpai (be justify)
+            # Storasis šešėlis jei "shadow effect"
+            if "shadow" in style.lower():
+                for offset_x in range(-3, 4, 2):
+                    for offset_y in range(-3, 4, 2):
+                        if offset_x != 0 or offset_y != 0:
+                            draw.text((text_x_start + offset_x, current_y + offset_y), line, fill=(0, 0, 0), font=font)
+            else:
+                # Įprastas šešėlis
+                draw.text((text_x_start + 2, current_y + 2), line, fill=shadow_color[:3] if len(shadow_color) > 3 else shadow_color, font=font)
+            
+            # Tekstas su vartotojo pasirinkta spalva
+            draw.text((text_x_start, current_y), line, fill=final_text_color, font=font)
+            current_y += line_height
+        
+        # Konvertuojame atgal į RGB jei buvo RGBA
+        if canvas.mode == 'RGBA':
+            canvas = canvas.convert('RGB')
+        
+        # Išsaugome į BytesIO
+        output = io.BytesIO()
+        canvas.save(output, format='PNG', quality=95)
+        output.seek(0)
+        return output
+        
+    except Exception as e:
+        st.error(f"Klaida kuriant šabloną: {e}")
+        import traceback
+        st.error(traceback.format_exc())
+        return None
 
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
@@ -229,11 +927,25 @@ season = st.sidebar.selectbox(
 )
 
 holiday = st.sidebar.selectbox(
-    "🎉 Lietuviškos šventės (pasirinktinai)",
-    ["Nėra", "Naujieji metai", "Šv. Valentino diena", "Vasario 16-oji", "Kovo 11-oji", 
-     "Velykos", "Gegužės 1-oji (Darbo diena)", "Motinos diena", "Tėvo diena", 
-     "Joninės", "Liepos 6-oji (Karaliaus Mindaugo diena)", "Žolinė", "Rugsėjo 1-oji", 
-     "Šv. Kalėdos", "Kūčios"],
+    "🎉 Šventės (pasirinktinai)",
+    [
+        "Nėra", 
+        "Naujieji metai", 
+        "Šv. Valentino diena", 
+        "Vasario 16-oji", 
+        "Kovo 11-oji", 
+        "Velykos", 
+        "Gegužės 1-oji", 
+        "Motinos diena", 
+        "Tėvo diena", 
+        "Joninės", 
+        "Liepos 6-oji", 
+        "Žolinė", 
+        "Rugsėjo 1-oji", 
+        "Šiurpnaktis (Halloween)",
+        "Šv. Kalėdos", 
+        "Kūčios"
+    ],
     index=0
 )
 
@@ -450,17 +1162,20 @@ if files_to_process:
     
     # Rodyti ir leisti atsisiųsti kiekvieną nuotrauką atskirai
     st.markdown("### 🎨 Redaguotos nuotraukos")
-    st.info("Reguliuokite redagavimo nustatymus šoniniame meniu (šviesumas, kontrastas, vandens ženklas)")
+    st.info("Reguliokite redagavimo nustatymus šoniniame meniu (šviesumas, kontrastas, vandens ženklas)")
     
     cols = st.columns(min(len(files_to_process), 4))
     for i, file in enumerate(files_to_process):
         with cols[i % 4]:
             file.seek(0)
             
+            # SVARBU: Vandens ženklas tik ant paskutinės nuotraukos (jei jų daugiau nei 1)
+            show_watermark = add_watermark and (len(files_to_process) == 1 or i == len(files_to_process) - 1)
+            
             # Redaguojame nuotrauką
             edited = add_marketing_overlay(
                 file,
-                add_watermark=add_watermark,
+                add_watermark=show_watermark,
                 add_border=add_border,
                 brightness=brightness,
                 contrast=contrast,
@@ -487,668 +1202,7 @@ if files_to_process:
                 use_container_width=True
             )
     
-    # === AI TURINIO GENERAVIMAS ===
-    st.markdown("---")
-    st.markdown("### 🤖 AI Turinio Generavimas")
-    st.caption("Sukurkite automatinį aprašymą pagal nuotraukas")
-    
-    if st.button("🚀 Generuoti AI Turinį", type="primary", use_container_width=True):
-        with st.spinner("🤖 AI analizuoja nuotraukas ir kuria tekstą..."):
-            try:
-                all_analyses = []
-                
-                # Analizuojame kiekvieną nuotrauką
-                for i, file in enumerate(files_to_process):
-                    file.seek(0)
-                    image_b64 = image_to_base64(file)
-                    analysis = analyze_image(image_b64)
-                    all_analyses.append(analysis)
-                
-                # Sujungiame analizes
-                combined_analysis = " ".join(all_analyses)
-                
-                # Generuojame tekstą
-                captions = generate_captions(combined_analysis, season, holiday)
-                
-                # Išsaugome į session state
-                st.session_state['ai_captions'] = captions
-                st.session_state['ai_analyses'] = all_analyses
-                
-                st.success("✅ AI turinys sukurtas!")
-                
-            except Exception as e:
-                st.error(f"❌ Klaida: {str(e)}")
-    
-    # Rodyti AI turinį jei sukurtas
-    if 'ai_captions' in st.session_state and st.session_state['ai_captions']:
-        st.markdown("### 📝 Sugeneruotas tekstas:")
-        st.text_area("AI Tekstas:", value=st.session_state['ai_captions'], height=200, key="ai_text_display")
-        
-        with st.expander("📊 Nuotraukų analizė"):
-            for i, analysis in enumerate(st.session_state['ai_analyses']):
-                st.markdown(f"**Nuotrauka {i+1}:** {analysis}")
-        
-        # === GALUTINIO POSTO GENERAVIMAS ===
-        st.markdown("---")
-        st.markdown("### 🎨 Gatavo Instagram Posto Generatorius")
-        st.info("📱 Sukurkite gatavą 1080x1080 Instagram postą su nuotrauka ir tekstu!")
-        
-        # Pasirinkimai
-        col1, col2 = st.columns(2)
-        with col1:
-            which_image = st.selectbox(
-                "🖼️ Nuotrauka:",
-                [f"Nuotrauka {i+1}" for i in range(len(files_to_process))],
-                help="Pasirinkite kurią nuotrauką naudoti fone"
-            )
-        
-        with col2:
-            # Padalijame AI tekstą į variantus
-            text_variants = st.session_state['ai_captions'].split("---")
-            text_options = ["Visas tekstas"] + [f"Variantas {i+1}" for i in range(len(text_variants))]
-            which_text = st.selectbox(
-                "📝 Tekstas:",
-                text_options,
-                help="Pasirinkite kurį teksto variantą naudoti"
-            )
-        
-        col3, col4, col5 = st.columns(3)
-        with col3:
-            text_position = st.selectbox(
-                "📍 Teksto pozicija:",
-                ["Apačia", "Viršus", "Centras", "Kairė apačia", "Dešinė apačia"],
-                help="Kur bus tekstas ant nuotraukos"
-            )
-        
-        with col4:
-            text_size = st.slider("📏 Teksto dydis:", 20, 80, 40, 5)
-        
-        with col5:
-            text_bg_opacity = st.slider("🔳 Fono tamsa:", 0, 255, 150, 10, help="0=permatomas, 255=juodas")
-        
-        if st.button("✨ SUKURTI GATAVĄ POSTĄ", type="primary", use_container_width=True):
-            with st.spinner("🎨 Kuriamas gatavs Instagram postas..."):
-                try:
-                    # Pasirenkame nuotrauką
-                    img_index = int(which_image.split()[1]) - 1
-                    selected_file = files_to_process[img_index]
-                    selected_file.seek(0)
-                    
-                    # Redaguojame nuotrauką
-                    edited = add_marketing_overlay(
-                        selected_file,
-                        add_watermark=False,  # Vandens ženklą pridėsime atskirai
-                        add_border=False,
-                        brightness=brightness,
-                        contrast=contrast,
-                        saturation=saturation,
-                        watermark_text="",
-                        watermark_size=watermark_size
-                    )
-                    edited.seek(0)
-                    base_image = Image.open(edited)
-                    
-                    # Resize į Instagram formatą
-                    canvas_size = 1080
-                    base_image = base_image.resize((canvas_size, canvas_size), Image.Resampling.LANCZOS)
-                    
-                    # Sukuriame canvas
-                    canvas = Image.new('RGB', (canvas_size, canvas_size))
-                    canvas.paste(base_image, (0, 0))
-                    
-                    # Pasiruošiame tekstą
-                    if which_text == "Visas tekstas":
-                        final_text = st.session_state['ai_captions']
-                    else:
-                        variant_index = int(which_text.split()[1]) - 1
-                        final_text = text_variants[variant_index].strip() if variant_index < len(text_variants) else st.session_state['ai_captions']
-                    
-                    # Išvalome teksto formatavimą
-                    import re
-                    final_text = re.sub(r'VARIANTAS\s+\d+\s*[-:]*\s*', '', final_text, flags=re.IGNORECASE)
-                    final_text = re.sub(r'^\d+[\.\)]\s*', '', final_text, flags=re.MULTILINE)
-                    final_text = re.sub(r'(MARKETINGINIS|DRAUGIŠKAS|DRAUGI[ŠS]KAS|SU HUMORU)\s*[💼🏡😄🎭]*\s*[-:]*\s*', '', final_text, flags=re.IGNORECASE)
-                    final_text = final_text.strip()
-                    
-                    # Pridedame tekstą ant nuotraukos
-                    canvas = canvas.convert('RGBA')
-                    text_layer = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
-                    draw = ImageDraw.Draw(text_layer)
-                    
-                    # Įkeliame šriftą
-                    font = None
-                    font_paths = [
-                        "C:/Windows/Fonts/arialbd.ttf",
-                        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                        "/System/Library/Fonts/Helvetica.ttc"
-                    ]
-                    for path in font_paths:
-                        try:
-                            font = ImageFont.truetype(path, text_size)
-                            break
-                        except:
-                            continue
-                    
-                    if not font:
-                        font = ImageFont.load_default()
-                    
-                    # Word wrap
-                    margin = 60
-                    max_width = canvas_size - (margin * 2)
-                    
-                    words = final_text.split()
-                    lines = []
-                    current_line = []
-                    
-                    for word in words:
-                        test_line = ' '.join(current_line + [word])
-                        bbox = draw.textbbox((0, 0), test_line, font=font)
-                        if bbox[2] - bbox[0] <= max_width:
-                            current_line.append(word)
-                        else:
-                            if current_line:
-                                lines.append(' '.join(current_line))
-                            current_line = [word]
-                    if current_line:
-                        lines.append(' '.join(current_line))
-                    
-                    # Skaičiuojame teksto bloko dydį
-                    line_height = text_size + 10
-                    total_height = len(lines) * line_height + margin
-                    
-                    # Nustatome poziciją
-                    if "Apačia" in text_position or "apačia" in text_position.lower():
-                        text_y = canvas_size - total_height - margin
-                    elif "Viršus" in text_position or "viršus" in text_position.lower():
-                        text_y = margin
-                    else:  # Centras
-                        text_y = (canvas_size - total_height) // 2
-                    
-                    # Pridedame pusskaidrų foną tekstui
-                    bg_overlay = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
-                    bg_draw = ImageDraw.Draw(bg_overlay)
-                    bg_draw.rectangle(
-                        [(margin // 2, text_y - 20), (canvas_size - margin // 2, text_y + total_height + 20)],
-                        fill=(0, 0, 0, text_bg_opacity)
-                    )
-                    canvas = Image.alpha_composite(canvas, bg_overlay)
-                    
-                    # Piešiame tekstą
-                    draw = ImageDraw.Draw(canvas)
-                    current_y = text_y
-                    
-                    for line in lines:
-                        # Centruojame tekstą
-                        bbox = draw.textbbox((0, 0), line, font=font)
-                        line_width = bbox[2] - bbox[0]
-                        text_x = (canvas_size - line_width) // 2
-                        
-                        # Šešėlis
-                        draw.text((text_x + 2, current_y + 2), line, fill=(0, 0, 0), font=font)
-                        # Tekstas
-                        draw.text((text_x, current_y), line, fill=(255, 255, 255), font=font)
-                        
-                        current_y += line_height
-                    
-                    # Pridedame vandens ženklą jei reikia
-                    if add_watermark and watermark_text:
-                        wm_font = None
-                        for path in font_paths:
-                            try:
-                                wm_font = ImageFont.truetype(path, watermark_size // 3)
-                                break
-                            except:
-                                continue
-                        
-                        if wm_font:
-                            wm_bbox = draw.textbbox((0, 0), watermark_text, font=wm_font)
-                            wm_width = wm_bbox[2] - wm_bbox[0]
-                            wm_x = canvas_size - wm_width - 30
-                            wm_y = canvas_size - 60
-                            
-                            draw.text((wm_x + 2, wm_y + 2), watermark_text, fill=(0, 0, 0, 180), font=wm_font)
-                            draw.text((wm_x, wm_y), watermark_text, fill=(255, 255, 255), font=wm_font)
-                    
-                    # Konvertuojame į RGB
-                    canvas = canvas.convert('RGB')
-                    
-                    # Išsaugome
-                    final_bytes = io.BytesIO()
-                    canvas.save(final_bytes, format='JPEG', quality=95)
-                    final_bytes.seek(0)
-                    
-                    st.session_state['final_post'] = final_bytes.getvalue()
-                    st.success("✅ Gatavs Instagram postas sukurtas!")
-                    
-                except Exception as e:
-                    st.error(f"❌ Klaida: {str(e)}")
-                    import traceback
-                    st.error(traceback.format_exc())
-        
-        # Rodyti gatavą postą
-        if 'final_post' in st.session_state:
-            st.markdown("---")
-            st.markdown("### 🎉 JŪSŲ GATAVS INSTAGRAM POSTAS")
-            st.image(st.session_state['final_post'], caption="Gatavs postas - Instagram 1080x1080", use_container_width=True)
-            
-            st.download_button(
-                label="📥 ATSISIŲSTI GATAVĄ POSTĄ",
-                data=st.session_state['final_post'],
-                file_name=f"instagram_post_{season}_{holiday}.jpg",
-                mime="image/jpeg",
-                use_container_width=True,
-                type="primary"
-            )
-            
-            st.success("🎯 Dabar tiesiog įkelkite šį failą į Instagram/Facebook!")
-    
-    # SOCIAL MEDIA ŠABLONAS (SENASIS - su koliažu)
-    st.markdown("---")
-    st.markdown("### 📱 Social Media Šablonas")
-    st.caption("Panaudokite sukurtą koliažą ant teminio fono paveikslėlio")
-    
-    # Automatiškai nustatome temą
-    if holiday != "Nėra":
-        auto_theme = f"🎉 Šventinė: {holiday}"
-    else:
-        auto_theme = f"🍂 Sezoninė: {season}"
-    
-    st.info(f"✨ Automatinė tema: **{auto_theme}** (pagal jūsų nustatymus kairėje)")
-    
-    # Tikriname ar yra sukurtas koliažas
-    if 'created_collage' in st.session_state and st.session_state['created_collage'] is not None:
-        
-        st.success("✅ Koliažas rastas! Dabar galite jį uždėti ant tematinio fono.")
-        
-        # Fono stilius
-        bg_style = st.selectbox(
-            "🎨 Fono stilius:",
-            ["Automatinis (pagal sezoną)", "Gamta", "Ofisas", "Interjeras", "Abstraktus", "Minimalus"],
-            help="Pasirinkite fono tematiką"
-        )
-        
-        if st.button("✨ Sukurti Social Media Šabloną su Koliažu", type="primary", use_container_width=True):
-            with st.spinner("🎨 Kuriamas social media šablonas su koliažu..."):
-                try:
-                    # Naudojame jau sukurtą koliažą iš session_state
-                    collage_image = st.session_state['created_collage']
-                    
-                    # === FONO GENERAVIMAS SU VIZUALIAIS ELEMENTAIS ===
-                    canvas_width = 1080  # Instagram standartinis
-                    canvas_height = 1080
-                    if bg_style == "Automatinis (pagal sezoną)" or bg_style == "Gamta":
-                        if holiday != "Nėra":
-                            # Šventiniai fonai su objektais
-                            if "Kalėdos" in holiday:
-                                bg_colors = [(25, 60, 40), (40, 80, 60), (20, 50, 35)]
-                                objects_type = "christmas"  # Eglutės, snaigės
-                            elif "Velykos" in holiday:
-                                bg_colors = [(255, 250, 235), (250, 245, 225), (245, 240, 220)]
-                                objects_type = "easter"  # Gėlės, kiaušiniai
-                            elif "Valentino" in holiday:
-                                bg_colors = [(255, 235, 240), (250, 220, 230), (245, 210, 220)]
-                                objects_type = "hearts"  # Širdys
-                            elif "Naujieji" in holiday:
-                                bg_colors = [(25, 25, 45), (35, 35, 60), (20, 20, 40)]
-                                objects_type = "fireworks"  # Fejerverkai (žvaigždės)
-                            else:
-                                bg_colors = [(240, 240, 245), (235, 235, 240), (230, 230, 235)]
-                                objects_type = "abstract"
-                        else:
-                            # Sezoniniai fonai su objektais
-                            if season == "Pavasaris":
-                                bg_colors = [(230, 245, 220), (220, 240, 210), (210, 235, 200)]
-                                objects_type = "spring"  # Gėlės, lapai
-                            elif season == "Vasara":
-                                bg_colors = [(255, 245, 200), (250, 240, 190), (245, 235, 180)]
-                                objects_type = "summer"  # Saulės, bangos
-                            elif season == "Ruduo":
-                                bg_colors = [(240, 220, 190), (235, 210, 180), (230, 200, 170)]
-                                objects_type = "autumn"  # Lapai
-                            else:  # Žiema
-                                bg_colors = [(230, 240, 250), (220, 235, 245), (210, 230, 240)]
-                                objects_type = "winter"  # Snaigės
-                    
-                    elif bg_style == "Ofisas":
-                        bg_colors = [(245, 245, 245), (235, 235, 240), (225, 230, 235)]
-                        objects_type = "office"  # Geometrinės formos
-                    
-                    elif bg_style == "Interjeras":
-                        bg_colors = [(250, 245, 240), (245, 240, 235), (240, 235, 230)]
-                        objects_type = "interior"  # Augalų siluetai
-                    
-                    elif bg_style == "Abstraktus":
-                        bg_colors = [(240, 230, 250), (230, 240, 255), (250, 240, 230)]
-                        objects_type = "abstract"  # Abstrakčios formos
-                    
-                    else:  # Minimalus
-                        bg_colors = [(255, 255, 255), (250, 250, 250), (245, 245, 245)]
-                        objects_type = "minimal"  # Taškai
-                    
-                    # Sukuriame gradientinį foną
-                    background = Image.new('RGB', (canvas_width, canvas_height))
-                    draw = ImageDraw.Draw(background)
-                    
-                    # Gradientas
-                    for y in range(canvas_height):
-                        ratio = y / canvas_height
-                        if ratio < 0.5:
-                            local_ratio = ratio * 2
-                            r = int(bg_colors[0][0] + (bg_colors[1][0] - bg_colors[0][0]) * local_ratio)
-                            g = int(bg_colors[0][1] + (bg_colors[1][1] - bg_colors[0][1]) * local_ratio)
-                            b = int(bg_colors[0][2] + (bg_colors[1][2] - bg_colors[0][2]) * local_ratio)
-                        else:
-                            local_ratio = (ratio - 0.5) * 2
-                            r = int(bg_colors[1][0] + (bg_colors[2][0] - bg_colors[1][0]) * local_ratio)
-                            g = int(bg_colors[1][1] + (bg_colors[2][1] - bg_colors[1][1]) * local_ratio)
-                            b = int(bg_colors[1][2] + (bg_colors[2][2] - bg_colors[1][2]) * local_ratio)
-                        draw.line([(0, y), (canvas_width, y)], fill=(r, g, b))
-                    
-                    # === GENERUOJAME VIZUALINIUS OBJEKTUS ===
-                    background = background.convert('RGBA')
-                    objects_layer = Image.new('RGBA', (canvas_width, canvas_height), (0, 0, 0, 0))
-                    obj_draw = ImageDraw.Draw(objects_layer)
-                    
-                    # Funkcija generuoti objektus pagal tipą
-                    def draw_decorative_objects(draw_obj, obj_type, colors, width, height):
-                        """Piešia dekoratyvinius objektus fone"""
-                        
-                        if obj_type == "christmas":
-                            # Eglutės ir snaigės (RYŠKESNI)
-                            for _ in range(15):
-                                x = random.randint(0, width - 200)
-                                y = random.randint(0, height - 250)
-                                # Eglutė (trikampis)
-                                size = random.randint(120, 200)
-                                points = [(x + size//2, y), (x, y + size), (x + size, y + size)]
-                                draw_obj.polygon(points, fill=(40, 90, 60, 150))
-                            
-                            # Snaigės
-                            for _ in range(40):
-                                x = random.randint(0, width)
-                                y = random.randint(0, height)
-                                size = random.randint(40, 100)
-                                # 6-kampė snaigė (supaprastinta)
-                                draw_obj.ellipse([x, y, x+size, y+size], fill=(255, 255, 255, 120))
-                                draw_obj.line([(x, y+size//2), (x+size, y+size//2)], fill=(255, 255, 255, 180), width=4)
-                                draw_obj.line([(x+size//2, y), (x+size//2, y+size)], fill=(255, 255, 255, 180), width=4)
-                        
-                        elif obj_type == "easter":
-                            # Gėlės (paprastos) RYŠKESNĖS
-                            for _ in range(25):
-                                x = random.randint(0, width - 150)
-                                y = random.randint(0, height - 150)
-                                size = random.randint(60, 120)
-                                # Gėlės žiedlapiai (5 apskritimai)
-                                petal_color = random.choice([(255, 200, 220, 150), (255, 240, 200, 150), (200, 220, 255, 150)])
-                                for angle in range(0, 360, 72):  # 5 žiedlapiai
-                                    import math
-                                    px = x + size//2 + int(size * 0.4 * math.cos(math.radians(angle)))
-                                    py = y + size//2 + int(size * 0.4 * math.sin(math.radians(angle)))
-                                    draw_obj.ellipse([px, py, px+size//2, py+size//2], fill=petal_color)
-                                # Centras
-                                draw_obj.ellipse([x+size//3, y+size//3, x+2*size//3, y+2*size//3], fill=(255, 220, 100, 180))
-                        
-                        elif obj_type == "hearts":
-                            # Širdys (supaprastintos apskritimai) RYŠKESNĖS
-                            for _ in range(20):
-                                x = random.randint(0, width - 120)
-                                y = random.randint(0, height - 120)
-                                size = random.randint(60, 130)
-                                draw_obj.ellipse([x, y, x+size, y+size], fill=(255, 150, 180, 140))
-                        
-                        elif obj_type == "spring":
-                            # Gėlių žiedlapiai ir lapai RYŠKESNI
-                            for _ in range(35):
-                                x = random.randint(0, width - 120)
-                                y = random.randint(0, height - 150)
-                                size = random.randint(50, 100)
-                                # Lapai (elipsės)
-                                draw_obj.ellipse([x, y, x+size, y+size*2], fill=(120, 200, 120, 140))
-                        
-                        elif obj_type == "summer":
-                            # Saulės spinduliai ir bangos RYŠKESNI
-                            for _ in range(25):
-                                x = random.randint(0, width - 150)
-                                y = random.randint(0, height - 150)
-                                size = random.randint(70, 150)
-                                # Saulė (apskritimas)
-                                draw_obj.ellipse([x, y, x+size, y+size], fill=(255, 200, 50, 130))
-                                # Spinduliai
-                                for angle in range(0, 360, 45):
-                                    import math
-                                    x2 = x + size//2 + int(size * math.cos(math.radians(angle)))
-                                    y2 = y + size//2 + int(size * math.sin(math.radians(angle)))
-                                    draw_obj.line([(x+size//2, y+size//2), (x2, y2)], fill=(255, 220, 100, 120), width=6)
-                        
-                        elif obj_type == "autumn":
-                            # Lapai (įvairių formų) RYŠKESNI
-                            for _ in range(45):
-                                x = random.randint(0, width - 100)
-                                y = random.randint(0, height - 100)
-                                size = random.randint(60, 120)
-                                rotation = random.randint(0, 360)
-                                leaf_color = random.choice([(200, 100, 50, 150), (220, 150, 50, 150), (180, 80, 40, 150)])
-                                # Lapas (elipsė pasukta)
-                                draw_obj.ellipse([x, y, x+size, y+size//2], fill=leaf_color)
-                        
-                        elif obj_type == "winter":
-                            # Snaigės RYŠKESNĖS
-                            for _ in range(50):
-                                x = random.randint(0, width)
-                                y = random.randint(0, height)
-                                size = random.randint(30, 80)
-                                # Snaigė (žvaigždė)
-                                draw_obj.ellipse([x, y, x+size, y+size], fill=(200, 220, 255, 130))
-                                # Kryžius
-                                draw_obj.line([(x, y+size//2), (x+size, y+size//2)], fill=(255, 255, 255, 170), width=3)
-                                draw_obj.line([(x+size//2, y), (x+size//2, y+size)], fill=(255, 255, 255, 170), width=3)
-                        
-                        elif obj_type == "office":
-                            # Geometrinės formos (kvadratai, stačiakampiai) RYŠKESNĖS
-                            for _ in range(25):
-                                x = random.randint(0, width - 200)
-                                y = random.randint(0, height - 200)
-                                w = random.randint(80, 180)
-                                h = random.randint(80, 180)
-                                shape_color = random.choice([(200, 200, 210, 120), (180, 180, 200, 120)])
-                                draw_obj.rectangle([x, y, x+w, y+h], fill=shape_color)
-                        
-                        elif obj_type == "interior":
-                            # Augalų siluetai (paprasti) RYŠKESNI
-                            for _ in range(15):
-                                x = random.randint(0, width - 150)
-                                y = random.randint(height//2, height - 200)
-                                height_plant = random.randint(120, 250)
-                                # Vazonas
-                                draw_obj.rectangle([x, y+height_plant-40, x+80, y+height_plant], fill=(180, 160, 140, 140))
-                                # Stiebas
-                                draw_obj.rectangle([x+32, y, x+48, y+height_plant-40], fill=(100, 150, 100, 140))
-                                # Lapai
-                                for i in range(6):
-                                    ly = y + i * height_plant // 7
-                                    draw_obj.ellipse([x+10, ly, x+40, ly+40], fill=(120, 180, 120, 150))
-                                    draw_obj.ellipse([x+40, ly, x+70, ly+40], fill=(120, 180, 120, 150))
-                        
-                        elif obj_type == "abstract":
-                            # Abstrakčios formos (apskritimai, bangos) RYŠKESNĖS
-                            for _ in range(35):
-                                x = random.randint(0, width - 150)
-                                y = random.randint(0, height - 150)
-                                size = random.randint(70, 180)
-                                shape_type = random.choice(['circle', 'wave'])
-                                color = random.choice([(200, 180, 220, 120), (180, 200, 240, 120), (240, 200, 180, 120)])
-                                
-                                if shape_type == 'circle':
-                                    draw_obj.ellipse([x, y, x+size, y+size], fill=color)
-                                else:
-                                    # Banga (keli apskritimai)
-                                    for i in range(4):
-                                        draw_obj.ellipse([x+i*40, y, x+i*40+50, y+50], fill=color)
-                        
-                        elif obj_type == "fireworks":
-                            # Fejerverkai (žvaigždės) RYŠKESNI
-                            for _ in range(20):
-                                x = random.randint(100, width - 100)
-                                y = random.randint(100, height - 100)
-                                size = random.randint(80, 150)
-                                star_color = random.choice([(255, 215, 0, 150), (255, 100, 150, 150), (100, 200, 255, 150)])
-                                # Žvaigždė (8 spinduliai)
-                                import math
-                                for angle in range(0, 360, 45):
-                                    x2 = x + int(size * math.cos(math.radians(angle)))
-                                    y2 = y + int(size * math.sin(math.radians(angle)))
-                                    draw_obj.line([(x, y), (x2, y2)], fill=star_color, width=7)
-                                draw_obj.ellipse([x-20, y-20, x+20, y+20], fill=star_color)
-                        
-                        else:  # minimal
-                            # Subtilūs taškai (bet DAUGIAU)
-                            for _ in range(100):
-                                x = random.randint(0, width)
-                                y = random.randint(0, height)
-                                size = random.randint(5, 15)
-                                draw_obj.ellipse([x, y, x+size, y+size], fill=(200, 200, 200, 80))
-                    
-                    # Generuojame objektus
-                    import math  # Reikalingas kai kuriems objektams
-                    draw_decorative_objects(obj_draw, objects_type, bg_colors, canvas_width, canvas_height)
-                    
-                    # Sujungiame foną su objektais
-                    background = Image.alpha_composite(background, objects_layer)
-                    background = background.convert('RGB')
-                    
-                    # === KOLIAŽO UŽDĖJIMAS ANT FONO ===
-                    # Naudojame jau sukurtą koliažą (mažesnis, kad matytųsi fonas)
-                    collage_max_width = int(canvas_width * 0.50)  # 50% ekrano
-                    collage_max_height = int(canvas_height * 0.50)
-                    
-                    # Resize koliažo išlaikant proportions
-                    collage_w, collage_h = collage_image.size
-                    aspect_ratio = collage_w / collage_h
-                    
-                    if collage_w > collage_max_width or collage_h > collage_max_height:
-                        if aspect_ratio > 1:  # Platesnis
-                            new_w = collage_max_width
-                            new_h = int(new_w / aspect_ratio)
-                        else:  # Aukštesnis
-                            new_h = collage_max_height
-                            new_w = int(new_h * aspect_ratio)
-                        collage_resized = collage_image.resize((new_w, new_h), Image.Resampling.LANCZOS)
-                    else:
-                        collage_resized = collage_image
-                    
-                    # Pridedame baltą rėmelį
-                    border_width = 15
-                    collage_with_border = ImageOps.expand(collage_resized, border=border_width, fill='white')
-                    
-                    # Pridedame šešėlį
-                    shadow_offset = 20
-                    shadow_blur = 30
-                    collage_w, collage_h = collage_with_border.size
-                    
-                    shadow = Image.new('RGBA', (collage_w + shadow_offset * 2, collage_h + shadow_offset * 2), (0, 0, 0, 0))
-                    shadow_draw = ImageDraw.Draw(shadow)
-                    shadow_draw.rectangle([shadow_offset, shadow_offset, collage_w + shadow_offset, collage_h + shadow_offset], fill=(0, 0, 0, 100))
-                    shadow = shadow.filter(ImageFilter.GaussianBlur(shadow_blur))
-                    
-                    # Centruojame koliažą
-                    collage_x = (canvas_width - collage_w) // 2
-                    collage_y = (canvas_height - collage_h) // 2
-                    
-                    # Paste šešėlį
-                    background = background.convert('RGBA')
-                    background.paste(shadow, (collage_x - shadow_offset, collage_y - shadow_offset), shadow)
-                    background = background.convert('RGB')
-                    
-                    # Paste koliažą
-                    background.paste(collage_with_border, (collage_x, collage_y))
-                    
-                    # === DEKORACIJOS ===
-                    # Pridedame subtilias dekoracijas kampuose (emoji arba shapes)
-                    if holiday != "Nėra":
-                        if "Kalėdos" in holiday:
-                            decorations = ["❄️", "🎄", "⭐"]
-                        elif "Velykos" in holiday:
-                            decorations = ["🌸", "🐰", "🥚"]
-                        elif "Valentino" in holiday:
-                            decorations = ["❤️", "💕", "🌹"]
-                        elif "Naujieji" in holiday:
-                            decorations = ["✨", "🎆", "🎉"]
-                        else:
-                            decorations = ["✨", "🎈"]
-                    else:
-                        if season == "Pavasaris":
-                            decorations = ["🌸", "🦋", "🌱"]
-                        elif season == "Vasara":
-                            decorations = ["☀️", "🌻", "🍋"]
-                        elif season == "Ruduo":
-                            decorations = ["🍂", "🍁", "🎃"]
-                        else:
-                            decorations = ["❄️", "⛄", "☃️"]
-                    
-                    # Dedame dekoracijas kampuose (subtiliai)
-                    try:
-                        emoji_font = None
-                        emoji_paths = [
-                            "C:/Windows/Fonts/seguiemj.ttf",
-                            "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
-                            "/System/Library/Fonts/Apple Color Emoji.ttc"
-                        ]
-                        
-                        for path in emoji_paths:
-                            try:
-                                emoji_font = ImageFont.truetype(path, 40)
-                                break
-                            except:
-                                continue
-                        
-                        if emoji_font:
-                            background = background.convert('RGBA')
-                            emoji_layer = Image.new('RGBA', (canvas_width, canvas_height), (0, 0, 0, 0))
-                            emoji_draw = ImageDraw.Draw(emoji_layer)
-                            
-                            # Kampų dekoracijos (8 vnt)
-                            positions = [
-                                (30, 30), (canvas_width - 70, 30),  # Top corners
-                                (30, canvas_height - 70), (canvas_width - 70, canvas_height - 70),  # Bottom corners
-                                (30, canvas_height // 2 - 20), (canvas_width - 70, canvas_height // 2 - 20),  # Middle sides
-                                (canvas_width // 2 - 20, 30), (canvas_width // 2 - 20, canvas_height - 70)  # Middle top/bottom
-                            ]
-                            
-                            for pos in positions:
-                                emoji = random.choice(decorations)
-                                emoji_draw.text(pos, emoji, font=emoji_font, embedded_color=True)
-                            
-                            background = Image.alpha_composite(background, emoji_layer)
-                            background = background.convert('RGB')
-                    except:
-                        pass
-                    
-                    # Išsaugome
-                    template_bytes = io.BytesIO()
-                    background.save(template_bytes, format='JPEG', quality=95)
-                    template_bytes.seek(0)
-                    
-                    st.success("✅ Social Media šablonas sukurtas!")
-                    st.image(template_bytes, caption="Jūsų Social Media įrašas", use_container_width=True)
-                    
-                    template_bytes.seek(0)
-                    st.download_button(
-                        label="📥 Atsisiųsti šabloną",
-                        data=template_bytes.getvalue(),
-                        file_name=f"social_media_{season}_{holiday}.jpg",
-                        mime="image/jpeg",
-                        use_container_width=True
-                    )
-                    
-                except Exception as e:
-                    st.error(f"❌ Klaida kuriant šabloną: {str(e)}")
-                    import traceback
-                    st.error(traceback.format_exc())
-    else:
-        st.warning("⚠️ Pirmiausia sukurkite koliažą apačioje ⬇️, tada galėsite jį naudoti šablone!")
-    
-    # COLLAGE KŪRIMAS (ORIGINALUS)
+    # COLLAGE KŪRIMAS
     st.markdown("---")
     st.markdown("### 🖼️ Collage Kūrėjas")
     
@@ -1161,9 +1215,23 @@ if files_to_process:
     st.info(f"✨ Automatinė tema: **{auto_theme}** (pagal jūsų nustatymus kairėje)")
     
     if len(files_to_process) >= 2:
+        # Stilius pasirinkimas
+        collage_style = st.selectbox(
+            "🎨 Collage stilius:",
+            [
+                "📸 Polaroid - Nuotraukos su baltais rėmeliais, pasuktos",
+                "📱 Instagram Grid - Tvarkingas tinklelis su tarpais",
+                "🎨 Scrapbook - Kūrybiškas, atsitiktinis išdėstymas",
+                "🖼️ Gallery Wall - Galerijos siena su juodais rėmeliais",
+                "✨ Minimalist - Minimalus stilius, baltas fonas"
+            ],
+            help="Pasirinkite collage stilių",
+            key="collage_style_selector"
+        )
+        
         collage_layout = st.selectbox(
             "📐 Išdėstymas:",
-            ["2x2 Grid (4 nuotraukos)", "1x2 Horizontal (2 nuotraukos)", "2x1 Vertical (2 nuotraukos)", "1x3 Horizontal (3 nuotraukos)"],
+            ["2x2 Grid (4 nuotraukos)", "1x2 Horizontal (2 nuotraukos)", "2x1 Vertical (2 nuotraukos)", "1x3 Horizontal (3 nuotraukos)", "3x1 Vertical (3 nuotraukos)"],
             help="Pasirinkite kaip išdėstyti nuotraukas"
         )
         
@@ -1172,11 +1240,15 @@ if files_to_process:
                 try:
                     # Paruošiame redaguotas nuotraukas
                     edited_images = []
-                    for file in files_to_process:
+                    for idx, file in enumerate(files_to_process):
                         file.seek(0)
+                        
+                        # SVARBU: Vandens ženklas tik ant paskutinės nuotraukos collage
+                        show_watermark = add_watermark and (idx == len(files_to_process) - 1)
+                        
                         edited = add_marketing_overlay(
                             file,
-                            add_watermark=add_watermark,
+                            add_watermark=show_watermark,
                             add_border=False,  # Collage'ui be rėmelio
                             brightness=brightness,
                             contrast=contrast,
@@ -1201,6 +1273,9 @@ if files_to_process:
                     elif "1x3" in collage_layout:
                         rows, cols = 1, 3
                         needed = 3
+                    elif "3x1" in collage_layout:
+                        rows, cols = 3, 1
+                        needed = 3
                     
                     # Apkarpome jei per daug
                     edited_images = edited_images[:needed]
@@ -1209,126 +1284,166 @@ if files_to_process:
                     while len(edited_images) < needed:
                         edited_images.append(edited_images[-1])
                     
-                    # Nustatome collage dydį
-                    img_width = 800
-                    img_height = 600
+                    import random
                     
-                    # Resize'iname visas nuotraukas
-                    resized = []
-                    for img in edited_images:
-                        img_resized = img.resize((img_width, img_height), Image.Resampling.LANCZOS)
-                        resized.append(img_resized)
+                    # NUSTATOME STILIŲ PAGAL PASIRINKIMĄ
                     
-                    # AUTOMATIŠKAI nustatome fono spalvą ir dekoracijų tipą pagal sezoną/šventę
-                    decorations = []
-                    
+                    # Automatiškai nustatome fono spalvą pagal sezoną/šventę
                     if holiday != "Nėra":
-                        # ŠVENTINĖS TEMOS
                         if "Kalėdos" in holiday:
-                            bg_color = (20, 50, 30)  # Tamsiai žalia
-                            decorations = ["❄️", "🎄", "⭐", "🎅", "🎁"]
-                            decoration_color = (255, 255, 255)
+                            bg_color = (235, 245, 240)
                         elif "Velykos" in holiday:
-                            bg_color = (255, 250, 230)  # Šviesi pastelinė
-                            decorations = ["🐰", "🥚", "🌷", "🌸", "🦋"]
-                            decoration_color = (150, 100, 200)
+                            bg_color = (255, 250, 235)
                         elif "Valentino" in holiday:
-                            bg_color = (255, 240, 245)  # Švelniai rožinė
-                            decorations = ["❤️", "💕", "🌹", "💐"]
-                            decoration_color = (200, 50, 100)
+                            bg_color = (255, 245, 248)
                         elif "Naujieji" in holiday:
-                            bg_color = (30, 30, 50)  # Tamsiai mėlyna
-                            decorations = ["🎆", "🎊", "🥂", "✨", "🎉"]
-                            decoration_color = (255, 215, 0)
+                            bg_color = (240, 245, 255)
                         else:
-                            bg_color = (250, 245, 250)
-                            decorations = ["🎉", "✨", "🎈"]
-                            decoration_color = (200, 150, 200)
+                            bg_color = (245, 245, 240)
                     else:
-                        # SEZONINĖS TEMOS
                         if season == "Pavasaris":
-                            bg_color = (245, 255, 245)  # Šviesiai žalia
-                            decorations = ["🌸", "🌷", "🌼", "🦋", "🌱"]
-                            decoration_color = (100, 180, 100)
+                            bg_color = (248, 252, 245)
                         elif season == "Vasara":
-                            bg_color = (255, 250, 220)  # Šilta geltona
-                            decorations = ["☀️", "🌻", "🌺", "🦜", "🍋"]
-                            decoration_color = (255, 180, 50)
+                            bg_color = (255, 252, 240)
                         elif season == "Ruduo":
-                            bg_color = (255, 240, 220)  # Švelni oranžinė
-                            decorations = ["🍂", "🍁", "🎃", "🌾", "🦊"]
-                            decoration_color = (180, 100, 50)
-                        else:  # Žiema
-                            bg_color = (240, 245, 255)  # Šaltas mėlynas
-                            decorations = ["❄️", "⛄", "🎿", "☃️", "🌨️"]
-                            decoration_color = (100, 150, 200)
+                            bg_color = (250, 245, 235)
+                        else:
+                            bg_color = (245, 248, 252)
                     
-                    # Sukuriame collage
-                    gap = 20
-                    canvas_width = cols * img_width + (cols + 1) * gap
-                    canvas_height = rows * img_height + (rows + 1) * gap
-                    
-                    collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
-                    draw = ImageDraw.Draw(collage)
-                    
-                    # Dedame nuotraukas
-                    idx = 0
-                    for row in range(rows):
-                        for col in range(cols):
-                            if idx < len(resized):
-                                x = gap + col * (img_width + gap)
-                                y = gap + row * (img_height + gap)
-                                collage.paste(resized[idx], (x, y))
-                                idx += 1
-                    
-                    # PRIDEDAME DEKORACIJAS (emoji) po nuotraukomis
-                    if decorations:
-                        try:
-                            # Bandome įkelti emoji palaikantį šriftą
-                            emoji_font = None
-                            emoji_paths = [
-                                "C:/Windows/Fonts/seguiemj.ttf",  # Windows Emoji
-                                "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",  # Linux
-                                "/System/Library/Fonts/Apple Color Emoji.ttc"  # Mac
-                            ]
+                    # ============ POLAROID STILIUS ============
+                    if "Polaroid" in collage_style:
+                        polaroid_width = 500
+                        polaroid_height = 500
+                        border_size = 20
+                        bottom_border = 60
+                        
+                        if needed == 4:
+                            canvas_width, canvas_height = 1800, 1800
+                            positions = [(200, 150, -8), (850, 100, 12), (300, 850, 5), (950, 900, -10)]
+                        elif needed == 3:
+                            canvas_width, canvas_height = 2000, 1200
+                            positions = [(200, 250, -10), (750, 150, 8), (450, 700, -5)]
+                        else:
+                            canvas_width, canvas_height = 1600, 1200
+                            positions = [(250, 300, -12), (850, 350, 8)]
+                        
+                        collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
+                        
+                        for idx, img in enumerate(edited_images[:needed]):
+                            img_resized = img.resize((polaroid_width, polaroid_height), Image.Resampling.LANCZOS)
+                            polaroid_img = Image.new('RGB', 
+                                (polaroid_width + border_size * 2, 
+                                 polaroid_height + border_size + bottom_border), 
+                                (255, 255, 255))
+                            polaroid_img.paste(img_resized, (border_size, border_size))
                             
-                            for path in emoji_paths:
-                                try:
-                                    emoji_font = ImageFont.truetype(path, 60)
-                                    break
-                                except:
-                                    continue
+                            x, y, angle = positions[idx]
+                            rotated = polaroid_img.rotate(angle, expand=True, fillcolor=bg_color)
+                            collage.paste(rotated, (x, y))
+                    
+                    # ============ INSTAGRAM GRID STILIUS ============
+                    elif "Instagram Grid" in collage_style:
+                        img_size = 600
+                        gap = 30
+                        
+                        canvas_width = cols * img_size + (cols + 1) * gap
+                        canvas_height = rows * img_size + (rows + 1) * gap
+                        
+                        collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
+                        
+                        idx = 0
+                        for row in range(rows):
+                            for col in range(cols):
+                                if idx < len(edited_images):
+                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
+                                    x = gap + col * (img_size + gap)
+                                    y = gap + row * (img_size + gap)
+                                    collage.paste(img_resized, (x, y))
+                                    idx += 1
+                    
+                    # ============ SCRAPBOOK STILIUS ============
+                    elif "Scrapbook" in collage_style:
+                        if needed == 4:
+                            canvas_width, canvas_height = 1900, 1900
+                        elif needed == 3:
+                            canvas_width, canvas_height = 2100, 1300
+                        else:
+                            canvas_width, canvas_height = 1700, 1300
+                        
+                        collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
+                        
+                        # Atsitiktiniai dydžiai ir pozicijos
+                        for idx, img in enumerate(edited_images[:needed]):
+                            size_var = random.randint(450, 650)
+                            img_resized = img.resize((size_var, size_var), Image.Resampling.LANCZOS)
                             
-                            if emoji_font:
-                                # Atsitiktinai išdėstome dekoracijas kampuose ir tarpuose
-                                for _ in range(15):  # 15 dekoracijų
-                                    emoji = random.choice(decorations)
-                                    x = random.randint(10, canvas_width - 70)
-                                    y = random.randint(10, canvas_height - 70)
-                                    draw.text((x, y), emoji, font=emoji_font, embedded_color=True)
-                        except:
-                            pass  # Jei nepavyko - praleidžiame dekoracijas
+                            # Pridedame atsitiktinį rėmelį
+                            border_color = random.choice([(255,255,255), (250,250,240), (245,240,235)])
+                            border_width = random.randint(15, 35)
+                            bordered = ImageOps.expand(img_resized, border=border_width, fill=border_color)
+                            
+                            # Atsitiktinė pozicija ir kampas
+                            max_x = canvas_width - bordered.width - 100
+                            max_y = canvas_height - bordered.height - 100
+                            x = random.randint(50, max(51, max_x))
+                            y = random.randint(50, max(51, max_y))
+                            angle = random.randint(-15, 15)
+                            
+                            rotated = bordered.rotate(angle, expand=True, fillcolor=bg_color)
+                            collage.paste(rotated, (x, y))
+                    
+                    # ============ GALLERY WALL STILIUS ============
+                    elif "Gallery Wall" in collage_style:
+                        img_size = 550
+                        gap = 40
+                        
+                        canvas_width = cols * img_size + (cols + 1) * gap
+                        canvas_height = rows * img_size + (rows + 1) * gap
+                        
+                        collage = Image.new('RGB', (canvas_width, canvas_height), (240, 240, 240))
+                        
+                        idx = 0
+                        for row in range(rows):
+                            for col in range(cols):
+                                if idx < len(edited_images):
+                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
+                                    # Juodas rėmelis
+                                    framed = ImageOps.expand(img_resized, border=15, fill=(20, 20, 20))
+                                    x = gap + col * (img_size + gap)
+                                    y = gap + row * (img_size + gap)
+                                    collage.paste(framed, (x, y))
+                                    idx += 1
+                    
+                    # ============ MINIMALIST STILIUS ============
+                    elif "Minimalist" in collage_style:
+                        img_size = 600
+                        gap = 60
+                        
+                        canvas_width = cols * img_size + (cols + 1) * gap
+                        canvas_height = rows * img_size + (rows + 1) * gap
+                        
+                        collage = Image.new('RGB', (canvas_width, canvas_height), (255, 255, 255))
+                        
+                        idx = 0
+                        for row in range(rows):
+                            for col in range(cols):
+                                if idx < len(edited_images):
+                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
+                                    # Labai plonas pilkas rėmelis
+                                    framed = ImageOps.expand(img_resized, border=2, fill=(200, 200, 200))
+                                    x = gap + col * (img_size + gap)
+                                    y = gap + row * (img_size + gap)
+                                    collage.paste(framed, (x, y))
+                                    idx += 1
                     
                     # Išsaugome
                     collage_bytes = io.BytesIO()
                     collage.save(collage_bytes, format='JPEG', quality=95)
                     collage_bytes.seek(0)
                     
-                    # IŠSAUGOME Į SESSION STATE (kad galėtume naudoti Social Media šablone)
-                    st.session_state['created_collage'] = collage  # PIL Image objektas
-                    st.session_state['collage_layout'] = f"{rows}x{cols}"
-                    
-                    st.success("✅ Collage sukurtas! Dabar galite jį naudoti Social Media šablone ⬆️")
-                    st.image(collage_bytes, caption="Jūsų Collage", use_container_width=True)
-                    
-                    collage_bytes.seek(0)
-                    st.download_button(
-                        label="📥 Atsisiųsti Collage",
-                        data=collage_bytes.getvalue(),
-                        file_name=f"collage_{season}_{holiday}.jpg",
-                        mime="image/jpeg",
-                        use_container_width=True
-                    )
+                    # Išsaugome į session_state
+                    st.session_state.collage_result = collage_bytes.getvalue()
+                    st.session_state.collage_filename = f"collage_{season}_{holiday}.jpg"
                     
                 except Exception as e:
                     st.error(f"❌ Klaida kuriant collage: {str(e)}")
@@ -1337,10 +1452,49 @@ if files_to_process:
     else:
         st.warning("⚠️ Collage reikia bent 2 nuotraukų!")
     
+    # Rodyti collage rezultatą (jei sukurtas)
+    if "collage_result" in st.session_state and st.session_state.collage_result:
+        st.markdown("---")
+        st.markdown("### ✅ Sukurtas Collage")
+        st.image(st.session_state.collage_result, caption="Jūsų Collage", use_container_width=True)
+        
+        st.download_button(
+            label="📥 Atsisiųsti Collage",
+            data=st.session_state.collage_result,
+            file_name=st.session_state.collage_filename,
+            mime="image/jpeg",
+            use_container_width=True,
+            key="download_collage_persistent"
+        )
+    
+    # AI TURINIO GENERAVIMAS
+    st.markdown("---")
+    st.markdown("### 📝 AI Turinio Generavimas")
+    st.info("💡 Sukurkite tekstus socialiniams tinklams pagal jūsų nuotraukas")
+    
+    # Mygtukas čia
+    if st.button("🚀 Sukurti AI Turinį", type="primary", use_container_width=True, key="create_ai_content_btn"):
+        # Patikriname ar pasikeitė nustatymai
+        current_settings = f"{season}_{holiday}"
+        last_settings = st.session_state.get("last_ai_settings", None)
+        
+        # Jei turime išsaugotas analizes IR pasikeitė nustatymai - tiesiog perkuriame tekstą
+        if last_settings and current_settings != last_settings and "ai_analyses" in st.session_state and st.session_state.ai_analyses:
+            st.session_state.trigger_ai_regenerate = True
+        else:
+            # Kitais atvejais - pilna analizė iš naujo
+            st.session_state.trigger_ai_content = True
+        
+        st.session_state.last_ai_settings = current_settings
+    
     # Mygtukas išvalyti failus
     st.markdown("---")
-    if st.button("🗑️ Išvalyti visus failus", type="secondary", use_container_width=True):
+    if st.button("🗑️ Išvalyti visus failus ir rezultatus", type="secondary", use_container_width=True):
         st.session_state.uploaded_files = []
+        if "collage_result" in st.session_state:
+            del st.session_state.collage_result
+        if "ai_content_result" in st.session_state:
+            del st.session_state.ai_content_result
         st.rerun()
     
     if len(files_to_process) > 4:
@@ -1348,29 +1502,59 @@ if files_to_process:
         files_to_process = files_to_process[:4]
         st.session_state.uploaded_files = files_to_process
 
-# Apdorojimas tik jei yra failų ir paspaustas mygtukas
-if create_content and files_to_process and len(files_to_process) > 0:
+# JEI TIK NUSTATYMAI PASIKEITĖ - greitai perkuriame tekstą su tais pačiais nuotraukų analizėmis
+if st.session_state.get("trigger_ai_regenerate", False):
+    status_text = st.empty()
+    status_text.text(f"🔄 Perkuriamas turinys su naujais nustatymais ({season} / {holiday})...")
+    
+    combined_analysis = " ".join(st.session_state.ai_analyses)
+    
+    try:
+        captions = generate_captions(combined_analysis, season, holiday)
+        st.session_state.ai_content_result = captions
+        st.success(f"✅ Turinys atnaujintas! Sezonas: {season}, Šventė: {holiday}")
+    except Exception as e:
+        st.error(f"❌ Klaida perkuriant turinį: {e}")
+    
+    status_text.empty()
+    st.session_state.trigger_ai_regenerate = False
+    st.rerun()
+
+# Apdorojimas tik jei yra failų ir trigger'is aktyvuotas
+if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_content and files_to_process and len(files_to_process) > 0:
     progress_bar = st.progress(0)
     status_text = st.empty()
     
     all_analyses = []
     
-    # Rodyti nuotraukas apdorojimo metu
-    st.subheader(f"📸 Apdorojamos nuotraukos ({len(files_to_process)})")
-    cols = st.columns(min(len(files_to_process), 4))
+    # Analizuojame REDAGUOTAS nuotraukas (su vandens ženklu, spalvų koregavimu)
     for i, file in enumerate(files_to_process):
-        with cols[i]:
-            st.image(file, caption=f"Nuotrauka {i+1}", use_container_width=True)
-            
-    for i, file in enumerate(files_to_process):
-        status_text.text(f"🔍 Analizuojama nuotrauka {i+1}/{len(files_to_process)}...")
+        status_text.text(f"🔍 Analizuojama redaguota nuotrauka {i+1}/{len(files_to_process)}...")
         progress_bar.progress((i + 1) / (len(files_to_process) + 1))
         
         try:
-            # Konvertuojame į base64
-            image_b64 = image_to_base64(file)
+            file.seek(0)
             
-            # Analizuojame
+            # SVARBU: Vandens ženklas tik ant paskutinės nuotraukos (jei jų daugiau nei 1)
+            show_watermark = add_watermark and (len(files_to_process) == 1 or i == len(files_to_process) - 1)
+            
+            # Sukuriame redaguotą nuotrauką (su visais efektais)
+            edited = add_marketing_overlay(
+                file,
+                add_watermark=show_watermark,
+                add_border=add_border,
+                brightness=brightness,
+                contrast=contrast,
+                saturation=saturation,
+                watermark_text=watermark_text,
+                watermark_size=watermark_size
+            )
+            edited.seek(0)
+            
+            # Konvertuojame REDAGUOTĄ nuotrauką į base64
+            image_b64 = base64.b64encode(edited.read()).decode()
+            
+            # Analizuojame redaguotą nuotrauką
             analysis = analyze_image(image_b64)
             all_analyses.append(analysis)
             
@@ -1389,29 +1573,245 @@ if create_content and files_to_process and len(files_to_process) > 0:
         try:
             captions = generate_captions(combined_analysis, season, holiday)
             
-            st.success("✅ Turinys sėkmingai sukurtas!")
-            
-            # Rezultatai
-            st.subheader("📝 Socialinių tinklų įrašai")
-            
-            # Rodyti sugeneruotą turinį
-            st.markdown("### 🎯 Paruošti tekstai:")
-            st.text_area("Kopijuokite tekstą:", value=captions, height=200)
-            
-            # Analitikos informacija
-            with st.expander("📊 Detali analizė"):
-                st.markdown("**Vaizdų analizė:**")
-                for i, analysis in enumerate(all_analyses):
-                    st.markdown(f"**Nuotrauka {i+1}:** {analysis}")
+            # Išsaugome į session_state
+            st.session_state.ai_content_result = captions
+            st.session_state.ai_analyses = all_analyses
             
         except Exception as e:
             st.error(f"❌ Klaida generuojant turinį: {e}")
     
     progress_bar.empty()
     status_text.empty()
+    
+    # Reset trigger TIKTAI pabaigoje
+    st.session_state.trigger_ai_content = False
 
-elif create_content and (not files_to_process or len(files_to_process) == 0):
-    st.warning("⚠️ Prašome pirmiausia įkelti bent vieną nuotrauką!")
+# Rodyti AI turinio rezultatus (jei sukurti)
+if "ai_content_result" in st.session_state and st.session_state.ai_content_result:
+    st.markdown("---")
+    st.success("✅ Turinys sėkmingai sukurtas!")
+    
+    # Rezultatai
+    st.subheader("📝 Socialinių tinklų įrašai")
+    
+    # Rodyti sugeneruotą turinį
+    st.markdown("### 🎯 Paruošti tekstai:")
+    st.text_area("Kopijuokite tekstą:", value=st.session_state.ai_content_result, height=200, key="ai_content_persistent")
+    
+    # Analitikos informacija
+    if "ai_analyses" in st.session_state:
+        with st.expander("📊 Detali analizė"):
+            st.markdown("**Vaizdų analizė:**")
+            for i, analysis in enumerate(st.session_state.ai_analyses):
+                st.markdown(f"**Nuotrauka {i+1}:** {analysis}")
+    
+    # SOCIAL MEDIA ŠABLONO GENERAVIMAS
+    st.markdown("---")
+    st.markdown("### 🎨 Social Media Šablono Generavimas")
+    st.info("📱 Sukurkite 1080×1080 Instagram paruoštą šabloną su nuotraukomis ir tekstu!")
+    
+    # UI kontrolės šablonui
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        template_layout = st.selectbox(
+            "📐 Nuotraukų išdėstymas:",
+            ["auto", "1 foto", "2 foto", "3 foto", "4 foto", "2 foto vertical", "Kolažas (atsitiktinai)"],
+            help="Automatinis - pagal įkeltų nuotraukų kiekį"
+        )
+    
+    with col2:
+        template_text_position = st.selectbox(
+            "📍 Teksto vieta:",
+            ["top", "bottom", "center", "top_right", "bottom_right", "top_left", "bottom_left", "full_center"],
+            index=1,
+            help="Pasirinkite kur bus tekstas (visos pozicijos su overlay)"
+        )
+    
+    with col3:
+        template_style = st.selectbox(
+            "✨ Šablono stilius:",
+            ["Classic", "Gradient", "Rounded corners", "Shadow effect", "Vignette", "Polaroid"],
+            help="Prideda vizualinius efektus"
+        )
+    
+    col4, col5 = st.columns(2)
+    
+    with col4:
+        template_font_size = st.slider(
+            "🔤 Teksto dydis (px):",
+            min_value=20,
+            max_value=100,
+            value=40,
+            step=2,
+            help="Šrifto dydis pikseliais"
+        )
+    
+    with col5:
+        template_font_family = st.selectbox(
+            "🔠 Šriftas:",
+            ["Arial Bold", "Times New Roman", "Georgia", "Courier New", "Verdana", "Comic Sans MS"],
+            help="Pasirinkite teksto šriftą"
+        )
+    
+    col6, col7, col8 = st.columns(3)
+    
+    with col6:
+        template_bg_color = st.color_picker(
+            "🎨 Fono spalva:",
+            "#FFFFFF",
+            help="Pasirinkite fono spalvą tekstui"
+        )
+    
+    with col7:
+        template_text_color = st.color_picker(
+            "✏️ Teksto spalva:",
+            "#000000",
+            help="Pasirinkite raidžių spalvą"
+        )
+    
+    with col8:
+        template_bg_opacity = st.slider(
+            "🔳 Fono permatomumas:",
+            min_value=0,
+            max_value=255,
+            value=180,
+            step=10,
+            help="0 = visiškai permatomas, 255 = nepermatomas"
+        )
+    
+    # Pasirenkame kurį tekstą naudoti
+    template_text_option = st.radio(
+        "📝 Kuris tekstas bus šablone?",
+        ["Pilnas AI turinys", "Tik pirmas variantas", "Tik antras variantas", "Tik trečias variantas", "Rankinis tekstas"],
+        index=0
+    )
+    
+    # Jei rankinis tekstas
+    if template_text_option == "Rankinis tekstas":
+        template_custom_text = st.text_area(
+            "✍️ Įveskite tekstą šablonui:",
+            height=100,
+            placeholder="Jūsų tekstas čia..."
+        )
+    else:
+        template_custom_text = None
+    
+    # Mygtukas generuoti šabloną
+    if st.button("🚀 Generuoti Social Media Šabloną", type="primary", use_container_width=True, key="generate_template_btn"):
+        with st.spinner("🎨 Kuriamas šablonas..."):
+            try:
+                # Paruošiame nuotraukas
+                template_images = []
+                for idx, file in enumerate(files_to_process):
+                    file.seek(0)
+                    
+                    # Vandens ženklas tik ant paskutinės
+                    show_watermark = add_watermark and (idx == len(files_to_process) - 1)
+                    
+                    edited = add_marketing_overlay(
+                        file,
+                        add_watermark=show_watermark,
+                        add_border=False,
+                        brightness=brightness,
+                        contrast=contrast,
+                        saturation=saturation,
+                        watermark_text=watermark_text,
+                        watermark_size=watermark_size
+                    )
+                    edited.seek(0)
+                    img = Image.open(edited)
+                    template_images.append(img)
+                
+                # Pasiruošiame tekstą
+                if template_custom_text:
+                    final_text = template_custom_text
+                elif template_text_option == "Pilnas AI turinys":
+                    final_text = st.session_state.ai_content_result
+                elif template_text_option == "Tik pirmas variantas":
+                    variants = st.session_state.ai_content_result.split("---")
+                    final_text = variants[0].strip() if variants else st.session_state.ai_content_result
+                elif template_text_option == "Tik antras variantas":
+                    variants = st.session_state.ai_content_result.split("---")
+                    final_text = variants[1].strip() if len(variants) > 1 else st.session_state.ai_content_result
+                elif template_text_option == "Tik trečias variantas":
+                    variants = st.session_state.ai_content_result.split("---")
+                    final_text = variants[2].strip() if len(variants) > 2 else st.session_state.ai_content_result
+                else:
+                    final_text = st.session_state.ai_content_result
+                
+                # Išvalome nereikalingus teksto elementus (VARIANTAS 1, 2, 3, MARKETINGINIS, etc.)
+                import re
+                final_text = re.sub(r'VARIANTAS\s+\d+\s*[-:]*\s*', '', final_text, flags=re.IGNORECASE)
+                final_text = re.sub(r'^\d+[\.\)]\s*', '', final_text, flags=re.MULTILINE)  # Numeriai pradžioje eilučių
+                # Pašaliname tipo etiketes (MARKETINGINIS, DRAUGIŠKAS, SU HUMORU)
+                final_text = re.sub(r'(MARKETINGINIS|DRAUGIŠKAS|DRAUGI[ŠS]KAS|SU HUMORU)\s*[💼🏡😄🎭]*\s*[-:]*\s*', '', final_text, flags=re.IGNORECASE)
+                final_text = final_text.strip()
+                
+                # Konvertuojame layout
+                layout_map = {
+                    "auto": "auto",
+                    "1 foto": "1",
+                    "2 foto": "2",
+                    "3 foto": "3",
+                    "4 foto": "4",
+                    "2 foto vertical": "2_vertical",
+                    "Kolažas (atsitiktinai)": "collage"
+                }
+                layout_value = layout_map.get(template_layout, "auto")
+                
+                # UI Debug - matysi naršyklėje!
+                st.info(f"🔍 DEBUG: Font dydis = **{template_font_size}px**, Šriftas = **{template_font_family}**, Pozicija = **{template_text_position}**")
+                
+                # Debug info
+                print(f"\n=== ŠABLONO PARAMETRAI ===")
+                print(f"Layout: {layout_value}")
+                print(f"Pozicija: '{template_text_position}'")
+                print(f"Font dydis: {template_font_size} (type: {type(template_font_size)})")
+                print(f"Font šeima: {template_font_family}")
+                print(f"Teksto spalva: {template_text_color}")
+                print(f"Fono spalva: {template_bg_color}")
+                print(f"Stilius: {template_style}")
+                print(f"========================\n")
+                
+                # Generuojame šabloną
+                template_result = create_social_template(
+                    images=template_images,
+                    text=final_text,
+                    layout=layout_value,
+                    text_position=template_text_position,
+                    font_size=template_font_size,
+                    background_color=template_bg_color,
+                    style=template_style,
+                    font_family=template_font_family,
+                    text_color=template_text_color,
+                    bg_opacity=template_bg_opacity
+                )
+                
+                if template_result:
+                    st.session_state.template_result = template_result.getvalue()
+                    st.session_state.template_filename = f"social_template_{season}_{holiday}.png"
+                    st.success("✅ Šablonas sukurtas sėkmingai!")
+                    
+            except Exception as e:
+                st.error(f"❌ Klaida kuriant šabloną: {e}")
+                import traceback
+                st.error(traceback.format_exc())
+    
+    # Rodyti sugeneruotą šabloną
+    if "template_result" in st.session_state and st.session_state.template_result:
+        st.markdown("---")
+        st.markdown("### ✅ Sugeneruotas Social Media Šablonas")
+        st.image(st.session_state.template_result, caption="1080×1080 Instagram šablonas", use_container_width=True)
+        
+        st.download_button(
+            label="📥 Atsisiųsti šabloną (PNG)",
+            data=st.session_state.template_result,
+            file_name=st.session_state.template_filename,
+            mime="image/png",
+            use_container_width=True,
+            key="download_template"
+        )
 
 # Footer
 st.markdown("---")
