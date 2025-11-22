@@ -924,47 +924,51 @@ from until.layout import draw_text_auto
 from until.templates import apply_template
 
 st.markdown("---")
-st.header("🆕 Modernus Social Media Šablonas")
+st.header("🆕 Modernus Social Media Šablonas su AI išdėstymu")
 
 uploaded_imgs = st.file_uploader("Įkelk nuotraukas", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 input_text = st.text_input("Tekstas ant nuotraukos", "Žaliuzių akcija!")
 extra_text = st.text_input("Papildomas tekstas (mažesnis)", "Akcija tik šią savaitę!")
 social_format = st.selectbox("Formatas:", ["Instagram Square", "Instagram Story", "Facebook Post", "Pinterest Vertical"])
 theme = st.selectbox("Tema:", ["Modern Dark", "Modern Blue", "Modern Red", "Modern Green", "Modern Gradient", "Winter", "Pastel"])
-export_format = st.selectbox("Eksportuoti kaip:", ["PNG", "JPEG"], key="export_format_modern")
+export_format = st.selectbox("Eksportuoti kaip:", ["PNG", "JPEG"], key="export_format_modern_ai")
 font_path = st.text_input("Šrifto failas (pvz. Roboto-Bold.ttf)", "Roboto-Bold.ttf")
 
 if uploaded_imgs:
-    for idx, uploaded_img in enumerate(uploaded_imgs):
-        img = Image.open(uploaded_img)
-        img = resize_for_social(img, social_format)
-        palette = [(120,180,255), (255,255,255)]
-        img = apply_template(img, palette, theme)
-        img = draw_text_auto(img, input_text, font_path=font_path)
-        # Papildomas tekstas - mažesnis, žemiau pagrindinio
-        if extra_text:
-            W, H = img.size
-            draw = ImageDraw.Draw(img)
-            font_size = int(H * 0.035)
-            fallback_font = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-            try:
-                font2 = ImageFont.truetype(font_path, font_size)
-            except Exception:
-                font2 = ImageFont.truetype(fallback_font, font_size)
-            bbox2 = draw.textbbox((0, 0), extra_text, font=font2)
-            w2 = bbox2[2] - bbox2[0]
-            h2 = bbox2[3] - bbox2[1]
-            position2 = ((W - w2) / 2, H * 0.70)
-            overlay2 = Image.new("RGBA", (w2+40, h2+30), (0,0,0,120))
-            img.paste(overlay2, (int(position2[0]-20), int(position2[1]-15)), overlay2)
-            draw.text(position2, extra_text, fill="white", font=font2)
-        st.image(img, caption=f"Modernus šablonas {idx+1}", use_column_width=True)
-        buf = io.BytesIO()
-        if export_format == "PNG":
-            img.save(buf, format="PNG")
-        else:
-            img.save(buf, format="JPEG")
-        st.download_button(f"Atsisiųsti {idx+1}", buf.getvalue(), file_name=f"template_{idx+1}.{export_format.lower()}", mime=f"image/{export_format.lower()}")
+    texts = [input_text]
+    if extra_text:
+        texts.append(extra_text)
+    layout = ai_generate_layout(len(uploaded_imgs), texts)
+    # Canvas pagal social formatą
+    size_map = {"Instagram Square": (1080,1080), "Instagram Story": (1080,1920), "Facebook Post": (1200,628), "Pinterest Vertical": (1000,1500)}
+    canvas_size = size_map.get(social_format, (1080,1080))
+    canvas = Image.new("RGBA", canvas_size, (30,30,30,255))
+    # Sudedam nuotraukas pagal AI
+    for i, img_file in enumerate(uploaded_imgs):
+        img = Image.open(img_file).convert("RGBA")
+        params = layout["nuotraukos"][i]
+        img = img.resize((params["w"], params["h"]), Image.LANCZOS)
+        img = img.rotate(params["rotation"], expand=True)
+        canvas.alpha_composite(img, (params["x"], params["y"]))
+    # Uždedam teminį overlay
+    palette = [(120,180,255), (255,255,255)]
+    canvas = apply_template(canvas.convert("RGB"), palette, theme).convert("RGBA")
+    # Sudedam tekstus pagal AI
+    draw = ImageDraw.Draw(canvas)
+    for i, txt in enumerate(texts):
+        tparams = layout["tekstai"][i]
+        try:
+            font = ImageFont.truetype(tparams["font"], tparams["size"])
+        except Exception:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", tparams["size"])
+        draw.text((tparams["x"], tparams["y"]), txt, font=font, fill=tparams["color"])
+    st.image(canvas.convert("RGB"), caption="Modernus AI šablonas", use_column_width=True)
+    buf = io.BytesIO()
+    if export_format == "PNG":
+        canvas.convert("RGB").save(buf, format="PNG")
+    else:
+        canvas.convert("RGB").save(buf, format="JPEG")
+    st.download_button("Atsisiųsti šabloną", buf.getvalue(), file_name=f"modern_ai_template.{export_format.lower()}", mime=f"image/{export_format.lower()}")
 
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
@@ -1449,6 +1453,7 @@ if files_to_process:
                         canvas_width = cols * img_size + (cols + 1) * gap
                         canvas_height = rows * img_size + (rows + 1) * gap
                         
+
                         collage = Image.new('RGB', (canvas_width, canvas_height), (240, 240, 240))
                         
                         idx = 0
@@ -1910,7 +1915,7 @@ if uploaded_imgs and (input_text or extra_text):
         img = img.resize((params["w"], params["h"]), Image.LANCZOS)
         img = img.rotate(params["rotation"], expand=True)
         canvas.alpha_composite(img, (params["x"], params["y"]))
-    # Sudedam tekstus
+    # Sudedam tekstus pagal AI
     draw = ImageDraw.Draw(canvas)
     for i, txt in enumerate(texts):
         tparams = layout["tekstai"][i]
