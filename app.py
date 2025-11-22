@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
 import random
 
+CAMERA_AVAILABLE = False
+
 # AI išdėstymo generavimo funkcija
 
 def ai_generate_layout(num_images, texts):
@@ -1450,7 +1452,7 @@ if files_to_process:
                         img_size = 550
                         gap = 40
                         
-                        canvas_width = cols * img_size + (cols + 1) * gap
+                        canvas_width = cols * img_size + (cols +  1) * gap
                        
                         canvas_height = rows * img_size + (rows + 1) * gap
                         
