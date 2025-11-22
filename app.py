@@ -931,7 +931,7 @@ input_text = st.text_input("Tekstas ant nuotraukos", "Žaliuzių akcija!")
 extra_text = st.text_input("Papildomas tekstas (mažesnis)", "Akcija tik šią savaitę!")
 social_format = st.selectbox("Formatas:", ["Instagram Square", "Instagram Story", "Facebook Post", "Pinterest Vertical"])
 theme = st.selectbox("Tema:", ["Modern Dark", "Modern Blue", "Modern Red", "Modern Green", "Modern Gradient", "Winter", "Pastel"])
-export_format = st.selectbox("Eksportuoti kaip:", ["PNG", "JPEG"])
+export_format = st.selectbox("Eksportuoti kaip:", ["PNG", "JPEG"], key="export_format_modern")
 font_path = st.text_input("Šrifto failas (pvz. Roboto-Bold.ttf)", "Roboto-Bold.ttf")
 
 if uploaded_imgs:
@@ -1894,7 +1894,7 @@ st.header("🧠 AI generuojamas Social Media Koliažas")
 uploaded_imgs = st.file_uploader("Įkelk nuotraukas (koliažui)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 input_text = st.text_input("Pagrindinis tekstas", "Žaliuzių akcija!")
 extra_text = st.text_input("Papildomas tekstas", "Akcija tik šią savaitę!")
-export_format = st.selectbox("Eksportuoti kaip:", ["PNG", "JPEG"])
+export_format = st.selectbox("Eksportuoti kaip:", ["PNG", "JPEG"], key="export_format_ai")
 
 if uploaded_imgs and (input_text or extra_text):
     texts = [input_text]
