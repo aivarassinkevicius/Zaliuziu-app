@@ -917,6 +917,37 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         st.error(traceback.format_exc())
         return None
 
+# ========== MODERNUS SOCIAL TEMPLATE ========== #
+from until.until.until.export import resize_for_social
+from until.until.until.layout import draw_text_auto
+from until.until.until.templates import apply_template
+
+st.markdown("---")
+st.header("🆕 Modernus Social Media Šablonas")
+
+uploaded_img = st.file_uploader("Įkelk nuotrauką", type=["jpg", "jpeg", "png"])
+input_text = st.text_input("Tekstas ant nuotraukos", "Žaliuzių akcija!")
+social_format = st.selectbox("Formatas:", ["Instagram Square", "Instagram Story", "Facebook Post", "Pinterest Vertical"])
+theme = st.selectbox("Tema:", ["Winter", "Modern Dark", "Pastel"])
+export_format = st.selectbox("Eksportuoti kaip:", ["PNG", "JPEG"])
+font_path = st.text_input("Šrifto failas (pvz. Roboto-Bold.ttf)", "Roboto-Bold.ttf")
+
+if uploaded_img:
+    img = Image.open(uploaded_img)
+    img = resize_for_social(img, social_format)
+    # Galima pridėti spalvų paletę, bet demo naudoja default
+    palette = [(120,180,255), (255,255,255)]
+    img = apply_template(img, palette, theme)
+    img = draw_text_auto(img, input_text, font_path=font_path)
+    st.image(img, caption="Modernus šablonas", use_column_width=True)
+    # Eksportas
+    buf = io.BytesIO()
+    if export_format == "PNG":
+        img.save(buf, format="PNG")
+    else:
+        img.save(buf, format="JPEG")
+    st.download_button("Atsisiųsti", buf.getvalue(), file_name=f"template.{export_format.lower()}", mime=f"image/{export_format.lower()}")
+
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
 
