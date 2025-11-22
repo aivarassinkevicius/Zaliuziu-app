@@ -1453,7 +1453,6 @@ if files_to_process:
                         canvas_width = cols * img_size + (cols + 1) * gap
                         canvas_height = rows * img_size + (rows + 1) * gap
                         
-
                         collage = Image.new('RGB', (canvas_width, canvas_height), (240, 240, 240))
                         
                         idx = 0
