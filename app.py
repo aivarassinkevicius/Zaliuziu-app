@@ -925,28 +925,45 @@ from until.templates import apply_template
 st.markdown("---")
 st.header("🆕 Modernus Social Media Šablonas")
 
-uploaded_img = st.file_uploader("Įkelk nuotrauką", type=["jpg", "jpeg", "png"])
+uploaded_imgs = st.file_uploader("Įkelk nuotraukas", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 input_text = st.text_input("Tekstas ant nuotraukos", "Žaliuzių akcija!")
+extra_text = st.text_input("Papildomas tekstas (mažesnis)", "Akcija tik šią savaitę!")
 social_format = st.selectbox("Formatas:", ["Instagram Square", "Instagram Story", "Facebook Post", "Pinterest Vertical"])
-theme = st.selectbox("Tema:", ["Winter", "Modern Dark", "Pastel"])
+theme = st.selectbox("Tema:", ["Modern Dark", "Modern Blue", "Modern Red", "Modern Green", "Modern Gradient", "Winter", "Pastel"])
 export_format = st.selectbox("Eksportuoti kaip:", ["PNG", "JPEG"])
 font_path = st.text_input("Šrifto failas (pvz. Roboto-Bold.ttf)", "Roboto-Bold.ttf")
 
-if uploaded_img:
-    img = Image.open(uploaded_img)
-    img = resize_for_social(img, social_format)
-    # Galima pridėti spalvų paletę, bet demo naudoja default
-    palette = [(120,180,255), (255,255,255)]
-    img = apply_template(img, palette, theme)
-    img = draw_text_auto(img, input_text, font_path=font_path)
-    st.image(img, caption="Modernus šablonas", use_column_width=True)
-    # Eksportas
-    buf = io.BytesIO()
-    if export_format == "PNG":
-        img.save(buf, format="PNG")
-    else:
-        img.save(buf, format="JPEG")
-    st.download_button("Atsisiųsti", buf.getvalue(), file_name=f"template.{export_format.lower()}", mime=f"image/{export_format.lower()}")
+if uploaded_imgs:
+    for idx, uploaded_img in enumerate(uploaded_imgs):
+        img = Image.open(uploaded_img)
+        img = resize_for_social(img, social_format)
+        palette = [(120,180,255), (255,255,255)]
+        img = apply_template(img, palette, theme)
+        img = draw_text_auto(img, input_text, font_path=font_path)
+        # Papildomas tekstas - mažesnis, žemiau pagrindinio
+        if extra_text:
+            W, H = img.size
+            draw = ImageDraw.Draw(img)
+            font_size = int(H * 0.035)
+            fallback_font = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+            try:
+                font2 = ImageFont.truetype(font_path, font_size)
+            except Exception:
+                font2 = ImageFont.truetype(fallback_font, font_size)
+            bbox2 = draw.textbbox((0, 0), extra_text, font=font2)
+            w2 = bbox2[2] - bbox2[0]
+            h2 = bbox2[3] - bbox2[1]
+            position2 = ((W - w2) / 2, H * 0.70)
+            overlay2 = Image.new("RGBA", (w2+40, h2+30), (0,0,0,120))
+            img.paste(overlay2, (int(position2[0]-20), int(position2[1]-15)), overlay2)
+            draw.text(position2, extra_text, fill="white", font=font2)
+        st.image(img, caption=f"Modernus šablonas {idx+1}", use_column_width=True)
+        buf = io.BytesIO()
+        if export_format == "PNG":
+            img.save(buf, format="PNG")
+        else:
+            img.save(buf, format="JPEG")
+        st.download_button(f"Atsisiųsti {idx+1}", buf.getvalue(), file_name=f"template_{idx+1}.{export_format.lower()}", mime=f"image/{export_format.lower()}")
 
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
