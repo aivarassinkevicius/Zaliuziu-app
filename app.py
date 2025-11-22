@@ -3,6 +3,7 @@ import io, os, base64
 from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
+import random
 
 # Bandome importuoti camera input (jei neveiks, praleidžia)
 try:
@@ -1575,7 +1576,7 @@ if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_cont
     
     all_analyses = []
     
-    # Analizuojame REDAGUOTAS nuotraukas (su vandens ženklu, spalvų koregavimu)
+    # Analizuojame REDAGUOTAS nuotraukas (su vandens ženkliu, spalvų koregavimu)
     for i, file in enumerate(files_to_process):
         status_text.text(f"🔍 Analizuojama redaguota nuotrauka {i+1}/{len(files_to_process)}...")
         progress_bar.progress((i + 1) / (len(files_to_process) + 1))
@@ -1861,6 +1862,70 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
             key="download_template"
         )
 
+# AI išdėstymo generavimo funkcija
+def ai_generate_layout(num_images, texts):
+    """
+    Naudoja OpenAI API, kad sugeneruotų nuotraukų ir tekstų išdėstymo parametrus.
+    """
+    prompt = f"Sugeneruok social media koliažo išdėstymo parametrus {num_images} nuotraukoms ir {len(texts)} tekstams. Atsakyk JSON formatu: nuotraukos: [{{x, y, w, h, rotation}}], tekstai: [{{x, y, size, font, color}}]. Stilius modernus, estetiškas, kiekvieną kartą skirtingas."
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    import json
+    try:
+        layout = json.loads(response.choices[0].message.content)
+    except Exception:
+        # Fallback: random grid
+        layout = {
+            "nuotraukos": [
+                {"x": 100 + i*300, "y": 100, "w": 250, "h": 250, "rotation": random.randint(-10,10)} for i in range(num_images)
+            ],
+            "tekstai": [
+                {"x": 200, "y": 500, "size": 48, "font": "DejaVuSans-Bold.ttf", "color": "#FFFFFF"},
+                {"x": 200, "y": 600, "size": 32, "font": "DejaVuSans-Bold.ttf", "color": "#CCCCCC"}
+            ]
+        }
+    return layout
+
+st.markdown("---")
+st.header("🧠 AI generuojamas Social Media Koliažas")
+
+uploaded_imgs = st.file_uploader("Įkelk nuotraukas (koliažui)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+input_text = st.text_input("Pagrindinis tekstas", "Žaliuzių akcija!")
+extra_text = st.text_input("Papildomas tekstas", "Akcija tik šią savaitę!")
+export_format = st.selectbox("Eksportuoti kaip:", ["PNG", "JPEG"])
+
+if uploaded_imgs and (input_text or extra_text):
+    texts = [input_text]
+    if extra_text:
+        texts.append(extra_text)
+    layout = ai_generate_layout(len(uploaded_imgs), texts)
+    # Sukuriame tuščią canvas
+    canvas = Image.new("RGBA", (1080,1080), (30,30,30,255))
+    # Sudedam nuotraukas
+    for i, img_file in enumerate(uploaded_imgs):
+        img = Image.open(img_file).convert("RGBA")
+        params = layout["nuotraukos"][i]
+        img = img.resize((params["w"], params["h"]), Image.LANCZOS)
+        img = img.rotate(params["rotation"], expand=True)
+        canvas.alpha_composite(img, (params["x"], params["y"]))
+    # Sudedam tekstus
+    draw = ImageDraw.Draw(canvas)
+    for i, txt in enumerate(texts):
+        tparams = layout["tekstai"][i]
+        try:
+            font = ImageFont.truetype(tparams["font"], tparams["size"])
+        except Exception:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", tparams["size"])
+        draw.text((tparams["x"], tparams["y"]), txt, font=font, fill=tparams["color"])
+    st.image(canvas.convert("RGB"), caption="AI generuotas koliažas", use_column_width=True)
+    buf = io.BytesIO()
+    if export_format == "PNG":
+        canvas.convert("RGB").save(buf, format="PNG")
+    else:
+        canvas.convert("RGB").save(buf, format="JPEG")
+    st.download_button("Atsisiųsti koliažą", buf.getvalue(), file_name=f"ai_koliazas.{export_format.lower()}", mime=f"image/{export_format.lower()}")
 # Footer
 st.markdown("---")
 st.markdown("🌿 *Sukūrta žaliuzių ir roletų verslui* | Powered by OpenAI")
