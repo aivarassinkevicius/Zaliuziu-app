@@ -918,9 +918,9 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
         return None
 
 # ========== MODERNUS SOCIAL TEMPLATE ========== #
-from until.until.until.export import resize_for_social
-from until.until.until.layout import draw_text_auto
-from until.until.until.templates import apply_template
+from until.export import resize_for_social
+from until.layout import draw_text_auto
+from until.templates import apply_template
 
 st.markdown("---")
 st.header("🆕 Modernus Social Media Šablonas")
