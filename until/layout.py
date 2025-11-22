@@ -1,4 +1,5 @@
 from PIL import Image, ImageDraw, ImageFont
+import os
 
 def draw_text_auto(img, text, font_path="Roboto-Bold.ttf"):
     """
@@ -9,9 +10,17 @@ def draw_text_auto(img, text, font_path="Roboto-Bold.ttf"):
     draw = ImageDraw.Draw(img)
 
     # Šrifto dydis pagal vaizdo aukštį
-    font = ImageFont.truetype(font_path, int(H * 0.05))
-    w, h = draw.textsize(text, font=font)
+    font_size = int(H * 0.05)
+    fallback_font = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    try:
+        if not os.path.exists(font_path):
+            font = ImageFont.truetype(fallback_font, font_size)
+        else:
+            font = ImageFont.truetype(font_path, font_size)
+    except Exception:
+        font = ImageFont.truetype(fallback_font, font_size)
 
+    w, h = draw.textsize(text, font=font)
     position = ((W - w) / 2, H * 0.60)
 
     # Teksto fonas (lengvas permatomumas)
