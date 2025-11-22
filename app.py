@@ -13,7 +13,11 @@ def ai_generate_layout(num_images, texts):
     """
     Naudoja OpenAI API, kad sugeneruotų nuotraukų ir tekstų išdėstymo parametrus.
     """
-    prompt = f"Sugeneruok social media koliažo išdėstymo parametrus {num_images} nuotraukoms ir {len(texts)} tekstams. Atsakyk JSON formatu: nuotraukos: [{{x, y, w, h, rotation}}], tekstai: [{{x, y, size, font, color}}]. Stilius modernus, estetiškas, kiekvieną kartą skirtingas."
+    prompt = (
+        f"Sugeneruok social media koliažo išdėstymo parametrus {num_images} nuotraukoms ir {len(texts)} tekstams. "
+        "Atsakyk JSON formatu: nuotraukos: [{{x, y, w, h, rotation}}], tekstai: [{{x, y, size, font, color}}]. "
+        "Stilius modernus, estetiškas, VISI elementai turi būti išdėstyti vizualiai BALANSUOTAI ir CENTRUOTI, kad nuotraukos ir tekstai nebūtų tik kairiame viršutiniame kampe. Naudok pilną drobės plotą, išdėstyk nuotraukas ir tekstus tvarkingai, kad atrodytų gražiai ir profesionaliai."
+    )
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}]
@@ -22,16 +26,34 @@ def ai_generate_layout(num_images, texts):
     try:
         layout = json.loads(response.choices[0].message.content)
     except Exception:
-        # Fallback: random grid
+        # Fallback: centered grid
+        canvas_w, canvas_h = 1080, 1080  # Default, will be overwritten by actual format
+        img_size = min(canvas_w, canvas_h) // (num_images + 1)
+        margin = img_size // 4
         layout = {
-            "nuotraukos": [
-                {"x": 100 + i*300, "y": 100, "w": 250, "h": 250, "rotation": random.randint(-10,10)} for i in range(num_images)
-            ],
-            "tekstai": [
-                {"x": 200, "y": 500, "size": 48, "font": "DejaVuSans-Bold.ttf", "color": "#FFFFFF"},
-                {"x": 200, "y": 600, "size": 32, "font": "DejaVuSans-Bold.ttf", "color": "#CCCCCC"}
-            ]
+            "nuotraukos": [],
+            "tekstai": []
         }
+        # Center images horizontally and vertically
+        for i in range(num_images):
+            x = int((canvas_w - img_size) // 2 + (i - (num_images-1)/2) * (img_size + margin))
+            y = int((canvas_h - img_size) // 2)
+            layout["nuotraukos"].append({
+                "x": max(0, min(x, canvas_w-img_size)),
+                "y": max(0, min(y, canvas_h-img_size)),
+                "w": img_size,
+                "h": img_size,
+                "rotation": random.randint(-8,8)
+            })
+        # Center texts below images
+        for i in range(len(texts)):
+            layout["tekstai"].append({
+                "x": int(canvas_w * 0.5),
+                "y": int(canvas_h * 0.8 + i*60),
+                "size": 48 if i == 0 else 32,
+                "font": "DejaVuSans-Bold.ttf",
+                "color": "#FFFFFF" if i == 0 else "#CCCCCC"
+            })
     return layout
 
 # ---------- Nustatymai ----------
