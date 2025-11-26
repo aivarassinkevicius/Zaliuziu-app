@@ -1,4 +1,5 @@
 import streamlit as st
+import io
 from PIL import Image
 import os
 from PIL import ImageFont
@@ -11,44 +12,37 @@ def get_font_path(font=None):
     # return font if font else default
 import os
 
-# Custom CSS for modern look
-st.markdown("""
-    <style>
-        body { background-color: #f7f7f7; }
-        .main { background-color: #f7f7f7; }
-        .block-container { padding-top: 2rem; }
-        h1, h2, h3, h4 { font-family: 'Segoe UI', Arial, sans-serif; }
-    </style>
-""", unsafe_allow_html=True)
+# Čia gali pridėti savo turinį arba palikti tuščią aplikaciją
 
-# Logo and header
-st.image("https://www.roleksa.lt/wp-content/uploads/2021/03/roleksa-logo.png", width=180)
-st.markdown("<h1 style='text-align: center; color: #2e7d32;'>Kurkime jaukumą kartu!</h1>", unsafe_allow_html=True)
-st.markdown("<h3 style='text-align: center; color: #555;'>8 607 87071</h3>", unsafe_allow_html=True)
 
-# Product gallery
-st.markdown("---")
-st.subheader("Mūsų gaminiai")
+# Šoninė juosta kairėje pusėje
+st.sidebar.header("Pasirinkite temą")
+metu_laikas = st.sidebar.selectbox(
+    "Metų laikas arba šventė",
+    ("Pavasaris", "Vasara", "Ruduo", "Žiema", "Kalėdos", "Velykos", "Joninės", "Akcija")
+)
 
-col1, col2 = st.columns(2)
+# Nuotraukų įkėlimas (iki 4 vnt.)
+st.markdown("<h2 style='text-align: center; color: #2e7d32;'>Rūbai Langams</h2>", unsafe_allow_html=True)
+st.write(f"Pasirinkta tema: {metu_laikas}")
 
-# First product block
-with col1:
-    st.image("https://files.oaiusercontent.com/file-7e2e7e7e-1a2b-4c2e-8e2e-7e2e7e7e7e7e/zaluzijos.jpg", caption="Žaliuzių akcija!")
+uploaded_files = st.file_uploader("Įkelkite iki 4 nuotraukų", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+if uploaded_files:
+    num_files = min(len(uploaded_files), 4)
+    cols = st.columns(num_files)
+    for i in range(num_files):
+        with cols[i]:
+            st.image(uploaded_files[i], use_container_width=True)
 
-# Second product block
-with col2:
-    st.image("https://files.oaiusercontent.com/file-7e2e7e7e-1a2b-4c2e-8e2e-7e2e7e7e7e7e/zaluzijos2.jpg", caption="Akcija tik šią savaitę!")
+# Teksto įvedimas
+post_title = st.text_input("Įrašykite pavadinimą")
+post_desc = st.text_area("Įrašykite aprašymą arba akcijos tekstą")
 
-# More products
-st.markdown("---")
-st.subheader("Kiti gaminiai")
-st.image("https://files.oaiusercontent.com/file-7e2e7e7e-1a2b-4c2e-8e2e-7e2e7e7e7e7e/roleksa1.png", caption="Kurkime jaukumą kartu!")
-st.image("https://files.oaiusercontent.com/file-7e2e7e7e-1a2b-4c2e-8e2e-7e2e7e7e7e7e/roleksa2.png", caption="Tinkleliai durims ir langams")
-
-# Footer
-st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align: center; color: #2e7d32;'>Susisiekite: info@roleksa.lt</h4>", unsafe_allow_html=True)
+# Parodomas tekstas po nuotraukomis
+if post_title:
+    st.markdown(f"<h3 style='text-align: center;'>{post_title}</h3>", unsafe_allow_html=True)
+if post_desc:
+    st.markdown(f"<p style='text-align: center;'>{post_desc}</p>", unsafe_allow_html=True)
 from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
@@ -1038,7 +1032,7 @@ if uploaded_imgs:
                 font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
             font = ImageFont.truetype(get_font_path(), tparams["size"])
         draw.text((tparams["x"], tparams["y"]), txt, font=font, fill=tparams["color"])
-    st.image(canvas.convert("RGB"), caption="Modernus AI šablonas", use_column_width=True)
+    st.image(canvas.convert("RGB"), caption="Modernus AI šablonas", use_container_width=True)
     buf = io.BytesIO()
     if export_format == "PNG":
         canvas.convert("RGB").save(buf, format="PNG")
