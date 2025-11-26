@@ -1,5 +1,54 @@
 import streamlit as st
-import io, os, base64
+from PIL import Image
+import os
+from PIL import ImageFont
+def get_font_path(font=None):
+    if os.name == "nt":
+        return "C:/Windows/Fonts/arial.ttf"
+    else:
+        return "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    # Jei font perduotas, galima naudoti jį kaip prioritetą
+    # return font if font else default
+import os
+
+# Custom CSS for modern look
+st.markdown("""
+    <style>
+        body { background-color: #f7f7f7; }
+        .main { background-color: #f7f7f7; }
+        .block-container { padding-top: 2rem; }
+        h1, h2, h3, h4 { font-family: 'Segoe UI', Arial, sans-serif; }
+    </style>
+""", unsafe_allow_html=True)
+
+# Logo and header
+st.image("https://www.roleksa.lt/wp-content/uploads/2021/03/roleksa-logo.png", width=180)
+st.markdown("<h1 style='text-align: center; color: #2e7d32;'>Kurkime jaukumą kartu!</h1>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center; color: #555;'>8 607 87071</h3>", unsafe_allow_html=True)
+
+# Product gallery
+st.markdown("---")
+st.subheader("Mūsų gaminiai")
+
+col1, col2 = st.columns(2)
+
+# First product block
+with col1:
+    st.image("https://files.oaiusercontent.com/file-7e2e7e7e-1a2b-4c2e-8e2e-7e2e7e7e7e7e/zaluzijos.jpg", caption="Žaliuzių akcija!")
+
+# Second product block
+with col2:
+    st.image("https://files.oaiusercontent.com/file-7e2e7e7e-1a2b-4c2e-8e2e-7e2e7e7e7e7e/zaluzijos2.jpg", caption="Akcija tik šią savaitę!")
+
+# More products
+st.markdown("---")
+st.subheader("Kiti gaminiai")
+st.image("https://files.oaiusercontent.com/file-7e2e7e7e-1a2b-4c2e-8e2e-7e2e7e7e7e7e/roleksa1.png", caption="Kurkime jaukumą kartu!")
+st.image("https://files.oaiusercontent.com/file-7e2e7e7e-1a2b-4c2e-8e2e-7e2e7e7e7e7e/roleksa2.png", caption="Tinkleliai durims ir langams")
+
+# Footer
+st.markdown("<hr>", unsafe_allow_html=True)
+st.markdown("<h4 style='text-align: center; color: #2e7d32;'>Susisiekite: info@roleksa.lt</h4>", unsafe_allow_html=True)
 from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
@@ -150,7 +199,7 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
             
             for font_path in font_paths:
                 try:
-                    font = ImageFont.truetype(font_path, font_size)
+                    font = ImageFont.truetype(get_font_path(), font_size)
                     break
                 except:
                     continue
@@ -738,7 +787,7 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
                 continue
                 
             try:
-                font = ImageFont.truetype(font_path, actual_font_size)
+                font = ImageFont.truetype(get_font_path(), actual_font_size)
                 print(f"   Rezultatas: ✅ SUCCESS! Užkrautas su {actual_font_size}px")
                 print(f"{'='*60}\n")
                 font_loaded = True
@@ -761,7 +810,7 @@ def create_social_template(images, text, layout="auto", text_position="bottom", 
                     "C:/Windows/Fonts/arial.ttf"
                 ]:
                     try:
-                        font = ImageFont.truetype(fallback, actual_font_size)
+                        font = ImageFont.truetype(get_font_path(), actual_font_size)
                         print(f"DEBUG: ✅ FALLBACK sukurtas: {fallback} su {actual_font_size}px")
                         st.warning(f"Naudojamas fallback šriftas: {fallback}")
                         break
@@ -980,9 +1029,14 @@ if uploaded_imgs:
     for i, txt in enumerate(texts):
         tparams = layout["tekstai"][i]
         try:
-            font = ImageFont.truetype(tparams["font"], tparams["size"])
+            font = ImageFont.truetype(get_font_path(), tparams["size"])
         except Exception:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", tparams["size"])
+            import os
+            if os.name == "nt":  # Windows
+                font_path = "C:/Windows/Fonts/arial.ttf"
+            else:
+                font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+            font = ImageFont.truetype(get_font_path(), tparams["size"])
         draw.text((tparams["x"], tparams["y"]), txt, font=font, fill=tparams["color"])
     st.image(canvas.convert("RGB"), caption="Modernus AI šablonas", use_column_width=True)
     buf = io.BytesIO()
