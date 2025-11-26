@@ -16,33 +16,12 @@ import os
 
 
 # Šoninė juosta kairėje pusėje
-st.sidebar.header("Pasirinkite temą")
-metu_laikas = st.sidebar.selectbox(
-    "Metų laikas arba šventė",
-    ("Pavasaris", "Vasara", "Ruduo", "Žiema", "Kalėdos", "Velykos", "Joninės", "Akcija")
-)
+
+
 
 # Nuotraukų įkėlimas (iki 4 vnt.)
-st.markdown("<h2 style='text-align: center; color: #2e7d32;'>Rūbai Langams</h2>", unsafe_allow_html=True)
-st.write(f"Pasirinkta tema: {metu_laikas}")
 
-uploaded_files = st.file_uploader("Įkelkite iki 4 nuotraukų", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
-if uploaded_files:
-    num_files = min(len(uploaded_files), 4)
-    cols = st.columns(num_files)
-    for i in range(num_files):
-        with cols[i]:
-            st.image(uploaded_files[i], use_container_width=True)
-
-# Teksto įvedimas
-post_title = st.text_input("Įrašykite pavadinimą")
-post_desc = st.text_area("Įrašykite aprašymą arba akcijos tekstą")
-
-# Parodomas tekstas po nuotraukomis
-if post_title:
-    st.markdown(f"<h3 style='text-align: center;'>{post_title}</h3>", unsafe_allow_html=True)
-if post_desc:
-    st.markdown(f"<p style='text-align: center;'>{post_desc}</p>", unsafe_allow_html=True)
+# Palieku tik norimus elementus, visos parinktys ir eilutės tarp 'Rūbai Langams' ir 'Žaliuzių & Roletų turinio kūrėjas' pašalintos
 from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
@@ -1041,71 +1020,9 @@ if uploaded_imgs:
     st.download_button("Atsisiųsti šabloną", buf.getvalue(), file_name=f"modern_ai_template.{export_format.lower()}", mime=f"image/{export_format.lower()}")
 
 # ---------- Pagrindinis UI ----------
-st.sidebar.header("⚙️ Nustatymai")
 
-season = st.sidebar.selectbox(
-    "🌤️ Metų laikas",
-    ["Pavasaris", "Vasara", "Ruduo", "Žiema"],
-    index=1
-)
 
-holiday = st.sidebar.selectbox(
-    "🎉 Šventės (pasirinktinai)",
-    [
-        "Nėra", 
-        "Naujieji metai", 
-        "Šv. Valentino diena", 
-        "Vasario 16-oji", 
-        "Kovo 11-oji", 
-        "Velykos", 
-        "Gegužės 1-oji", 
-        "Motinos diena", 
-        "Tėvo diena", 
-        "Joninės", 
-        "Liepos 6-oji", 
-        "Žolinė", 
-        "Rugsėjo 1-oji", 
-        "Šiurpnaktis (Halloween)",
-        "Šv. Kalėdos", 
-        "Kūčios"
-    ],
-    index=0
-)
-
-auto_process = st.sidebar.checkbox("🤖 Automatinis apdorojimas", value=True)
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
-
-add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=True, help="Pridės jūsų tekstą dešiniame apatiniame kampe")
-if add_watermark:
-    watermark_text = st.sidebar.text_input("Vandens ženklo tekstas", value="#RūbaiLangams", help="Pvz: #RūbaiLangams arba © Jūsų Įmonė")
-    watermark_size = st.sidebar.slider("📏 Vandens ženklo dydis (px)", 30, 300, 150, 10, help="Šrifto dydis pikseliais. 150px = vidutinis, 250px = DIDELIS")
-else:
-    watermark_text = ""
-    watermark_size = 120
-
-add_border = st.sidebar.checkbox("🖼️ Pridėti baltą rėmelį", value=False)
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("**🤖 Automatinė optimizacija**")
-auto_enhance = st.sidebar.checkbox("✨ AUTO spalvų optimizacija", value=True, help="Automatiškai pagerina šviesumą, kontrastą ir sodrumo")
-
-if auto_enhance:
-    st.sidebar.info("💡 Automatinė optimizacija įjungta - nuotraukos bus pagerintos!")
-    # Automatiniai nustatymai marketinginėms nuotraukoms
-    brightness = 1.1  # Šiek tiek šviesiau
-    contrast = 1.15   # Ryškesnis kontrastas
-    saturation = 1.1  # Sodresni spalvos
-else:
-    st.sidebar.markdown("**Rankinė spalvų korekcija:**")
-    brightness = st.sidebar.slider("☀️ Šviesumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 tamsiau, >1.0 šviesiau")
-    contrast = st.sidebar.slider("🎭 Kontrastas", 0.5, 1.5, 1.0, 0.05, help="<1.0 blankiau, >1.0 ryškiau")
-    saturation = st.sidebar.slider("🎨 Sodrumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 pilkiau, >1.0 sodresni spalvos")
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotraukas su žaliuzėmis ar roletais.")
-
+add_watermark = False  # Numatytasis, kad nebūtų klaidos
 # Failų įkėlimas
 
 # CSS stilių pridejimas
