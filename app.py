@@ -1,87 +1,17 @@
-import streamlit as st
-# Pilna šoninė juosta su visais nustatymais
-st.sidebar.header("⚙️ Nustatymai")
-season = st.sidebar.selectbox(
-    "🌤️ Metų laikas",
-    ["Pavasaris", "Vasara", "Ruduo", "Žiema"],
-    index=1
-)
-holiday = st.sidebar.selectbox(
-    "🎉 Šventės (pasirinktinai)",
-    [
-        "Nėra", 
-        "Naujieji metai", 
-        "Šv. Valentino diena", 
-        "Vasario 16-oji", 
-        "Kovo 11-oji", 
-        "Velykos", 
-        "Gegužės 1-oji", 
-        "Motinos diena", 
-        "Tėvo diena", 
-        "Joninės", 
-        "Liepos 6-oji", 
-        "Žolinė", 
-        "Rugsėjo 1-oji", 
-        "Šiurpnaktis (Halloween)",
-        "Šv. Kalėdos", 
-        "Kūčios"
-    ],
-    index=0
-)
-auto_process = st.sidebar.checkbox("🤖 Automatinis apdorojimas", value=True)
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
-add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=True, help="Pridės jūsų tekstą dešiniame apatiniame kampe")
-if add_watermark:
-    watermark_text = st.sidebar.text_input("Vandens ženklo tekstas", value="#RūbaiLangams", help="Pvz: #RūbaiLangams arba © Jūsų Įmonė")
-    watermark_size = st.sidebar.slider("📏 Vandens ženklo dydis (px)", 30, 300, 150, 10, help="Šrifto dydis pikseliais. 150px = vidutinis, 250px = DIDELIS")
-else:
-    watermark_text = ""
-    watermark_size = 120
-add_border = st.sidebar.checkbox("🖼️ Pridėti baltą rėmelį", value=False)
-st.sidebar.markdown("---")
-st.sidebar.markdown("**🤖 Automatinė optimizacija**")
-auto_enhance = st.sidebar.checkbox("✨ AUTO spalvų optimizacija", value=True, help="Automatiškai pagerina šviesumą, kontrastą ir sodrumo")
-if auto_enhance:
-    st.sidebar.info("💡 Automatinė optimizacija įjungta - nuotraukos bus pagerintos!")
-    brightness = 1.1  # Šiek tiek šviesiau
-    contrast = 1.15   # Ryškesnis kontrastas
-    saturation = 1.1  # Sodresni spalvos
-else:
-    st.sidebar.markdown("**Rankinė spalvų korekcija:**")
-    brightness = st.sidebar.slider("☀️ Šviesumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 tamsiau, >1.0 šviesiau")
-    contrast = st.sidebar.slider("🎭 Kontrastas", 0.5, 1.5, 1.0, 0.05, help="<1.0 blankiau, >1.0 ryškiau")
-    saturation = st.sidebar.slider("🎨 Sodrumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 pilkiau, >1.0 sodresni spalvos")
-st.sidebar.markdown("---")
-st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotraukas su žaliuzėmis ar roletais.")
+
+# Konsoliduoti importai
 import streamlit as st
 import io
-from PIL import Image
 import os
-from PIL import ImageFont
-def get_font_path(font=None):
-    if os.name == "nt":
-        return "C:/Windows/Fonts/arial.ttf"
-    else:
-        return "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-    # Jei font perduotas, galima naudoti jį kaip prioritetą
-    # return font if font else default
-import os
-
-# Čia gali pridėti savo turinį arba palikti tuščią aplikaciją
-
-
-# Šoninė juosta kairėje pusėje
-
-
-
-# Nuotraukų įkėlimas (iki 4 vnt.)
-
-# Palieku tik norimus elementus, visos parinktys ir eilutės tarp 'Rūbai Langams' ir 'Žaliuzių & Roletų turinio kūrėjas' pašalintos
-from openai import OpenAI
-from dotenv import load_dotenv
-from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
 import random
+from dotenv import load_dotenv
+from openai import OpenAI
+from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
+
+from until.export import resize_for_social
+from until.layout import draw_text_auto
+from until.templates import apply_template
+
 
 CAMERA_AVAILABLE = False
 
