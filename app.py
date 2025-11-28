@@ -1,4 +1,3 @@
-
 # Konsoliduoti importai
 import streamlit as st
 import io
@@ -11,6 +10,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
 from until.export import resize_for_social
 from until.layout import draw_text_auto
 from until.templates import apply_template
+from lib.image_utils import add_marketing_overlay, create_social_template, load_font
 
 
 CAMERA_AVAILABLE = False
@@ -22,7 +22,7 @@ def ai_generate_layout(num_images, texts):
     Naudoja OpenAI API, kad sugeneruotų nuotraukų ir tekstų išdėstymo parametrus.
     """
     prompt = (
-        f"Sugeneruok social media koliažo išdėstymo parametrus {num_images} nuotraukoms ir {len(texts)} tekstams. "
+        f"Sugenerok social media koliažo išdėstymo parametrus {num_images} nuotraukoms ir {len(texts)} tekstams. "
         "Atsakyk JSON formatu: nuotraukos: [{{x, y, w, h, rotation}}], tekstai: [{{x, y, size, font, color}}]. "
         "Stilius modernus, estetiškas, VISI elementai turi būti išdėstyti vizualiai BALANSUOTAI ir CENTRUOTI, kad nuotraukos ir tekstai nebūtų tik kairiame viršutiniame kampe. Naudok pilną drobės plotą, išdėstyk nuotraukas ir tekstus tvarkingai, kad atrodytų gražiai ir profesionaliai."
     )
@@ -53,6 +53,9 @@ def ai_generate_layout(num_images, texts):
             })
         # Tekstus dedame po nuotraukomis, centre, su didesniu tarpu
         for i in range(len(texts)):
+            # OpenAI API key check and fallback
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
             layout["tekstai"].append({
                 "x": int(canvas_w * (0.25 + 0.5*i)),
                 "y": int(canvas_h*0.22 + img_size + 60),
@@ -92,114 +95,6 @@ st.title("🌿 Žaliuzių & Roletų turinio kūrėjas")
 st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tinklams.")
 
 # ---------- Pagalbinės funkcijos ----------
-
-def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=150):
-    """
-    Prideda marketinginius elementus prie nuotraukos:
-    - Vandens ženklą (ryškų, baltą su šešėliu)
-    - Rėmelį
-    - Spalvų koregavimą (šviesumas, kontrastas, sodrumas)
-    """
-    try:
-        from PIL import ImageEnhance, ImageDraw, ImageFont, ImageFilter
-        
-        # Atidarome nuotrauką
-        img = Image.open(image_file)
-        
-        # Konvertuojame į RGB jei reikia
-        if img.mode in ('RGBA', 'LA', 'P'):
-            background = Image.new('RGB', img.size, (255, 255, 255))
-            if img.mode == 'P':
-                img = img.convert('RGBA')
-            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-            img = background
-        elif img.mode != 'RGB':
-            img = img.convert('RGB')
-        
-        # Spalvų koregavimai
-        if brightness != 1.0:
-            enhancer = ImageEnhance.Brightness(img)
-            img = enhancer.enhance(brightness)
-        
-        if contrast != 1.0:
-            enhancer = ImageEnhance.Contrast(img)
-            img = enhancer.enhance(contrast)
-        
-        if saturation != 1.0:
-            enhancer = ImageEnhance.Color(img)
-            img = enhancer.enhance(saturation)
-        
-        # Pridedame rėmelį
-        if add_border:
-            from PIL import ImageOps
-            border_color = (255, 255, 255)  # Baltas rėmelis
-            border_width = 20
-            img = ImageOps.expand(img, border=border_width, fill=border_color)
-        
-        # Vandens ženklas (RYŠKUS IR REGULIUOJAMAS DYDIS)
-        if add_watermark and watermark_text:
-            draw = ImageDraw.Draw(img)
-            width, height = img.size
-            
-            # PAPRASTA formulė: watermark_size procentai tiesiai nuo mažesnio nuotraukos matmens
-            # pvz: 1000px nuotrauka, 80% slider → 800px šrifto aukštis (per didelis!)
-            # Geriau: 1000px, 80 slider → 80px šriftas (normalus)
-            # TIESIAI: slider reikšmė = px dydis
-            font_size = max(30, int(watermark_size))
-            
-            # Bandome įkelti geresnį fontą (PRIORITY: Bold)
-            font = None
-            font_paths = [
-                "C:/Windows/Fonts/arialbd.ttf",  # Arial Bold (Windows)
-                "C:/Windows/Fonts/arial.ttf",    # Arial Regular
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Linux Bold
-                "/System/Library/Fonts/Helvetica.ttc"  # Mac
-            ]
-            
-            for font_path in font_paths:
-                try:
-                    font = ImageFont.truetype(get_font_path(), font_size)
-                    break
-                except:
-                    continue
-            
-            # Jei niekas neveikė - sukuriame DIDELĮ default
-            if font is None:
-                font = ImageFont.load_default()
-                # Default font nemažas - pakartojame tekstą kad būtų didesnis
-                watermark_text = watermark_text * 2
-            
-            # Pozicija - dešiniame apatiniame kampe
-            try:
-                text_bbox = draw.textbbox((0, 0), watermark_text, font=font)
-            except:
-                text_bbox = (0, 0, len(watermark_text) * 10, 20)
-            
-            text_width = text_bbox[2] - text_bbox[0]
-            text_height = text_bbox[3] - text_bbox[1]
-            
-            x = width - text_width - 30
-            y = height - text_height - 30
-            
-            # Piešiame STORESNI šešėlį (juodą)
-            for offset in [(3, 3), (2, 2), (1, 1), (4, 4)]:
-                draw.text((x + offset[0], y + offset[1]), watermark_text, fill=(0, 0, 0), font=font)
-            
-            # Piešiame BALTĄ RYŠKŲ tekstą
-            draw.text((x, y), watermark_text, fill=(255, 255, 255), font=font)
-        
-        # Išsaugome į bytes su AUKŠTA kokybe
-        output = io.BytesIO()
-        img.save(output, format='JPEG', quality=98, optimize=False)
-        output.seek(0)
-        return output
-        
-    except Exception as e:
-        st.error(f"Klaida redaguojant nuotrauką: {e}")
-        import traceback
-        st.error(traceback.format_exc())
-        image_file.seek(0)
-        return image_file
 
 def analyze_image(image_bytes):
     """Naudoja GPT-4o-mini vaizdo analizei su konkrečiu produktų atpažinimu"""
@@ -247,6 +142,9 @@ Pavyzdys: "Nuotraukoje matosi TRYS SKIRTINGI PRODUKTAI: 1) PLISUOTOS ŽALIUZĖS 
         max_tokens=500
     )
     return response.choices[0].message.content.strip()
+                if not client:
+                    st.warning("🔒 OpenAI API raktas nerastas. Naudojamas automatinis išdėstymas.")
+                    return {"nuotraukos": [], "tekstai": []}
 
 def generate_captions(analysis_text, season, holiday):
     """Sukuria 3 teksto variantus lietuviškai pagal tikslią produkto analizę"""
@@ -260,6 +158,9 @@ def generate_captions(analysis_text, season, holiday):
         },
         "Vasara": {
             "must_have": ["vasara", "vasar", "saulė", "šilum", "vėsin", "karšt"],
+            if not client:
+                st.warning("🔒 OpenAI API raktas nerastas. Naudojamas automatinis produktų atpažinimas.")
+                return "Nuotraukoje matosi žaliuzės arba roletai. Spalva: balta arba pilka. Kambarys: svetainė arba miegamasis."
             "forbidden": ["žiem", "šalt", "snieg", "kalėd", "pavasa", "ruduo", "ruden"],
             "message": "vasaros šviesumą ir vėsumą"
         },
@@ -270,6 +171,9 @@ def generate_captions(analysis_text, season, holiday):
         },
         "Žiema": {
             "must_have": ["žiem", "šalt", "šilum", "kalėd"],
+            if not client:
+                st.warning("🔒 OpenAI API raktas nerastas. Naudojami automatiniai tekstai.")
+                return f"Pavasario gaivumas su mūsų žaliuzėmis! Šviesios spalvos, atsinaujinimas, nauji sprendimai. --- Jaukumas namuose su roletais. --- Linksmas tekstas apie žaliuzes ir sezoną."
             "forbidden": ["pavasa", "vasara", "ruden", "karšt", "velyk"],
             "message": "žiemos šilumą"
         }
@@ -446,507 +350,6 @@ def image_to_base64(image_file):
     """Konvertuoja įkeltą failą į base64 be kompresijos"""
     image_file.seek(0)
     return base64.b64encode(image_file.read()).decode()
-
-def create_social_template(images, text, layout="auto", text_position="bottom", font_size=40, background_color="#FFFFFF", style="Classic", font_family="Arial Bold", text_color="#000000", bg_opacity=180):
-    """
-    Sukuria 1080x1080 Instagram šabloną su nuotraukomis ir tekstu
-    
-    Args:
-        images: List of PIL Image objects
-        text: Tekstas, kuris bus pridėtas prie šablono
-        layout: "auto", "1", "2", "3", "4", "2_vertical", "collage" - nuotraukų išdėstymas
-        text_position: "top", "bottom", "center", "top_right", "bottom_right", "top_left", "bottom_left", "full_center" - teksto pozicija
-        font_size: Tikslus šrifto dydis pikseliais (int)
-        background_color: Hex spalva fono (pvz. "#FFFFFF")
-        style: "Classic", "Gradient", "Rounded corners", "Shadow effect", "Vignette", "Polaroid"
-        font_family: Šrifto šeima ("Arial Bold", "Times New Roman", etc.)
-        text_color: Hex spalva teksto (pvz. "#000000")
-        bg_opacity: Fono overlay permatomumas 0-255 (0=permatomas, 255=nepermatomas)
-    
-    Returns:
-        BytesIO object su PNG šablonu
-    """
-    try:
-        import random
-        from PIL import ImageFilter
-        
-        # Canvas parametrai
-        canvas_size = 1080
-        margin = 50
-        text_area_height = 250  # Fiksuotas teksto srities aukštis
-        
-        # Konvertuojame hex į RGB
-        bg_color = tuple(int(background_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-        text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-        
-        # Nustatome teksto dydį - UŽTIKRINAME INT
-        try:
-            actual_font_size = int(font_size)
-        except:
-            actual_font_size = 40
-        
-        # DEBUG
-        print(f"DEBUG: font_size parametras = {font_size} (type: {type(font_size)}), actual_font_size = {actual_font_size}")
-        
-        # Automatinis layout pagal nuotraukų kiekį
-        if layout == "auto":
-            layout = str(len(images))
-        
-        if has_top and has_right:
-            text_align = "top_right"
-        elif has_top and has_left:
-            text_align = "top_left"
-        elif has_bottom and has_right:
-            text_align = "bottom_right"
-        elif has_bottom and has_left:
-            text_align = "bottom_left"
-        elif has_top:
-            text_align = "top"
-        elif has_bottom:
-            text_align = "bottom"
-        elif has_full:
-            text_align = "full_center"
-        elif has_center:
-            text_align = "center"
-        else:
-            text_align = "center"
-        
-        print(f"DEBUG: Nustatyta text_align: {text_align}")
-        
-        # NUOTRAUKŲ IŠDĖSTYMAS
-        photos_width = canvas_size
-        rounded_radius = 30 if "rounded" in style.lower() else 0
-        
-        def apply_rounded_corners(img, radius):
-            """Prideda apvalius kampus nuotraukai"""
-            mask = Image.new('L', img.size, 0)
-            draw = ImageDraw.Draw(mask)
-            draw.rounded_rectangle([(0, 0), img.size], radius=radius, fill=255)
-            img.putalpha(mask)
-            return img
-        
-        def apply_photo_style(img, style_name):
-            """Pritaiko stilių nuotraukai"""
-            if "vignette" in style_name.lower():
-                # Pridedame vignette efektą
-                vignette = Image.new('L', img.size, 255)
-                draw = ImageDraw.Draw(vignette)
-                width, height = img.size
-                for i in range(min(width, height) // 4):
-                    alpha = int(255 * (1 - i / (min(width, height) / 4)))
-                    draw.rectangle([i, i, width-i, height-i], outline=alpha)
-                img = Image.composite(img, Image.new('RGB', img.size, (0, 0, 0)), vignette)
-            
-            if "shadow" in style_name.lower():
-                # Šešėlio efektas (simuliacija)
-                enhancer = ImageEnhance.Contrast(img)
-                img = enhancer.enhance(1.2)
-            
-            return img
-        
-        if layout == "1" and len(images) >= 1:
-            # 1 nuotrauka - pilnas plotis
-            img = images[0].copy()
-            img = apply_photo_style(img, style)
-            img = img.resize((photos_width, photos_height), Image.Resampling.LANCZOS)
-            
-            if rounded_radius > 0:
-                img = img.convert("RGBA")
-                img = apply_rounded_corners(img, rounded_radius)
-                temp_canvas = Image.new('RGBA', (canvas_size, canvas_size), bg_color + (255,))
-                temp_canvas.paste(img, (0, photos_y_start), img)
-                canvas = temp_canvas.convert("RGB")
-            else:
-                canvas.paste(img, (0, photos_y_start))
-            
-        elif layout == "2" and len(images) >= 2:
-            # 2 nuotraukos - 2 stulpeliai
-            photo_width = photos_width // 2
-            gap = 10
-            photo_width = (photos_width - gap) // 2
-            
-            for i in range(2):
-                img = images[i].copy()
-                img = apply_photo_style(img, style)
-                img = img.resize((photo_width, photos_height), Image.Resampling.LANCZOS)
-                canvas.paste(img, (i * (photo_width + gap), photos_y_start))
-        
-        elif layout == "2_vertical" and len(images) >= 2:
-            # 2 nuotraukos - viršuje ir apačioje
-            photo_height = photos_height // 2
-            gap = 10
-            photo_height = (photos_height - gap) // 2
-            
-            for i in range(2):
-                img = images[i].copy()
-                img = apply_photo_style(img, style)
-                img = img.resize((photos_width, photo_height), Image.Resampling.LANCZOS)
-                canvas.paste(img, (0, photos_y_start + i * (photo_height + gap)))
-                
-        elif layout == "3" and len(images) >= 3:
-            # 3 nuotraukos - 1 viršuje, 2 apačioje
-            top_height = photos_height // 2
-            bottom_height = photos_height - top_height - 10
-            gap = 10
-            
-            # Viršutinė nuotrauka
-            img = images[0].copy()
-            img = apply_photo_style(img, style)
-            img = img.resize((photos_width, top_height), Image.Resampling.LANCZOS)
-            canvas.paste(img, (0, photos_y_start))
-            
-            # Dvi apatinės
-            photo_width = (photos_width - gap) // 2
-            for i in range(2):
-                img = images[i + 1].copy()
-                img = apply_photo_style(img, style)
-                img = img.resize((photo_width, bottom_height), Image.Resampling.LANCZOS)
-                canvas.paste(img, (i * (photo_width + gap), photos_y_start + top_height + gap))
-                
-        elif layout == "4" and len(images) >= 4:
-            # 4 nuotraukos - 2x2 grid
-            gap = 10
-            photo_width = (photos_width - gap) // 2
-            photo_height = (photos_height - gap) // 2
-            
-            for i in range(4):
-                row = i // 2
-                col = i % 2
-                img = images[i].copy()
-                img = apply_photo_style(img, style)
-                img = img.resize((photo_width, photo_height), Image.Resampling.LANCZOS)
-                canvas.paste(img, (col * (photo_width + gap), photos_y_start + row * (photo_height + gap)))
-        
-        elif layout == "collage":
-            # Atsitiktinis kolažas
-            random.seed()
-            for i, img in enumerate(images[:4]):
-                size = random.randint(400, 600)
-                angle = random.randint(-15, 15)
-                
-                img_resized = img.copy()
-                img_resized = apply_photo_style(img_resized, style)
-                img_resized = img_resized.resize((size, size), Image.Resampling.LANCZOS)
-                
-                if "polaroid" in style.lower():
-                    # Polaroid efektas
-                    border = 20
-                    polaroid = Image.new('RGB', (size + border*2, size + border*2 + 40), (255, 255, 255))
-                    polaroid.paste(img_resized, (border, border))
-                    img_resized = polaroid
-                
-                rotated = img_resized.rotate(angle, expand=True, fillcolor=bg_color)
-                
-                max_x = canvas_size - rotated.width
-                max_y = photos_height - rotated.height
-                x = random.randint(0, max(1, max_x))
-                y = photos_y_start + random.randint(0, max(1, max_y))
-                
-                canvas.paste(rotated, (x, y))
-        
-        # GRADIENT FONAS (jei pasirinktas)
-        if "gradient" in style.lower() and not text_overlay:
-            gradient = Image.new('RGB', (canvas_size, text_area_height), bg_color)
-            draw_grad = ImageDraw.Draw(gradient)
-            
-            r, g, b = bg_color
-            for i in range(text_area_height):
-                ratio = i / text_area_height
-                new_r = int(r * (1 - ratio * 0.3))
-                new_g = int(g * (1 - ratio * 0.3))
-                new_b = int(b * (1 - ratio * 0.3))
-                
-                if text_position.lower() == "top":
-                    draw_grad.line([(0, i), (canvas_size, i)], fill=(new_r, new_g, new_b))
-                else:
-                    draw_grad.line([(0, text_area_height - i - 1), (canvas_size, text_area_height - i - 1)], fill=(new_r, new_g, new_b))
-            
-            if text_position.lower() == "top":
-                canvas.paste(gradient, (0, 0))
-            else:
-                canvas.paste(gradient, (0, photos_height))
-        
-        # TEKSTO PRIDĖJIMAS
-        draw = ImageDraw.Draw(canvas)
-        
-        # Įkeliame fontą pagal pasirinkimą - UNIVERSAL PATHS
-        font = None
-        
-        # PIRMENYBĖ: Linux/Cloud šriftai (Streamlit Cloud), tada Windows
-        font_map = {
-            "Arial Bold": [
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",  # Linux/Cloud PIRMAS
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
-                "C:/Windows/Fonts/arialbd.ttf",  # Windows
-                "/System/Library/Fonts/Helvetica.ttc"  # Mac
-            ],
-            "Times New Roman": [
-                "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
-                "C:/Windows/Fonts/times.ttf",
-                "C:/Windows/Fonts/timesbd.ttf",
-                "/System/Library/Fonts/Times.ttc"
-            ],
-            "Georgia": [
-                "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
-                "C:/Windows/Fonts/georgiab.ttf",
-                "C:/Windows/Fonts/georgia.ttf",
-                "/System/Library/Fonts/Georgia.ttf"
-            ],
-            "Courier New": [
-                "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf",
-                "C:/Windows/Fonts/courbd.ttf",
-                "C:/Windows/Fonts/cour.ttf",
-                "/System/Library/Fonts/Courier.ttc"
-            ],
-            "Verdana": [
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-                "C:/Windows/Fonts/verdanab.ttf",
-                "C:/Windows/Fonts/verdana.ttf",
-                "/System/Library/Fonts/Helvetica.ttc"
-            ],
-            "Comic Sans MS": [
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                "C:/Windows/Fonts/comicbd.ttf",
-                "C:/Windows/Fonts/comic.ttf",
-                "/System/Library/Fonts/Helvetica.ttc"
-            ]
-        }
-        
-        font_paths = font_map.get(font_family, font_map["Arial Bold"])
-        
-        # CRITICAL: Naudojame font_size (ne base_font_size!)
-        actual_font_size = int(font_size)
-        
-        # CRITICAL: Tikrai užkrauname fontą su OS patikra
-        import os
-        
-        # DIAGNOSTIKA: Parodome VISUS galimus šriftus
-        print(f"\n{'='*60}")
-        print(f"FONT LOADING DEBUG: {font_family} su {actual_font_size}px")
-        print(f"{'='*60}")
-        
-        font_loaded = False
-        for i, font_path in enumerate(font_paths, 1):
-            # Pirma tikriname ar failas egzistuoja
-            exists = os.path.exists(font_path)
-            print(f"{i}. {font_path}")
-            print(f"   Egzistuoja: {'✅ TAIP' if exists else '❌ NE'}")
-            
-            if not exists:
-                continue
-                
-            try:
-                font = ImageFont.truetype(get_font_path(), actual_font_size)
-                print(f"   Rezultatas: ✅ SUCCESS! Užkrautas su {actual_font_size}px")
-                print(f"{'='*60}\n")
-                font_loaded = True
-                break
-            except Exception as e:
-                print(f"   Rezultatas: ❌ ERROR - {str(e)[:60]}")
-                continue
-        
-        # Jei NIEKUR nepavyko - ERROR
-        if not font_loaded:
-            error_msg = f"⚠️ CRITICAL ERROR: Negaliu užkrauti JOKIO šrifto su {actual_font_size}px!"
-            print(f"DEBUG: {error_msg}")
-            st.error(error_msg)
-            # Last resort - bet kuris šriftas su dydžiu
-            try:
-                # Bandome bet kokį Linux šriftą
-                for fallback in [
-                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-                    "C:/Windows/Fonts/arial.ttf"
-                ]:
-                    try:
-                        font = ImageFont.truetype(get_font_path(), actual_font_size)
-                        print(f"DEBUG: ✅ FALLBACK sukurtas: {fallback} su {actual_font_size}px")
-                        st.warning(f"Naudojamas fallback šriftas: {fallback}")
-                        break
-                    except:
-                        continue
-            except:
-                st.error("FATAL: Default font be dydžio kontrolės!")
-                font = ImageFont.load_default()
-        
-        # Automatinis teksto laužymas (word wrap)
-        # PLATESNIS stulpelis - 4-6 žodžiai eilutėje = mažesni tarpai su justify
-        
-        # Pirma paskaičiuojame optimalų plotį pagal tekstą
-        words = text.split()
-        avg_word_length = sum(len(word) for word in words) / max(len(words), 1)
-        total_chars = len(text)
-        
-        # Optimizuojame plotį - PLATESNĖ versija (4-6 žodžiai eilutėje)
-        if text_align in ["top_right", "top_left", "bottom_right", "bottom_left"]:
-            # Kampuose - 45-55% (daug žodžių = maži tarpai)
-            if total_chars < 100:
-                ratio = 0.45
-            elif total_chars < 200:
-                ratio = 0.50
-            else:
-                ratio = 0.55
-            text_width = int(canvas_size * ratio) - (margin * 2)
-        elif text_align in ["center", "full_center"]:
-            # Centre - 50-65%
-            if total_chars < 100:
-                ratio = 0.50
-            elif total_chars < 200:
-                ratio = 0.57
-            else:
-                ratio = 0.65
-            text_width = int(canvas_size * ratio) - (margin * 2)
-        else:
-            # Top/Bottom - pilnas plotis
-            text_width = canvas_size - (margin * 2)
-        
-        wrapped_lines = []
-        
-        # Padalijame tekstą į eilutes
-        paragraphs = text.split('\n')
-        for paragraph in paragraphs:
-            words = paragraph.split(' ')
-            current_line = []
-            
-            for word in words:
-                test_line = ' '.join(current_line + [word])
-                bbox = draw.textbbox((0, 0), test_line, font=font)
-                line_width = bbox[2] - bbox[0]
-                
-                if line_width <= text_width:
-                    current_line.append(word)
-                else:
-                    if current_line:
-                        wrapped_lines.append(' '.join(current_line))
-                    current_line = [word]
-            
-            if current_line:
-                wrapped_lines.append(' '.join(current_line))
-        
-        # Naudojame vartotojo pasirinktą teksto spalvą
-        final_text_color = text_rgb
-        
-        # Šešėlio spalva - priešinga teksto spalvai
-        avg_text = sum(text_rgb) / 3
-        shadow_color = (0, 0, 0, 180) if avg_text > 128 else (255, 255, 255, 180)
-        
-        # Apskaičiuojame teksto bloko dydį
-        line_height = int(actual_font_size * 1.2)  # 20% tarpas (mažiau nei buvo)
-        total_text_height = len(wrapped_lines) * line_height + margin
-        
-        # Apskaičiuojame tikrą teksto plotį (kompaktiškai)
-        if wrapped_lines:
-            max_line_width = max([draw.textbbox((0, 0), line, font=font)[2] - draw.textbbox((0, 0), line, font=font)[0] for line in wrapped_lines])
-            padding = margin // 2  # Mažesnis padding
-            total_text_width = max_line_width + padding * 2
-        else:
-            total_text_width = canvas_size
-        
-        # Jei overlay - pridedame pusskaidrų foną tekstui pagal poziciją
-        if text_overlay:
-            overlay_bg = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
-            overlay_draw = ImageDraw.Draw(overlay_bg)
-            
-            # Nustatome overlay poziciją pagal text_align (kompaktiškai)
-            padding = margin // 2
-            if text_align == "top_right":
-                overlay_x = canvas_size - total_text_width - padding
-                overlay_y = padding
-                text_x_start = overlay_x + padding
-                text_y = overlay_y + padding // 2
-            elif text_align == "top_left":
-                overlay_x = padding
-                overlay_y = padding
-                text_x_start = overlay_x + padding
-                text_y = overlay_y + padding // 2
-            elif text_align == "bottom_right":
-                overlay_x = canvas_size - total_text_width - padding
-                overlay_y = canvas_size - total_text_height - padding
-                text_x_start = overlay_x + padding
-                text_y = overlay_y + padding // 2
-            elif text_align == "bottom_left":
-                overlay_x = padding
-                overlay_y = canvas_size - total_text_height - padding
-                text_x_start = overlay_x + padding
-                text_y = overlay_y + padding // 2
-            elif text_align == "top":
-                overlay_x = (canvas_size - total_text_width) // 2
-                overlay_y = padding
-                text_x_start = overlay_x + padding
-                text_y = overlay_y + padding // 2
-            elif text_align == "bottom":
-                overlay_x = (canvas_size - total_text_width) // 2
-                overlay_y = canvas_size - total_text_height - padding
-                text_x_start = overlay_x + padding
-                text_y = overlay_y + padding // 2
-            elif text_align == "full_center":
-                overlay_x = (canvas_size - total_text_width) // 2
-                overlay_y = canvas_size // 2 - total_text_height // 2
-                text_x_start = overlay_x + padding
-                text_y = overlay_y + padding // 2
-            else:  # center
-                overlay_x = canvas_size // 2 - total_text_width // 2
-                overlay_y = canvas_size // 2 - total_text_height // 2
-                text_x_start = overlay_x + padding
-                text_y = overlay_y + padding // 2
-            
-            # Piešiame pusskaidrų fono stačiakampį su vartotojo pasirinktu permatomumu
-            overlay_draw.rectangle(
-                [(overlay_x, overlay_y), (overlay_x + total_text_width, overlay_y + total_text_height)],
-                fill=bg_color + (bg_opacity,)  # Naudojame vartotojo pasirinkta alpha
-            )
-            
-            canvas = canvas.convert('RGBA')
-            canvas = Image.alpha_composite(canvas, overlay_bg)
-            draw = ImageDraw.Draw(canvas)
-        
-        # Piešiame tekstą su šešėliu + JUSTIFY
-        current_y = text_y
-        
-        for i, line in enumerate(wrapped_lines):
-            if current_y + line_height > canvas_size - margin:
-                break  # Per daug teksto
-            
-            # PAPRASTAS LEFT ALIGN - normalūs tarpai (be justify)
-            # Storasis šešėlis jei "shadow effect"
-            if "shadow" in style.lower():
-                for offset_x in range(-3, 4, 2):
-                    for offset_y in range(-3, 4, 2):
-                        if offset_x != 0 or offset_y != 0:
-                            draw.text((text_x_start + offset_x, current_y + offset_y), line, fill=(0, 0, 0), font=font)
-            else:
-                # Įprastas šešėlis
-                draw.text((text_x_start + 2, current_y + 2), line, fill=shadow_color[:3] if len(shadow_color) > 3 else shadow_color, font=font)
-            
-            # Tekstas su vartotojo pasirinkta spalva
-            draw.text((text_x_start, current_y), line, fill=final_text_color, font=font)
-            current_y += line_height
-        
-        # Konvertuojame atgal į RGB jei buvo RGBA
-        if canvas.mode == 'RGBA':
-            canvas = canvas.convert('RGB')
-        
-        # Išsaugome į BytesIO
-        output = io.BytesIO()
-        canvas.save(output, format='PNG', quality=95)
-        output.seek(0)
-        return output
-        
-    except Exception as e:
-        st.error(f"Klaida kuriant šabloną: {e}")
-        import traceback
-        st.error(traceback.format_exc())
-        return None
 
 # ========== MODERNUS SOCIAL TEMPLATE ========== #
 from until.export import resize_for_social
@@ -1147,33 +550,52 @@ with tab3:
             st.session_state.manual_files = []
             st.rerun()
 
+
+# --- Helper: Clear all session keys ---
+def clear_all():
+    for key in ["uploaded_files", "manual_files", "camera_photos", "ai_content_result", "collage_result", "template_result", "collage_filename", "template_filename", "ai_analyses", "last_ai_settings", "trigger_ai_content", "trigger_ai_regenerate"]:
+        if key in st.session_state:
+            del st.session_state[key]
+
+# --- Normalize uploaded files to BytesIO ---
+def normalize_files(file_list):
+    normalized = []
+    for f in file_list:
+        if hasattr(f, "read"):
+            f.seek(0)
+            data = f.read()
+            bio = io.BytesIO(data)
+            bio.name = getattr(f, "name", None)
+            normalized.append(bio)
+        elif isinstance(f, bytes):
+            bio = io.BytesIO(f)
+            normalized.append(bio)
+        else:
+            normalized.append(f)
+    return normalized
+
 # Mobilus failų valdymas
 if uploaded_files:
-    st.session_state.uploaded_files = uploaded_files
-    st.success(f"🎉 **Iš viso pasirinkta: {len(uploaded_files)} nuotraukų!**")
-    
-    # Rodyti preview
-    if len(uploaded_files) <= 4:
-        cols = st.columns(len(uploaded_files))
-        for i, file in enumerate(uploaded_files):
-            with cols[i]:
-                st.image(file, caption=f"#{i+1}", width=150)
-    else:
+    # Normalize all files to BytesIO for downstream processing
+    normalized_files = normalize_files(uploaded_files)
+    # Limit to 4 files
+    if len(normalized_files) > 4:
         st.warning("⚠️ Per daug nuotraukų! Bus naudojamos tik pirmosios 4.")
-        uploaded_files = uploaded_files[:4]
-        st.session_state.uploaded_files = uploaded_files
-
+        normalized_files = normalized_files[:4]
+    st.session_state["uploaded_files"] = normalized_files
+    st.success(f"🎉 **Iš viso pasirinkta: {len(normalized_files)} nuotraukų!**")
+    # Rodyti preview
+    cols = st.columns(len(normalized_files))
+    for i, file in enumerate(normalized_files):
+        with cols[i]:
+            st.image(file, caption=f"#{i+1}", width=150)
 elif "uploaded_files" not in st.session_state:
-    st.session_state.uploaded_files = []
+    st.session_state["uploaded_files"] = []
 
 # Globalus išvalymo mygtukas
-if st.session_state.uploaded_files:
+if st.session_state["uploaded_files"]:
     if st.button("🗑️ Išvalyti VISAS nuotraukas", type="secondary", key="clear_all"):
-        st.session_state.uploaded_files = []
-        if "manual_files" in st.session_state:
-            st.session_state.manual_files = []
-        if "camera_photos" in st.session_state:
-            st.session_state.camera_photos = []
+        clear_all()
         st.rerun()
 
 # Rodyti instrukcijas jei nėra failų
