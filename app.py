@@ -53,9 +53,6 @@ def ai_generate_layout(num_images, texts):
             })
         # Tekstus dedame po nuotraukomis, centre, su didesniu tarpu
         for i in range(len(texts)):
-            # OpenAI API key check and fallback
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
             layout["tekstai"].append({
                 "x": int(canvas_w * (0.25 + 0.5*i)),
                 "y": int(canvas_h*0.22 + img_size + 60),
@@ -142,9 +139,6 @@ Pavyzdys: "Nuotraukoje matosi TRYS SKIRTINGI PRODUKTAI: 1) PLISUOTOS ŽALIUZĖS 
         max_tokens=500
     )
     return response.choices[0].message.content.strip()
-                if not client:
-                    st.warning("🔒 OpenAI API raktas nerastas. Naudojamas automatinis išdėstymas.")
-                    return {"nuotraukos": [], "tekstai": []}
 
 def generate_captions(analysis_text, season, holiday):
     """Sukuria 3 teksto variantus lietuviškai pagal tikslią produkto analizę"""
@@ -158,9 +152,6 @@ def generate_captions(analysis_text, season, holiday):
         },
         "Vasara": {
             "must_have": ["vasara", "vasar", "saulė", "šilum", "vėsin", "karšt"],
-            if not client:
-                st.warning("🔒 OpenAI API raktas nerastas. Naudojamas automatinis produktų atpažinimas.")
-                return "Nuotraukoje matosi žaliuzės arba roletai. Spalva: balta arba pilka. Kambarys: svetainė arba miegamasis."
             "forbidden": ["žiem", "šalt", "snieg", "kalėd", "pavasa", "ruduo", "ruden"],
             "message": "vasaros šviesumą ir vėsumą"
         },
@@ -171,9 +162,6 @@ def generate_captions(analysis_text, season, holiday):
         },
         "Žiema": {
             "must_have": ["žiem", "šalt", "šilum", "kalėd"],
-            if not client:
-                st.warning("🔒 OpenAI API raktas nerastas. Naudojami automatiniai tekstai.")
-                return f"Pavasario gaivumas su mūsų žaliuzėmis! Šviesios spalvos, atsinaujinimas, nauji sprendimai. --- Jaukumas namuose su roletais. --- Linksmas tekstas apie žaliuzes ir sezoną."
             "forbidden": ["pavasa", "vasara", "ruden", "karšt", "velyk"],
             "message": "žiemos šilumą"
         }
