@@ -340,6 +340,46 @@ def image_to_base64(image_file):
     image_file.seek(0)
     return base64.b64encode(image_file.read()).decode()
 
+def generate_themed_background(season, canvas_width, canvas_height):
+    """Generuoja tematinį foną pagal sezoną naudojant AI (DALL-E)"""
+    try:
+        # Teminės nuotraukos promptai pagal sezoną
+        prompts = {
+            "Pavasaris": "soft spring background with blooming flowers, cherry blossoms, pastel colors, gentle bokeh effect, professional photography, high resolution, peaceful atmosphere",
+            "Vasara": "bright summer background with green grass meadow, blue sky, sunshine, vibrant colors, professional photography, high resolution, fresh atmosphere",
+            "Ruduo": "warm autumn background with colorful falling leaves, orange and golden tones, cozy atmosphere, professional photography, high resolution",
+            "Žiema": "winter background with soft snow, snowflakes, cool blue and white tones, peaceful atmosphere, professional photography, high resolution"
+        }
+        
+        prompt = prompts.get(season, prompts["Vasara"])
+        
+        # Generuojame nuotrauką su DALL-E 3
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1
+        )
+        
+        # Gauname URL ir atsisiunčiame nuotrauką
+        import requests
+        image_url = response.data[0].url
+        img_response = requests.get(image_url)
+        
+        if img_response.status_code == 200:
+            # Konvertuojame į PIL Image
+            bg_image = Image.open(io.BytesIO(img_response.content))
+            # Prisitaikome prie reikiamo dydžio
+            bg_image = bg_image.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+            return bg_image
+        else:
+            return None
+            
+    except Exception as e:
+        st.warning(f"⚠️ Nepavyko sugeneruoti tematinio fono: {e}. Naudojamas spalvinis fonas.")
+        return None
+
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
 
@@ -638,6 +678,16 @@ if files_to_process:
             key="collage_style_selector"
         )
         
+        # Tematinio fono pasirinkimas
+        use_themed_bg = st.checkbox(
+            "🖼️ Naudoti tematinį foną",
+            value=False,
+            help="AI pasirenka teminę fono nuotrauką pagal sezoną"
+        )
+        
+        if use_themed_bg:
+            st.info(f"✨ Bus naudojamas **{season}** tematinis fonas (automatiškai parenkamas)")
+        
         collage_layout = st.selectbox(
             "📐 Išdėstymas:",
             ["2x2 Grid (4 nuotraukos)", "1x2 Horizontal (2 nuotraukos)", "2x1 Vertical (2 nuotraukos)", "1x3 Horizontal (3 nuotraukos)", "3x1 Vertical (3 nuotraukos)"],
@@ -719,6 +769,12 @@ if files_to_process:
                         else:
                             bg_color = (245, 248, 252)
                     
+                    # Tematinis fonas (jei pasirinkta)
+                    themed_bg = None
+                    if use_themed_bg:
+                        # Nustatome preliminarų dydį (bus pritaikytas vėliau)
+                        themed_bg = generate_themed_background(season, 2000, 2000)
+                    
                     # ============ POLAROID STILIUS ============
                     if "Polaroid" in collage_style:
                         polaroid_width = 500
@@ -736,7 +792,11 @@ if files_to_process:
                             canvas_width, canvas_height = 1600, 1200
                             positions = [(250, 300, -12), (850, 350, 8)]
                         
-                        collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
+                        # Sukuriame collage su tematiniu fonu arba spalva
+                        if themed_bg is not None:
+                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+                        else:
+                            collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
                         
                         for idx, img in enumerate(edited_images[:needed]):
                             img_resized = img.resize((polaroid_width, polaroid_height), Image.Resampling.LANCZOS)
@@ -758,7 +818,11 @@ if files_to_process:
                         canvas_width = cols * img_size + (cols + 1) * gap
                         canvas_height = rows * img_size + (rows + 1) * gap
                         
-                        collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
+                        # Sukuriame collage su tematiniu fonu arba spalva
+                        if themed_bg is not None:
+                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+                        else:
+                            collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
                         
                         idx = 0
                         for row in range(rows):
@@ -779,7 +843,11 @@ if files_to_process:
                         else:
                             canvas_width, canvas_height = 1700, 1300
                         
-                        collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
+                        # Sukuriame collage su tematiniu fonu arba spalva
+                        if themed_bg is not None:
+                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+                        else:
+                            collage = Image.new('RGB', (canvas_width, canvas_height), bg_color)
                         
                         # Atsitiktiniai dydžiai ir pozicijos
                         for idx, img in enumerate(edited_images[:needed]):
@@ -809,7 +877,11 @@ if files_to_process:
                         canvas_width = cols * img_size + (cols + 1) * gap
                         canvas_height = rows * img_size + (rows + 1) * gap
                         
-                        collage = Image.new('RGB', (canvas_width, canvas_height), (240, 240, 240))
+                        # Sukuriame collage su tematiniu fonu arba spalva
+                        if themed_bg is not None:
+                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+                        else:
+                            collage = Image.new('RGB', (canvas_width, canvas_height), (240, 240, 240))
                         
                         idx = 0
                         for row in range(rows):
@@ -831,7 +903,11 @@ if files_to_process:
                         canvas_width = cols * img_size + (cols + 1) * gap
                         canvas_height = rows * img_size + (rows + 1) * gap
                         
-                        collage = Image.new('RGB', (canvas_width, canvas_height), (255, 255, 255))
+                        # Sukuriame collage su tematiniu fonu arba spalva
+                        if themed_bg is not None:
+                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+                        else:
+                            collage = Image.new('RGB', (canvas_width, canvas_height), (255, 255, 255))
                         
                         idx = 0
                         for row in range(rows):
