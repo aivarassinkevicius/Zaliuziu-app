@@ -36,7 +36,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🌿 Žaliuzių & Roletų turinio kūrėjas")
+st.title("🌿 Žaliuzių ir Roletų turinio kūrėjas")
 st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tinklams.")
 
 # ---------- Pagalbinės funkcijos ----------
@@ -366,10 +366,10 @@ st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
 add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=True, help="Pridės jūsų tekstą dešiniame apatiniame kampe")
 if add_watermark:
     watermark_text = st.sidebar.text_input("Vandens ženklo tekstas", value="#RūbaiLangams", help="Pvz: #RūbaiLangams arba © Jūsų Įmonė")
-    watermark_size = st.sidebar.slider("📏 Vandens ženklo dydis (px)", 30, 300, 150, 10, help="Šrifto dydis pikseliais. 150px = vidutinis, 250px = DIDELIS")
+    watermark_size = st.sidebar.slider("📏 Vandens ženklo dydis (px)", 30, 300, 40, 10, help="Šrifto dydis pikseliais. 120px = vidutinis, 250px = DIDELIS")
 else:
     watermark_text = ""
-    watermark_size = 120
+    watermark_size = 40
 
 add_border = st.sidebar.checkbox("🖼️ Pridėti baltą rėmelį", value=False)
 
