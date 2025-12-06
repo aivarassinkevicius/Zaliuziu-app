@@ -4,13 +4,6 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
 
-# Bandome importuoti camera input (jei neveiks, praleidžia)
-try:
-    from streamlit_camera_input_live import camera_input_live
-    CAMERA_AVAILABLE = True
-except ImportError:
-    CAMERA_AVAILABLE = False
-
 # ---------- Nustatymai ----------
 load_dotenv()
 
@@ -433,6 +426,62 @@ def add_modern_shadow(img, shadow_size=20, shadow_blur=30, shadow_color=(0, 0, 0
     
     return result
 
+def add_rounded_corners(img, radius=30):
+    """Užapvalina nuotraukos kampus"""
+    if img.mode != 'RGBA':
+        img = img.convert('RGBA')
+    
+    # Sukuriame apskritimo mask
+    mask = Image.new('L', img.size, 0)
+    draw = ImageDraw.Draw(mask)
+    draw.rounded_rectangle([(0, 0), img.size], radius=radius, fill=255)
+    
+    # Pritaikome mask
+    result = Image.new('RGBA', img.size, (255, 255, 255, 0))
+    result.paste(img, (0, 0))
+    result.putalpha(mask)
+    
+    return result
+
+def add_white_border(img, border_width=10):
+    """Prideda baltą rėmelį aplink nuotrauką"""
+    if img.mode != 'RGBA':
+        img = img.convert('RGBA')
+    
+    # Sukuriame naują paveikslėlį su rėmeliu
+    new_width = img.width + border_width * 2
+    new_height = img.height + border_width * 2
+    
+    bordered = Image.new('RGBA', (new_width, new_height), (255, 255, 255, 255))
+    bordered.paste(img, (border_width, border_width), img)
+    
+    return bordered
+
+def add_photo_effects(img, enable_border=True, border_width=15, enable_rounded=True, corner_radius=20, 
+                      enable_shadow=True, shadow_size=15, shadow_blur=25):
+    """Prideda visus foto efektus: rėmelį, užapvalintus kampus, šešėlį"""
+    result = img.copy()
+    
+    if img.mode != 'RGBA':
+        result = result.convert('RGBA')
+    
+    # 1. Užapvalinti kampai
+    if enable_rounded:
+        result = add_rounded_corners(result, radius=corner_radius)
+    
+    # 2. Baltas rėmelis
+    if enable_border:
+        result = add_white_border(result, border_width=border_width)
+        # Po rėmelio vėl užapvaliname (rėmelis su apvaliais kampais)
+        if enable_rounded:
+            result = add_rounded_corners(result, radius=corner_radius + border_width)
+    
+    # 3. Šešėlis (3D efektas)
+    if enable_shadow:
+        result = add_modern_shadow(result, shadow_size=shadow_size, shadow_blur=shadow_blur)
+    
+    return result
+
 def add_glassmorphism_effect(img, blur_amount=10, opacity=0.3):
     """Prideda glassmorphism efektą (blurred background overlay)"""
     # Sukuriame blur kopiją
@@ -496,6 +545,232 @@ def add_text_overlay_modern(img, text, position='bottom', font_size=60, bg_opaci
     draw.text((x, y), text, fill=(0, 0, 0, 255), font=font)
     
     return Image.alpha_composite(img, overlay)
+
+def add_collage_text_overlay(img, text, position='bottom', style='glassmorphism', font_size=70):
+    """Prideda stilingą tekstą ant collage su įvairiais efektais"""
+    if not text or text.strip() == "":
+        return img
+    
+    if img.mode != 'RGBA':
+        img = img.convert('RGBA')
+    
+    # Sukuriame overlay sluoksnį
+    overlay = Image.new('RGBA', img.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(overlay)
+    
+    # Fontų paieška (prioritetas: Bold fontai)
+    font = None
+    font_paths = [
+        "C:/Windows/Fonts/arialbd.ttf",  # Arial Bold
+        "C:/Windows/Fonts/calibrib.ttf",  # Calibri Bold
+        "C:/Windows/Fonts/ariblk.ttf",   # Arial Black
+        "C:/Windows/Fonts/arial.ttf",    # Arial Regular
+    ]
+    
+    for font_path in font_paths:
+        try:
+            font = ImageFont.truetype(font_path, font_size)
+            break
+        except:
+            continue
+    
+    if font is None:
+        font = ImageFont.load_default()
+    
+    # Gauname teksto dydį
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    
+    # Pozicijos nustatymas
+    if position == 'Apačioje':
+        y = img.height - text_height - 120
+    elif position == 'Viršuje':
+        y = 100
+    else:  # Centre
+        y = (img.height - text_height) // 2
+    
+    x = (img.width - text_width) // 2
+    
+    # STILIŲ IMPLEMENTACIJOS
+    if "Glassmorphism" in style:
+        # Glassmorphism: blur fonas su skaidrumu
+        padding = 60
+        bg_rect = [x - padding, y - padding, x + text_width + padding, y + text_height + padding]
+        
+        # Sukuriame blur foną
+        bg_blur = Image.new('RGBA', img.size, (255, 255, 255, 0))
+        bg_draw = ImageDraw.Draw(bg_blur)
+        bg_draw.rounded_rectangle(bg_rect, radius=30, fill=(255, 255, 255, 200))
+        bg_blur = bg_blur.filter(ImageFilter.GaussianBlur(5))
+        
+        # Pridedame šešėlį
+        shadow = Image.new('RGBA', img.size, (255, 255, 255, 0))
+        shadow_draw = ImageDraw.Draw(shadow)
+        shadow_draw.rounded_rectangle(
+            [bg_rect[0] + 5, bg_rect[1] + 5, bg_rect[2] + 5, bg_rect[3] + 5],
+            radius=30, fill=(0, 0, 0, 60)
+        )
+        shadow = shadow.filter(ImageFilter.GaussianBlur(15))
+        
+        img = Image.alpha_composite(img, shadow)
+        img = Image.alpha_composite(img, bg_blur)
+        
+        # Tekstas su šešėliu
+        for offset in [(2, 2), (1, 1), (3, 3)]:
+            draw.text((x + offset[0], y + offset[1]), text, fill=(0, 0, 0, 80), font=font)
+        draw.text((x, y), text, fill=(30, 30, 30, 255), font=font)
+    
+    elif "Neo-Brutalism" in style:
+        # Neo-Brutalism: ryškus rėmelis su storais kraštais
+        padding = 50
+        border_width = 8
+        bg_rect = [x - padding, y - padding, x + text_width + padding, y + text_height + padding]
+        
+        # "3D" šešėlis (offset)
+        shadow_offset = 10
+        draw.rectangle(
+            [bg_rect[0] + shadow_offset, bg_rect[1] + shadow_offset, 
+             bg_rect[2] + shadow_offset, bg_rect[3] + shadow_offset],
+            fill=(0, 0, 0, 255)
+        )
+        
+        # Ryškus geltonas fonas
+        draw.rectangle(bg_rect, fill=(255, 220, 50, 255))
+        
+        # Storas juodas rėmelis
+        for i in range(border_width):
+            draw.rectangle(
+                [bg_rect[0] + i, bg_rect[1] + i, bg_rect[2] - i, bg_rect[3] - i],
+                outline=(0, 0, 0, 255), width=2
+            )
+        
+        # Juodas tekstas be šešėlio (clean)
+        draw.text((x, y), text, fill=(0, 0, 0, 255), font=font)
+    
+    elif "Minimalist" in style:
+        # Minimalist: šviesus fonas su subtiliu šešėliu
+        padding = 50
+        bg_rect = [x - padding, y - padding, x + text_width + padding, y + text_height + padding]
+        
+        # Subtilus šešėlis
+        shadow = Image.new('RGBA', img.size, (255, 255, 255, 0))
+        shadow_draw = ImageDraw.Draw(shadow)
+        shadow_draw.rectangle(
+            [bg_rect[0] + 3, bg_rect[1] + 3, bg_rect[2] + 3, bg_rect[3] + 3],
+            fill=(0, 0, 0, 40)
+        )
+        shadow = shadow.filter(ImageFilter.GaussianBlur(10))
+        
+        img = Image.alpha_composite(img, shadow)
+        
+        # Baltas fonas
+        draw.rectangle(bg_rect, fill=(255, 255, 255, 245))
+        
+        # Tamsus tekstas su labai subtiliu šešėliu
+        draw.text((x + 1, y + 1), text, fill=(0, 0, 0, 60), font=font)
+        draw.text((x, y), text, fill=(40, 40, 40, 255), font=font)
+    
+    return Image.alpha_composite(img, overlay)
+
+def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg_color=(255, 255, 255)):
+    """Sukuria teksto kvadratą kaip atskirą paveikslėlį (ne overlay!)"""
+    
+    # Sukuriame RGBA paveikslėlį
+    text_box = Image.new('RGBA', (width, height), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(text_box)
+    
+    # Fontų paieška
+    font = None
+    font_paths = [
+        "C:/Windows/Fonts/arialbd.ttf",
+        "C:/Windows/Fonts/calibrib.ttf",
+        "C:/Windows/Fonts/ariblk.ttf",
+        "C:/Windows/Fonts/arial.ttf",
+    ]
+    
+    for font_path in font_paths:
+        try:
+            font = ImageFont.truetype(font_path, font_size)
+            break
+        except:
+            continue
+    
+    if font is None:
+        font = ImageFont.load_default()
+    
+    # STILIŲ IMPLEMENTACIJOS
+    if "Glassmorphism" in style:
+        # Blur baltas fonas su skaidrumu
+        draw.rectangle([0, 0, width, height], fill=(255, 255, 255, 220))
+        
+        # Pridedame lengvą blur efektą
+        text_box = text_box.filter(ImageFilter.GaussianBlur(2))
+        draw = ImageDraw.Draw(text_box)
+        
+        # Tekstas su šešėliu
+        lines = text.split('\n')
+        total_height = len(lines) * (font_size + 20)
+        y_start = (height - total_height) // 2
+        
+        for i, line in enumerate(lines):
+            bbox = draw.textbbox((0, 0), line, font=font)
+            text_width = bbox[2] - bbox[0]
+            x = (width - text_width) // 2
+            y = y_start + i * (font_size + 20)
+            
+            # Šešėlis
+            draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
+            # Tekstas
+            draw.text((x, y), line, fill=(40, 40, 40, 255), font=font)
+    
+    elif "Neo-Brutalism" in style:
+        # Ryškus geltonas fonas su juodu rėmeliu
+        border_width = 8
+        
+        # Juodas šešėlis (3D efektas)
+        draw.rectangle([10, 10, width, height], fill=(0, 0, 0, 255))
+        
+        # Geltonas fonas
+        draw.rectangle([0, 0, width - 10, height - 10], fill=(255, 220, 50, 255))
+        
+        # Storas juodas rėmelis
+        for i in range(border_width):
+            draw.rectangle([i, i, width - 10 - i, height - 10 - i], outline=(0, 0, 0, 255), width=2)
+        
+        # Tekstas
+        lines = text.split('\n')
+        total_height = len(lines) * (font_size + 20)
+        y_start = (height - total_height) // 2
+        
+        for i, line in enumerate(lines):
+            bbox = draw.textbbox((0, 0), line, font=font)
+            text_width = bbox[2] - bbox[0]
+            x = (width - text_width) // 2
+            y = y_start + i * (font_size + 20)
+            draw.text((x, y), line, fill=(0, 0, 0, 255), font=font)
+    
+    elif "Minimalist" in style:
+        # Švarus baltas fonas
+        draw.rectangle([0, 0, width, height], fill=(255, 255, 255, 250))
+        
+        # Tekstas
+        lines = text.split('\n')
+        total_height = len(lines) * (font_size + 20)
+        y_start = (height - total_height) // 2
+        
+        for i, line in enumerate(lines):
+            bbox = draw.textbbox((0, 0), line, font=font)
+            text_width = bbox[2] - bbox[0]
+            x = (width - text_width) // 2
+            y = y_start + i * (font_size + 20)
+            
+            # Subtilus šešėlis
+            draw.text((x + 1, y + 1), line, fill=(0, 0, 0, 50), font=font)
+            # Tekstas
+            draw.text((x, y), line, fill=(50, 50, 50, 255), font=font)
+    
+    return text_box
 
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
@@ -596,7 +871,7 @@ st.markdown("""
 st.markdown("### 📸 Įkelkite nuotraukas")
 
 # Sukuriame tabs skirtingoms įkėlimo opcijoms
-tab1, tab2, tab3 = st.tabs(["📁 Failų įkėlimas", "📷 Kamera", "🔧 Rankiniu būdu"])
+tab1, tab2 = st.tabs(["📁 Failų įkėlimas", "🔧 Rankiniu būdu"])
 
 uploaded_files = []
 
@@ -613,36 +888,6 @@ with tab1:
         st.success(f"✅ Įkelta {len(files_standard)} nuotraukų!")
 
 with tab2:
-    if CAMERA_AVAILABLE:
-        st.markdown("**Mobiliams telefonams** - fotografuokite tiesiai iš kameros")
-        
-        # Patikrinimas ar veikia kamera
-        camera_photo = camera_input_live()
-        if camera_photo is not None:
-            st.image(camera_photo, caption="Užfiksuota nuotrauka")
-            
-            if st.button("📸 Pridėti šią nuotrauką", key="add_camera"):
-                # Konvertuojame PIL į UploadedFile formato objektą
-                if "camera_photos" not in st.session_state:
-                    st.session_state.camera_photos = []
-                
-                # Konvertuojame PIL image į bytes
-                img_bytes = io.BytesIO()
-                camera_photo.save(img_bytes, format='JPEG')
-                img_bytes.seek(0)
-                
-                st.session_state.camera_photos.append(img_bytes.getvalue())
-                st.success("📸 Nuotrauka pridėta!")
-                st.rerun()
-        
-        # Rodyti pridėtas nuotraukas iš kameros
-        if "camera_photos" in st.session_state and st.session_state.camera_photos:
-            st.info(f"🖼️ Pridėta iš kameros: {len(st.session_state.camera_photos)} nuotraukų")
-            uploaded_files.extend([io.BytesIO(photo) for photo in st.session_state.camera_photos])
-    else:
-        st.error("📷 Kameros komponentas nepasiekiamas. Naudokite kitus būdus.")
-
-with tab3:
     st.markdown("**Rezervinis variantas** - jei kiti būdai neveikia")
     st.info("📱 **Instrukcijos telefonui:**\n1. Įkelkite po vieną nuotrauką\n2. Spauskite 'Pridėti' po kiekvienos\n3. Kartokite iki 4 nuotraukų")
     
@@ -712,8 +957,6 @@ if st.session_state.uploaded_files:
         st.session_state.uploaded_files = []
         if "manual_files" in st.session_state:
             st.session_state.manual_files = []
-        if "camera_photos" in st.session_state:
-            st.session_state.camera_photos = []
         st.rerun()
 
 # Rodyti instrukcijas jei nėra failų
@@ -781,54 +1024,118 @@ if files_to_process:
     st.info(f"✨ Automatinė tema: **{auto_theme}** (pagal jūsų nustatymus kairėje)")
     
     if len(files_to_process) >= 2:
-        # Stilius pasirinkimas
-        collage_style = st.selectbox(
-            "🎨 Collage stilius:",
-            [
-                "🌈 Gradient Flow - Modernus gradientas su šešėliais (NAUJAS!)",
-                "🎯 Neo-Brutalism - Ryškūs rėmeliai ir spalvos (NAUJAS!)",
-                "💎 Glassmorphism - Skaidrūs blur efektai (NAUJAS!)",
-                "📸 Polaroid - Nuotraukos su baltais rėmeliais, pasuktos",
-                "📱 Instagram Grid - Tvarkingas tinklelis su tarpais",
-                "🎨 Scrapbook - Kūrybiškas, atsitiktinis išdėstymas",
-                "🖼️ Gallery Wall - Galerijos siena su juodais rėmeliais",
-                "✨ Minimalist - Minimalus stilius, baltas fonas"
-            ],
-            help="Pasirinkite collage stilių - dabar su moderniais canvas efektais!",
-            key="collage_style_selector"
+        # NAUJAS: Social media formato pasirinkimas
+        col_format, col_style = st.columns([1, 1])
+        
+        with col_format:
+            social_format = st.selectbox(
+                "📱 Socialinio tinklo formatas:",
+                ["Instagram kvadratas (1080x1080)", "Instagram Portrait (1080x1350)", "Facebook Post (1200x630)"],
+                help="Pasirinkite socialinio tinklo formatą"
+            )
+        
+        with col_style:
+            collage_style = st.selectbox(
+                "🎨 Dizaino stilius:",
+                ["💎 Glassmorphism - Modernus, skaidrus", "🎯 Neo-Brutalism - Ryškus, drąsus", "✨ Minimalist - Švarus, elegantiškas"],
+                help="Bendras collage dizaino stilius"
+            )
+        
+        # NAUJAS: Išdėstymas su teksto kvadratu
+        st.markdown("---")
+        st.markdown("#### 📐 Išdėstymas (nuotraukos + tekstas)")
+        
+        num_photos = len(files_to_process)
+        
+        if num_photos == 2:
+            layout_options = [
+                "Grid 2x2 (2 nuotraukos + 2 teksto kvadratai)",
+                "Horizontal (2 nuotraukos + 1 tekstas viduryje)",
+                "Asymmetric (1 didelė + 1 maža + tekstas)"
+            ]
+        elif num_photos == 3:
+            layout_options = [
+                "Grid 2x2 (3 nuotraukos + 1 teksto kvadratas)",
+                "Magazine (3 nuotraukos + teksto zona)",
+                "Asymmetric (1 didelė + 2 mažos + tekstas)"
+            ]
+        else:  # 4 ar daugiau
+            layout_options = [
+                "Grid 2x2 (4 nuotraukos be teksto)",
+                "Grid 3x2 (4 nuotraukos + 2 teksto kvadratai)",
+                "Mosaic (4 nuotraukos skirtingų dydžių + tekstas)"
+            ]
+        
+        collage_layout = st.selectbox(
+            "Pasirinkite išdėstymą:",
+            layout_options,
+            help="Layout su integruotu teksto kvadratu (ne overlay!)"
         )
         
-        # Tematinio fono pasirinkimas
+        # Tematinio fono pasirinkimas (VISADA ĮJUNGTAS dabar)
         use_themed_bg = st.checkbox(
-            "🖼️ Naudoti tematinį foną",
-            value=False,
-            help="AI pasirenka teminę fono nuotrauką pagal sezoną"
+            "🖼️ Naudoti AI tematinį foną",
+            value=True,
+            help="AI sugeneruotas sezoninis fonas bus matomas aplink nuotraukas"
         )
         
         if use_themed_bg:
-            st.info(f"✨ Bus naudojamas **{season}** tematinis fonas (automatiškai parenkamas)")
+            st.info(f"✨ **{season}** tematinis fonas bus matomas aplink nuotraukas (padding efektas)")
+        if use_themed_bg:
+            st.info(f"✨ **{season}** tematinis fonas bus matomas aplink nuotraukas (padding efektas)")
         
-        collage_layout = st.selectbox(
-            "📐 Išdėstymas:",
-            ["2x2 Grid (4 nuotraukos)", "1x2 Horizontal (2 nuotraukos)", "2x1 Vertical (2 nuotraukos)", "1x3 Horizontal (3 nuotraukos)", "3x1 Vertical (3 nuotraukos)"],
-            help="Pasirinkite kaip išdėstyti nuotraukas"
-        )
+        # NAUJAS: Teksto turinys (VISADA ĮJUNGTAS dabar, nes tekstas = dalis layout'o)
+        st.markdown("---")
+        st.markdown("#### ✍️ Teksto kvadrato turinys")
+        
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            text_content = st.text_area(
+                "Tekstas teksto kvadrate:",
+                value=f"{season} kolekcija 2025 🌿",
+                height=100,
+                help="Šis tekstas bus atskirame kvadrate collage (ne overlay!)"
+            )
+        
+        with col2:
+            text_font_size = st.slider(
+                "Šrifto dydis:",
+                30, 120, 60, 10,
+                help="Teksto dydis teksto kvadrate"
+            )
+        
+        # NAUJAS: Nuotraukų efektai
+        st.markdown("---")
+        st.markdown("#### 🎨 Nuotraukų efektai")
+        
+        col_fx1, col_fx2 = st.columns(2)
+        
+        with col_fx1:
+            enable_white_border = st.checkbox("⬜ Baltas rėmelis", value=True, help="Baltas rėmelis aplink nuotraukas")
+            enable_rounded_corners = st.checkbox("⭕ Užapvalinti kampai", value=True, help="Apvalūs nuotraukų kampai")
+        
+        with col_fx2:
+            enable_shadow_effect = st.checkbox("🌑 Šešėlio efektas", value=True, help="3D šešėlis (drop shadow)")
+            shadow_strength = st.slider("Šešėlio stiprumas:", 5, 30, 15, 5, help="Šešėlio dydis px") if enable_shadow_effect else 0
+        
+        st.markdown("---")
         
         if st.button("🎨 Sukurti Collage", type="primary", use_container_width=True):
-            with st.spinner("🖼️ Kuriamas tematinis collage..."):
+            with st.spinner("🖼️ Kuriamas modernus collage su teksto kvadratu..."):
                 try:
                     # Paruošiame redaguotas nuotraukas
                     edited_images = []
                     for idx, file in enumerate(files_to_process):
                         file.seek(0)
                         
-                        # SVARBU: Vandens ženklas tik ant paskutinės nuotraukos collage
+                        # Vandens ženklas tik ant paskutinės
                         show_watermark = add_watermark and (idx == len(files_to_process) - 1)
                         
                         edited = add_marketing_overlay(
                             file,
                             add_watermark=show_watermark,
-                            add_border=False,  # Collage'ui be rėmelio
+                            add_border=False,
                             brightness=brightness,
                             contrast=contrast,
                             saturation=saturation,
@@ -839,417 +1146,301 @@ if files_to_process:
                         img = Image.open(edited)
                         edited_images.append(img)
                     
-                    # Nustatome layout
-                    if "2x2" in collage_layout:
-                        rows, cols = 2, 2
-                        needed = 4
-                    elif "1x2" in collage_layout:
-                        rows, cols = 1, 2
-                        needed = 2
-                    elif "2x1" in collage_layout:
-                        rows, cols = 2, 1
-                        needed = 2
-                    elif "1x3" in collage_layout:
-                        rows, cols = 1, 3
-                        needed = 3
-                    elif "3x1" in collage_layout:
-                        rows, cols = 3, 1
-                        needed = 3
+                    # Nustatome canvas dydį pagal social format
+                    if "Instagram kvadratas" in social_format:
+                        canvas_width, canvas_height = 1080, 1080
+                    elif "Instagram Portrait" in social_format:
+                        canvas_width, canvas_height = 1080, 1350
+                    else:  # Facebook
+                        canvas_width, canvas_height = 1200, 630
                     
-                    # Apkarpome jei per daug
-                    edited_images = edited_images[:needed]
-                    
-                    # Jei per mažai - dubliuojame
-                    while len(edited_images) < needed:
-                        edited_images.append(edited_images[-1])
-                    
-                    import random
-                    
-                    # NUSTATOME STILIŲ PAGAL PASIRINKIMĄ
-                    
-                    # Automatiškai nustatome fono spalvą pagal sezoną/šventę
-                    if holiday != "Nėra":
-                        if "Kalėdos" in holiday:
-                            bg_color = (235, 245, 240)
-                            gradient_colors = [(210, 230, 225), (245, 255, 250)]
-                        elif "Velykos" in holiday:
-                            bg_color = (255, 250, 235)
-                            gradient_colors = [(255, 245, 220), (255, 255, 245)]
-                        elif "Valentino" in holiday:
-                            bg_color = (255, 245, 248)
-                            gradient_colors = [(255, 230, 240), (255, 250, 255)]
-                        elif "Naujieji" in holiday:
-                            bg_color = (240, 245, 255)
-                            gradient_colors = [(220, 235, 255), (245, 250, 255)]
-                        else:
-                            bg_color = (245, 245, 240)
-                            gradient_colors = [(230, 230, 225), (255, 255, 250)]
-                    else:
-                        if season == "Pavasaris":
-                            bg_color = (248, 252, 245)
-                            gradient_colors = [(230, 245, 220), (255, 255, 245)]
-                        elif season == "Vasara":
-                            bg_color = (255, 252, 240)
-                            gradient_colors = [(255, 245, 200), (255, 255, 230)]
-                        elif season == "Ruduo":
-                            bg_color = (250, 245, 235)
-                            gradient_colors = [(240, 220, 200), (255, 245, 230)]
-                        else:
-                            bg_color = (245, 248, 252)
-                            gradient_colors = [(220, 230, 245), (245, 250, 255)]
-                    
-                    # Tematinis fonas (jei pasirinkta)
-                    themed_bg = None
+                    # Sukuriame foną (AI arba gradientą)
                     if use_themed_bg:
-                        # Nustatome preliminarų dydį (bus pritaikytas vėliau)
-                        themed_bg = generate_themed_background(season, 2000, 2000)
+                        themed_bg = generate_themed_background(season, canvas_width, canvas_height)
+                        if themed_bg:
+                            collage = themed_bg
+                        else:
+                            # Fallback į gradientą
+                            collage = create_gradient_background(canvas_width, canvas_height, (240, 245, 250), (250, 250, 255))
+                    else:
+                        collage = create_gradient_background(canvas_width, canvas_height, (245, 245, 245), (255, 255, 255))
                     
-                    # ============ GRADIENT FLOW STILIUS (NAUJAS!) ============
-                    if "Gradient Flow" in collage_style:
-                        img_size = 650
-                        gap = 50
-                        
-                        canvas_width = cols * img_size + (cols + 1) * gap + 100
-                        canvas_height = rows * img_size + (rows + 1) * gap + 100
-                        
-                        # Gradientinis fonas
-                        collage = create_gradient_background(
-                            canvas_width, canvas_height,
-                            gradient_colors[0], gradient_colors[1],
-                            direction='vertical'
-                        )
-                        
-                        idx = 0
-                        for row in range(rows):
-                            for col in range(cols):
-                                if idx < len(edited_images):
-                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
-                                    
-                                    # Apvalūs kampai
-                                    mask = Image.new('L', (img_size, img_size), 0)
-                                    mask_draw = ImageDraw.Draw(mask)
-                                    mask_draw.rounded_rectangle([(0, 0), (img_size, img_size)], radius=30, fill=255)
-                                    
-                                    rounded_img = Image.new('RGBA', (img_size, img_size), (255, 255, 255, 0))
-                                    rounded_img.paste(img_resized, (0, 0))
-                                    rounded_img.putalpha(mask)
-                                    
-                                    # Šešėlis
-                                    shadowed = add_modern_shadow(rounded_img, shadow_size=15, shadow_blur=25)
-                                    
-                                    x = gap + 50 + col * (img_size + gap)
-                                    y = gap + 50 + row * (img_size + gap)
-                                    
-                                    # Konvertuojame collage į RGBA
-                                    collage_rgba = collage.convert('RGBA')
-                                    collage_rgba.paste(shadowed, (x, y), shadowed)
-                                    collage = collage_rgba.convert('RGB')
-                                    
-                                    idx += 1
+                    collage = collage.convert('RGBA')
                     
-                    # ============ NEO-BRUTALISM STILIUS (NAUJAS!) ============
-                    elif "Neo-Brutalism" in collage_style:
-                        img_size = 600
-                        gap = 40
-                        border_width = 8
+                    # PADDING - mažesnis padding, daugiau vietos nuotraukoms!
+                    padding = int(canvas_width * 0.04)  # 4% padding (buvo 8%)
+                    content_width = canvas_width - padding * 2
+                    content_height = canvas_height - padding * 2
+                    
+                    # Nustatome layout pagal pasirinkimą
+                    num_photos = len(edited_images)
+                    
+                    # ============ GRID 2x2 LAYOUTS ============
+                    if "Grid 2x2" in collage_layout:
+                        cell_size = content_width // 2
+                        gap = 20
                         
-                        canvas_width = cols * (img_size + border_width * 2) + (cols + 1) * gap
-                        canvas_height = rows * (img_size + border_width * 2) + (rows + 1) * gap
+                        # Apskaičiuojame efektų įtaką dydžiui
+                        border_offset = 12 if enable_white_border else 0
+                        shadow_offset = shadow_strength if enable_shadow_effect else 0
+                        # SVARBU: Nuotrauka PRIEŠ efektus turi būti mažesnė!
+                        target_size = cell_size - gap - (border_offset + shadow_offset) * 2
                         
-                        # Ryškus fono spalva
-                        collage = Image.new('RGB', (canvas_width, canvas_height), (255, 255, 240))
-                        
-                        # Ryškios brutalistiškos spalvos
-                        brutal_colors = [
-                            (255, 60, 60),   # Raudona
-                            (60, 120, 255),  # Mėlyna
-                            (255, 200, 60),  # Geltona
-                            (60, 220, 120)   # Žalia
+                        positions = [
+                            (padding, padding),  # Top-left
+                            (padding + cell_size + gap, padding),  # Top-right
+                            (padding, padding + cell_size + gap),  # Bottom-left
+                            (padding + cell_size + gap, padding + cell_size + gap)  # Bottom-right
                         ]
                         
-                        idx = 0
-                        for row in range(rows):
-                            for col in range(cols):
-                                if idx < len(edited_images):
-                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
-                                    
-                                    # Ryškus rėmelis
-                                    border_color = brutal_colors[idx % len(brutal_colors)]
-                                    bordered = ImageOps.expand(img_resized, border=border_width, fill=border_color)
-                                    
-                                    # "3D" šešėlio efektas (offset shadow)
-                                    shadow_offset = 8
-                                    shadow_img = Image.new('RGB', 
-                                        (bordered.width + shadow_offset, bordered.height + shadow_offset),
-                                        (255, 255, 240))
-                                    
-                                    # Juodas šešėlis
-                                    shadow_draw = ImageDraw.Draw(shadow_img)
-                                    shadow_draw.rectangle(
-                                        [shadow_offset, shadow_offset, 
-                                         bordered.width + shadow_offset, bordered.height + shadow_offset],
-                                        fill=(0, 0, 0)
-                                    )
-                                    
-                                    shadow_img.paste(bordered, (0, 0))
-                                    
-                                    x = gap + col * (img_size + border_width * 2 + gap)
-                                    y = gap + row * (img_size + border_width * 2 + gap)
-                                    
-                                    collage.paste(shadow_img, (x, y))
-                                    idx += 1
+                        for idx in range(4):
+                            # Apskaičiuojame ląstelės centrą
+                            row = idx // 2  # 0 arba 1
+                            col = idx % 2   # 0 arba 1
+                            cell_x = padding + col * (cell_size + gap)
+                            cell_y = padding + row * (cell_size + gap)
+                            
+                            if idx < num_photos:
+                                # Nuotrauka - CROP vietoj resize!
+                                original_img = edited_images[idx]
+                                
+                                # Apskaičiuojame crop (centruota)
+                                aspect = original_img.width / original_img.height
+                                
+                                if aspect > 1:  # Plati
+                                    new_height = target_size
+                                    new_width = int(target_size * aspect)
+                                else:  # Aukšta
+                                    new_width = target_size
+                                    new_height = int(target_size / aspect)
+                                
+                                # Resize ir crop
+                                img_resized = original_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                                left = (new_width - target_size) // 2
+                                top = (new_height - target_size) // 2
+                                img_cropped = img_resized.crop((left, top, left + target_size, top + target_size))
+                                
+                                # Pridedame pasirinktus efektus
+                                img_with_effects = add_photo_effects(
+                                    img_cropped,
+                                    enable_border=enable_white_border,
+                                    border_width=12,
+                                    enable_rounded=enable_rounded_corners,
+                                    corner_radius=25,
+                                    enable_shadow=enable_shadow_effect,
+                                    shadow_size=shadow_strength,
+                                    shadow_blur=shadow_strength * 2
+                                )
+                                
+                                # Centruojame nuotrauką ląstelėje
+                                paste_x = cell_x + (cell_size - img_with_effects.width) // 2
+                                paste_y = cell_y + (cell_size - img_with_effects.height) // 2
+                                
+                                collage.paste(img_with_effects, (paste_x, paste_y), img_with_effects)
+                            else:
+                                # Teksto kvadratas
+                                text_box = create_text_box(
+                                    target_size, 
+                                    target_size, 
+                                    text_content,
+                                    style=collage_style,
+                                    font_size=text_font_size
+                                )
+                                # Pridedame tuos pačius efektus tekstui
+                                text_with_effects = add_photo_effects(
+                                    text_box,
+                                    enable_border=enable_white_border,
+                                    border_width=12,
+                                    enable_rounded=enable_rounded_corners,
+                                    corner_radius=25,
+                                    enable_shadow=enable_shadow_effect,
+                                    shadow_size=shadow_strength,
+                                    shadow_blur=shadow_strength * 2
+                                )
+                                
+                                # Centruojame tekstą ląstelėje
+                                paste_x = cell_x + (cell_size - text_with_effects.width) // 2
+                                paste_y = cell_y + (cell_size - text_with_effects.height) // 2
+                                
+                                st.write(f"✅ Tekstas įklijuojamas į poziciją ({paste_x}, {paste_y})")
+                                collage.paste(text_with_effects, (paste_x, paste_y), text_with_effects)
                     
-                    # ============ GLASSMORPHISM STILIUS (NAUJAS!) ============
-                    elif "Glassmorphism" in collage_style:
-                        img_size = 620
-                        gap = 60
+                    # ============ HORIZONTAL LAYOUT (2 nuotraukos + tekstas) ============
+                    elif "Horizontal" in collage_layout and num_photos == 2:
+                        cell_width = content_width // 3
+                        gap = 20
                         
-                        canvas_width = cols * img_size + (cols + 1) * gap
-                        canvas_height = rows * img_size + (rows + 1) * gap
+                        # Nuotrauka 1 (kairėje)
+                        img1 = edited_images[0].resize((cell_width - gap, content_height), Image.Resampling.LANCZOS)
+                        if img1.mode != 'RGBA':
+                            img1 = img1.convert('RGBA')
+                        shadowed1 = add_modern_shadow(img1, shadow_size=10, shadow_blur=20)
+                        collage.paste(shadowed1, (padding, padding), shadowed1)
                         
-                        # Gradientinis fonas su blur
-                        collage = create_gradient_background(
-                            canvas_width, canvas_height,
-                            gradient_colors[0], gradient_colors[1],
-                            direction='vertical'
+                        # Teksto kvadratas (viduryje)
+                        text_box = create_text_box(
+                            cell_width - gap,
+                            content_height,
+                            text_content,
+                            style=collage_style,
+                            font_size=text_font_size
                         )
+                        shadowed_text = add_modern_shadow(text_box, shadow_size=10, shadow_blur=20)
+                        collage.paste(shadowed_text, (padding + cell_width + gap, padding), shadowed_text)
                         
-                        # Blur visa fono
-                        collage = collage.filter(ImageFilter.GaussianBlur(3))
-                        
-                        idx = 0
-                        for row in range(rows):
-                            for col in range(cols):
-                                if idx < len(edited_images):
-                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
-                                    
-                                    # Apvalūs kampai
-                                    mask = Image.new('L', (img_size, img_size), 0)
-                                    mask_draw = ImageDraw.Draw(mask)
-                                    mask_draw.rounded_rectangle([(0, 0), (img_size, img_size)], radius=25, fill=255)
-                                    
-                                    # Konvertuojame į RGBA
-                                    if img_resized.mode != 'RGBA':
-                                        img_resized = img_resized.convert('RGBA')
-                                    
-                                    img_resized.putalpha(mask)
-                                    
-                                    # Baltas glassmorphism rėmelis
-                                    glass_border = 3
-                                    glass_img = Image.new('RGBA', 
-                                        (img_size + glass_border * 2, img_size + glass_border * 2),
-                                        (255, 255, 255, 100))
-                                    
-                                    # Blur rėmelis
-                                    glass_img = glass_img.filter(ImageFilter.GaussianBlur(2))
-                                    
-                                    # Šešėlis
-                                    shadowed = add_modern_shadow(glass_img, shadow_size=10, shadow_blur=20, shadow_color=(0, 0, 0, 50))
-                                    
-                                    x = gap + col * (img_size + gap)
-                                    y = gap + row * (img_size + gap)
-                                    
-                                    # Konvertuojame collage į RGBA
-                                    collage_rgba = collage.convert('RGBA')
-                                    collage_rgba.paste(shadowed, (x - glass_border, y - glass_border), shadowed)
-                                    collage_rgba.paste(img_resized, (x, y), img_resized)
-                                    collage = collage_rgba.convert('RGB')
-                                    
-                                    idx += 1
+                        # Nuotrauka 2 (dešinėje)
+                        img2 = edited_images[1].resize((cell_width - gap, content_height), Image.Resampling.LANCZOS)
+                        if img2.mode != 'RGBA':
+                            img2 = img2.convert('RGBA')
+                        shadowed2 = add_modern_shadow(img2, shadow_size=10, shadow_blur=20)
+                        collage.paste(shadowed2, (padding + cell_width * 2 + gap * 2, padding), shadowed2)
                     
-                    # ============ POLAROID STILIUS (PATOBULINTA) ============
-                    elif "Polaroid" in collage_style:
-                        polaroid_width = 500
-                        polaroid_height = 500
-                        border_size = 20
-                        bottom_border = 60
-                        
-                        if needed == 4:
-                            canvas_width, canvas_height = 1800, 1800
-                            positions = [(200, 150, -8), (850, 100, 12), (300, 850, 5), (950, 900, -10)]
-                        elif needed == 3:
-                            canvas_width, canvas_height = 2000, 1200
-                            positions = [(200, 250, -10), (750, 150, 8), (450, 700, -5)]
-                        else:
-                            canvas_width, canvas_height = 1600, 1200
-                            positions = [(250, 300, -12), (850, 350, 8)]
-                        
-                        # Sukuriame collage su tematiniu fonu arba gradientu
-                        if themed_bg is not None:
-                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
-                        else:
-                            collage = create_gradient_background(canvas_width, canvas_height, gradient_colors[0], gradient_colors[1])
-                        
-                        collage = collage.convert('RGBA')
-                        
-                        for idx, img in enumerate(edited_images[:needed]):
-                            img_resized = img.resize((polaroid_width, polaroid_height), Image.Resampling.LANCZOS)
-                            polaroid_img = Image.new('RGB', 
-                                (polaroid_width + border_size * 2, 
-                                 polaroid_height + border_size + bottom_border), 
-                                (255, 255, 255))
-                            polaroid_img.paste(img_resized, (border_size, border_size))
+                    # ============ ASYMMETRIC LAYOUT ============
+                    elif "Asymmetric" in collage_layout:
+                        if num_photos == 2:
+                            # 1 didelė kairėje + 1 maža + tekstas dešinėje
+                            big_width = int(content_width * 0.6)
+                            small_width = content_width - big_width - 20
+                            half_height = content_height // 2
+                            gap = 20
                             
-                            # Konvertuojame į RGBA ir pridedame šešėlį
-                            polaroid_rgba = polaroid_img.convert('RGBA')
-                            shadowed = add_modern_shadow(polaroid_rgba, shadow_size=12, shadow_blur=20)
+                            # Didelė nuotrauka (kairėje)
+                            img_big = edited_images[0].resize((big_width, content_height), Image.Resampling.LANCZOS)
+                            if img_big.mode != 'RGBA':
+                                img_big = img_big.convert('RGBA')
+                            shadowed_big = add_modern_shadow(img_big, shadow_size=15, shadow_blur=25)
+                            collage.paste(shadowed_big, (padding, padding), shadowed_big)
                             
-                            x, y, angle = positions[idx]
-                            rotated = shadowed.rotate(angle, expand=True, fillcolor=(255, 255, 255, 0))
+                            # Maža nuotrauka (viršuje dešinėje)
+                            img_small = edited_images[1].resize((small_width, half_height - gap), Image.Resampling.LANCZOS)
+                            if img_small.mode != 'RGBA':
+                                img_small = img_small.convert('RGBA')
+                            shadowed_small = add_modern_shadow(img_small, shadow_size=10, shadow_blur=20)
+                            collage.paste(shadowed_small, (padding + big_width + gap, padding), shadowed_small)
                             
-                            collage.paste(rotated, (x, y), rotated)
+                            # Teksto kvadratas (apačioje dešinėje)
+                            text_box = create_text_box(
+                                small_width,
+                                half_height - gap,
+                                text_content,
+                                style=collage_style,
+                                font_size=text_font_size
+                            )
+                            shadowed_text = add_modern_shadow(text_box, shadow_size=10, shadow_blur=20)
+                            collage.paste(shadowed_text, (padding + big_width + gap, padding + half_height + gap), shadowed_text)
                         
-                        collage = collage.convert('RGB')
+                        elif num_photos == 3:
+                            # 1 didelė + 2 mažos + tekstas
+                            big_width = int(content_width * 0.65)
+                            small_width = content_width - big_width - 20
+                            third_height = content_height // 3
+                            gap = 20
+                            
+                            # Didelė nuotrauka (kairėje)
+                            img_big = edited_images[0].resize((big_width, content_height), Image.Resampling.LANCZOS)
+                            if img_big.mode != 'RGBA':
+                                img_big = img_big.convert('RGBA')
+                            shadowed_big = add_modern_shadow(img_big, shadow_size=15, shadow_blur=25)
+                            collage.paste(shadowed_big, (padding, padding), shadowed_big)
+                            
+                            # 2 mažos nuotraukos + tekstas dešinėje
+                            for i in range(2):
+                                img_small = edited_images[i + 1].resize((small_width, third_height - gap), Image.Resampling.LANCZOS)
+                                if img_small.mode != 'RGBA':
+                                    img_small = img_small.convert('RGBA')
+                                shadowed_small = add_modern_shadow(img_small, shadow_size=10, shadow_blur=20)
+                                y_pos = padding + i * (third_height + gap)
+                                collage.paste(shadowed_small, (padding + big_width + gap, y_pos), shadowed_small)
+                            
+                            # Teksto kvadratas apačioje
+                            text_box = create_text_box(
+                                small_width,
+                                third_height - gap,
+                                text_content,
+                                style=collage_style,
+                                font_size=text_font_size
+                            )
+                            shadowed_text = add_modern_shadow(text_box, shadow_size=10, shadow_blur=20)
+                            collage.paste(shadowed_text, (padding + big_width + gap, padding + third_height * 2 + gap * 2), shadowed_text)
                     
-                    # ============ INSTAGRAM GRID STILIUS (PATOBULINTA) ============
-                    elif "Instagram Grid" in collage_style:
-                        img_size = 600
-                        gap = 30
+                    # ============ MAGAZINE LAYOUT ============
+                    elif "Magazine" in collage_layout and num_photos == 3:
+                        half_width = content_width // 2
+                        half_height = content_height // 2
+                        gap = 20
                         
-                        canvas_width = cols * img_size + (cols + 1) * gap
-                        canvas_height = rows * img_size + (rows + 1) * gap
+                        # Nuotrauka 1 (viršuje kairėje)
+                        img1 = edited_images[0].resize((half_width - gap, half_height - gap), Image.Resampling.LANCZOS)
+                        if img1.mode != 'RGBA':
+                            img1 = img1.convert('RGBA')
+                        shadowed1 = add_modern_shadow(img1, shadow_size=10, shadow_blur=20)
+                        collage.paste(shadowed1, (padding, padding), shadowed1)
                         
-                        # Sukuriame collage su tematiniu fonu arba gradientu
-                        if themed_bg is not None:
-                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
-                        else:
-                            collage = create_gradient_background(canvas_width, canvas_height, (250, 250, 250), (240, 240, 245))
+                        # Nuotrauka 2 (viršuje dešinėje - didelė)
+                        img2 = edited_images[1].resize((half_width - gap, content_height), Image.Resampling.LANCZOS)
+                        if img2.mode != 'RGBA':
+                            img2 = img2.convert('RGBA')
+                        shadowed2 = add_modern_shadow(img2, shadow_size=10, shadow_blur=20)
+                        collage.paste(shadowed2, (padding + half_width + gap, padding), shadowed2)
                         
-                        collage = collage.convert('RGBA')
-                        
-                        idx = 0
-                        for row in range(rows):
-                            for col in range(cols):
-                                if idx < len(edited_images):
-                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
-                                    
-                                    # Apvalūs kampai
-                                    mask = Image.new('L', (img_size, img_size), 0)
-                                    mask_draw = ImageDraw.Draw(mask)
-                                    mask_draw.rounded_rectangle([(0, 0), (img_size, img_size)], radius=15, fill=255)
-                                    
-                                    img_rgba = img_resized.convert('RGBA')
-                                    img_rgba.putalpha(mask)
-                                    
-                                    # Šešėlis
-                                    shadowed = add_modern_shadow(img_rgba, shadow_size=8, shadow_blur=15)
-                                    
-                                    x = gap + col * (img_size + gap)
-                                    y = gap + row * (img_size + gap)
-                                    collage.paste(shadowed, (x, y), shadowed)
-                                    idx += 1
-                        
-                        collage = collage.convert('RGB')
+                        # Teksto kvadratas (apačioje kairėje)
+                        text_box = create_text_box(
+                            half_width - gap,
+                            half_height - gap,
+                            text_content,
+                            style=collage_style,
+                            font_size=text_font_size - 10
+                        )
+                        shadowed_text = add_modern_shadow(text_box, shadow_size=10, shadow_blur=20)
+                        collage.paste(shadowed_text, (padding, padding + half_height + gap), shadowed_text)
                     
-                    # ============ SCRAPBOOK STILIUS (PATOBULINTA) ============
-                    elif "Scrapbook" in collage_style:
-                        if needed == 4:
-                            canvas_width, canvas_height = 1900, 1900
-                        elif needed == 3:
-                            canvas_width, canvas_height = 2100, 1300
-                        else:
-                            canvas_width, canvas_height = 1700, 1300
+                    # ============ MOSAIC LAYOUT (4 nuotraukos) ============
+                    elif "Mosaic" in collage_layout and num_photos >= 4:
+                        # Kompleksiškas mozaikos layout
+                        gap = 15
                         
-                        # Sukuriame collage su tematiniu fonu arba gradientu
-                        if themed_bg is not None:
-                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
-                        else:
-                            collage = create_gradient_background(canvas_width, canvas_height, gradient_colors[0], gradient_colors[1])
+                        # Didelė nuotrauka kairėje
+                        big_size = int(content_height * 0.65)
+                        img_big = edited_images[0].resize((big_size, big_size), Image.Resampling.LANCZOS)
+                        if img_big.mode != 'RGBA':
+                            img_big = img_big.convert('RGBA')
+                        shadowed_big = add_modern_shadow(img_big, shadow_size=15, shadow_blur=25)
+                        collage.paste(shadowed_big, (padding, padding), shadowed_big)
                         
-                        collage = collage.convert('RGBA')
+                        # 2 mažos nuotraukos dešinėje viršuje
+                        small_size = (content_width - big_size - gap * 2) // 2
+                        for i in range(2):
+                            img_small = edited_images[i + 1].resize((small_size, small_size), Image.Resampling.LANCZOS)
+                            if img_small.mode != 'RGBA':
+                                img_small = img_small.convert('RGBA')
+                            shadowed_small = add_modern_shadow(img_small, shadow_size=10, shadow_blur=20)
+                            x_pos = padding + big_size + gap + i * (small_size + gap)
+                            collage.paste(shadowed_small, (x_pos, padding), shadowed_small)
                         
-                        # Atsitiktiniai dydžiai ir pozicijos
-                        for idx, img in enumerate(edited_images[:needed]):
-                            size_var = random.randint(450, 650)
-                            img_resized = img.resize((size_var, size_var), Image.Resampling.LANCZOS)
-                            
-                            # Pridedame atsitiktinį rėmelį
-                            border_color = random.choice([(255,255,255), (250,250,240), (245,240,235)])
-                            border_width = random.randint(15, 35)
-                            bordered = ImageOps.expand(img_resized, border=border_width, fill=border_color)
-                            
-                            # Konvertuojame į RGBA ir pridedame šešėlį
-                            bordered_rgba = bordered.convert('RGBA')
-                            shadowed = add_modern_shadow(bordered_rgba, shadow_size=15, shadow_blur=25)
-                            
-                            # Atsitiktinė pozicija ir kampas
-                            max_x = canvas_width - shadowed.width - 50
-                            max_y = canvas_height - shadowed.height - 50
-                            x = random.randint(30, max(31, max_x))
-                            y = random.randint(30, max(31, max_y))
-                            angle = random.randint(-15, 15)
-                            
-                            rotated = shadowed.rotate(angle, expand=True, fillcolor=(255, 255, 255, 0))
-                            collage.paste(rotated, (x, y), rotated)
+                        # Teksto kvadratas apačioje dešinėje
+                        text_width = content_width - big_size - gap
+                        text_height = content_height - small_size - gap * 2
+                        text_box = create_text_box(
+                            text_width,
+                            text_height,
+                            text_content,
+                            style=collage_style,
+                            font_size=text_font_size
+                        )
+                        shadowed_text = add_modern_shadow(text_box, shadow_size=10, shadow_blur=20)
+                        collage.paste(shadowed_text, (padding + big_size + gap, padding + small_size + gap), shadowed_text)
                         
-                        collage = collage.convert('RGB')
+                        # 1 nuotrauka apačioje kairėje
+                        bottom_size = content_height - big_size - gap
+                        if num_photos >= 4:
+                            img_bottom = edited_images[3].resize((big_size, bottom_size), Image.Resampling.LANCZOS)
+                            if img_bottom.mode != 'RGBA':
+                                img_bottom = img_bottom.convert('RGBA')
+                            shadowed_bottom = add_modern_shadow(img_bottom, shadow_size=10, shadow_blur=20)
+                            collage.paste(shadowed_bottom, (padding, padding + big_size + gap), shadowed_bottom)
                     
-                    # ============ GALLERY WALL STILIUS (PATOBULINTA) ============
-                    elif "Gallery Wall" in collage_style:
-                        img_size = 550
-                        gap = 40
-                        
-                        canvas_width = cols * img_size + (cols + 1) * gap
-                        canvas_height = rows * img_size + (rows + 1) * gap
-                        
-                        # Sukuriame collage su tematiniu fonu arba tamsesniu gradientu
-                        if themed_bg is not None:
-                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
-                        else:
-                            collage = create_gradient_background(canvas_width, canvas_height, (220, 220, 220), (245, 245, 245))
-                        
-                        collage = collage.convert('RGBA')
-                        
-                        idx = 0
-                        for row in range(rows):
-                            for col in range(cols):
-                                if idx < len(edited_images):
-                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
-                                    # Juodas rėmelis su šešėliu
-                                    framed = ImageOps.expand(img_resized, border=15, fill=(20, 20, 20))
-                                    
-                                    framed_rgba = framed.convert('RGBA')
-                                    shadowed = add_modern_shadow(framed_rgba, shadow_size=20, shadow_blur=30)
-                                    
-                                    x = gap + col * (img_size + gap)
-                                    y = gap + row * (img_size + gap)
-                                    collage.paste(shadowed, (x, y), shadowed)
-                                    idx += 1
-                        
-                        collage = collage.convert('RGB')
-                    
-                    # ============ MINIMALIST STILIUS (PATOBULINTA) ============
-                    elif "Minimalist" in collage_style:
-                        img_size = 600
-                        gap = 60
-                        
-                        canvas_width = cols * img_size + (cols + 1) * gap
-                        canvas_height = rows * img_size + (rows + 1) * gap
-                        
-                        # Sukuriame collage su tematiniu fonu arba švariu baltu
-                        if themed_bg is not None:
-                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
-                        else:
-                            collage = Image.new('RGB', (canvas_width, canvas_height), (255, 255, 255))
-                        
-                        collage = collage.convert('RGBA')
-                        
-                        idx = 0
-                        for row in range(rows):
-                            for col in range(cols):
-                                if idx < len(edited_images):
-                                    img_resized = edited_images[idx].resize((img_size, img_size), Image.Resampling.LANCZOS)
-                                    
-                                    # Labai subtilus šešėlis
-                                    img_rgba = img_resized.convert('RGBA')
-                                    shadowed = add_modern_shadow(img_rgba, shadow_size=5, shadow_blur=12, shadow_color=(0, 0, 0, 40))
-                                    
-                                    x = gap + col * (img_size + gap)
-                                    y = gap + row * (img_size + gap)
-                                    collage.paste(shadowed, (x, y), shadowed)
-                                    idx += 1
-                        
-                        collage = collage.convert('RGB')
+                    # Konvertuojame į RGB
+                    collage = collage.convert('RGB')
                     
                     # Išsaugome
                     collage_bytes = io.BytesIO()
@@ -1258,7 +1449,7 @@ if files_to_process:
                     
                     # Išsaugome į session_state
                     st.session_state.collage_result = collage_bytes.getvalue()
-                    st.session_state.collage_filename = f"collage_{season}_{holiday}.jpg"
+                    st.session_state.collage_filename = f"collage_{season}_{social_format.split()[0]}.jpg"
                     
                 except Exception as e:
                     st.error(f"❌ Klaida kuriant collage: {str(e)}")
