@@ -1080,37 +1080,27 @@ if files_to_process:
             help="Layout su integruotu teksto kvadratu (ne overlay!)"
         )
         
-        # AI Fono generavimas
-        use_themed_bg = st.checkbox(
-            "🖼️ Naudoti AI tematinį foną",
+        # AI Custom Fono generavimas
+        use_custom_background = st.checkbox(
+            "🎨 Naudoti Custom AI foną",
             value=False,
-            help="AI sugeneruos foną pagal metų laiką/šventę arba tavo aprašymą"
+            help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą"
         )
         
         custom_prompt = ""
-        if use_themed_bg:
-            use_custom_background = st.checkbox(
-                "✍️ Naudoti Custom AI Prompt fonui",
-                value=False,
-                help="Aprašyk foną savo žodžiais (pvz: 'medžiai rugiai pieva')"
+        if use_custom_background:
+            custom_prompt = st.text_area(
+                "Aprašykite norimą foną:",
+                value="",
+                placeholder="Pvz: medžiai rugiai pieva, kviečiai ir medžio tekstūra, jūra saulėlydis...",
+                help="AI (DALL-E 3) sugeneruos foną pagal šį aprašymą",
+                height=80
             )
             
-            if use_custom_background:
-                custom_prompt = st.text_area(
-                    "Aprašykite norimą foną:",
-                    value="",
-                    placeholder="Pvz: medžiai rugiai pieva, kviečiai ir medžio tekstūra, jūra saulėlydis...",
-                    help="AI (DALL-E 3) sugeneruos foną pagal šį aprašymą",
-                    height=80
-                )
-            
-            # Info pranešimas
-            if use_custom_background and custom_prompt and custom_prompt.strip():
+            if custom_prompt and custom_prompt.strip():
                 st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
-            elif holiday != "Nėra":
-                st.info(f"✨ **{holiday}** + **{season}** tematinis fonas")
-            else:
-                st.info(f"✨ **{season}** tematinis fonas")
+        
+        use_themed_bg = use_custom_background
         
         # NAUJAS: Teksto turinys (VISADA ĮJUNGTAS dabar, nes tekstas = dalis layout'o)
         st.markdown("---")
