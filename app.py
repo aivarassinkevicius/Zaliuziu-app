@@ -1224,7 +1224,8 @@ if files_to_process:
                         
                         # Apskaičiuojame efektų įtaką dydžiui
                         border_offset = 12 if enable_white_border else 0
-                        shadow_offset = shadow_strength if enable_shadow_effect else 0
+                        # Šešėlio offset visada 15px (nepriklausomai nuo stiprumo)
+                        shadow_offset = 15 if enable_shadow_effect else 0
                         # SVARBU: Nuotrauka PRIEŠ efektus turi būti mažesnė!
                         target_size = cell_size - gap - (border_offset + shadow_offset) * 2
                         
