@@ -779,48 +779,44 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
 
-# AI Fono generavimo tipas
-background_type = st.sidebar.radio(
-    "🎨 AI Fono tipas",
-    ["🌤️ Metų laikas", "🎉 Šventė", "✍️ Custom AI Prompt"],
-    index=0,
-    help="Pasirinkite kaip sugeneruoti foną: pagal metų laiką, šventę arba savo aprašymą"
+# Metų laikas (visada pasirinktas)
+season = st.sidebar.selectbox(
+    "🌤️ Metų laikas",
+    ["Pavasaris", "Vasara", "Ruduo", "Žiema"],
+    index=1,
+    help="AI turinio aprašymams ir fonui (jei nenaudoji custom)"
 )
 
-# Metų laikas
-if background_type == "🌤️ Metų laikas":
-    season = st.sidebar.selectbox(
-        "Pasirinkite sezoną",
-        ["Pavasaris", "Vasara", "Ruduo", "Žiema"],
-        index=1
-    )
-    holiday = "Nėra"
-    custom_prompt = ""
+# Šventė (papildomas)
+holiday = st.sidebar.selectbox(
+    "🎉 Lietuviškos šventės (pasirinktinai)",
+    ["Nėra", "Naujieji metai", "Šv. Valentino diena", "Vasario 16-oji", "Kovo 11-oji", 
+     "Velykos", "Gegužės 1-oji (Darbo diena)", "Motinos diena", "Tėvo diena", 
+     "Joninės", "Liepos 6-oji (Karaliaus Mindaugo diena)", "Žolinė", "Rugsėjo 1-oji", 
+     "Šv. Kalėdos", "Kūčios"],
+    index=0,
+    help="Papildoma tema turinio aprašymams ir fonui"
+)
 
-# Šventė
-elif background_type == "🎉 Šventė":
-    season = "Vasara"  # default
-    holiday = st.sidebar.selectbox(
-        "Pasirinkite šventę",
-        ["Naujieji metai", "Šv. Valentino diena", "Vasario 16-oji", "Kovo 11-oji", 
-         "Velykos", "Gegužės 1-oji (Darbo diena)", "Motinos diena", "Tėvo diena", 
-         "Joninės", "Liepos 6-oji (Karaliaus Mindaugo diena)", "Žolinė", "Rugsėjo 1-oji", 
-         "Šv. Kalėdos", "Kūčios"],
-        index=0
-    )
-    custom_prompt = ""
+st.sidebar.markdown("---")
 
-# Custom AI Prompt
-else:  # "✍️ Custom AI Prompt"
-    season = "Vasara"  # default
-    holiday = "Nėra"
+# Custom AI Fono Prompt (papildomas)
+use_custom_background = st.sidebar.checkbox(
+    "✍️ Naudoti Custom AI Foną",
+    value=False,
+    help="Jei įjungta, AI sukurs foną pagal tavo aprašymą (ignoruos metų laiką/šventę fonui)"
+)
+
+custom_prompt = ""
+if use_custom_background:
     custom_prompt = st.sidebar.text_area(
-        "✍️ Aprašykite norimą foną",
+        "Aprašykite norimą foną:",
         value="",
-        placeholder="Pvz: medziai rugiai pieva, kviečiai ir medžio tekstūra, jūra saulėlydis, kalnų peizažas su gėlėmis...",
-        help="AI sugeneruos foną pagal jūsų aprašymą",
+        placeholder="Pvz: medžiai rugiai pieva, kviečiai ir medžio tekstūra, jūra saulėlydis...",
+        help="AI sugeneruos foną pagal šį aprašymą",
         height=100
     )
+    st.sidebar.info("ℹ️ Turinio aprašymai vis tiek naudos metų laiką ir šventes")
 
 auto_process = st.sidebar.checkbox("🤖 Automatinis apdorojimas", value=True)
 
@@ -1112,12 +1108,13 @@ if files_to_process:
         )
         
         if use_themed_bg:
-            if custom_prompt and custom_prompt.strip():
-                st.info(f"✨ **Custom AI** fonas: '{custom_prompt[:50]}...' bus sugeneruotas aplink nuotraukas")
+            if use_custom_background and custom_prompt and custom_prompt.strip():
+                st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
+                st.caption(f"📝 Turinio aprašymams: {season}" + (f" + {holiday}" if holiday != "Nėra" else ""))
             elif holiday != "Nėra":
-                st.info(f"✨ **{holiday}** tematinis fonas bus matomas aplink nuotraukas")
+                st.info(f"✨ **{holiday}** + **{season}** tematinis fonas ir turinys")
             else:
-                st.info(f"✨ **{season}** tematinis fonas bus matomas aplink nuotraukas")
+                st.info(f"✨ **{season}** tematinis fonas ir turinys")
         
         # NAUJAS: Teksto turinys (VISADA ĮJUNGTAS dabar, nes tekstas = dalis layout'o)
         st.markdown("---")
