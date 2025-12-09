@@ -1292,8 +1292,14 @@ if files_to_process:
                         img1 = edited_images[0].resize((cell_width - gap, content_height), Image.Resampling.LANCZOS)
                         if img1.mode != 'RGBA':
                             img1 = img1.convert('RGBA')
-                        shadowed1 = add_modern_shadow(img1, shadow_size=10, shadow_blur=20)
-                        collage.paste(shadowed1, (padding, padding), shadowed1)
+                        styled1 = add_photo_effects(
+                            img1,
+                            enable_border=enable_white_border,
+                            enable_rounded=enable_rounded_corners,
+                            enable_shadow=enable_shadow_effect,
+                            shadow_size=shadow_strength
+                        )
+                        collage.paste(styled1, (padding, padding), styled1)
                         
                         # Teksto kvadratas (viduryje)
                         text_box = create_text_box(
@@ -1310,8 +1316,14 @@ if files_to_process:
                         img2 = edited_images[1].resize((cell_width - gap, content_height), Image.Resampling.LANCZOS)
                         if img2.mode != 'RGBA':
                             img2 = img2.convert('RGBA')
-                        shadowed2 = add_modern_shadow(img2, shadow_size=10, shadow_blur=20)
-                        collage.paste(shadowed2, (padding + cell_width * 2 + gap * 2, padding), shadowed2)
+                        styled2 = add_photo_effects(
+                            img2,
+                            enable_border=enable_white_border,
+                            enable_rounded=enable_rounded_corners,
+                            enable_shadow=enable_shadow_effect,
+                            shadow_size=shadow_strength
+                        )
+                        collage.paste(styled2, (padding + cell_width * 2 + gap * 2, padding), styled2)
                     
                     # ============ ASYMMETRIC LAYOUT ============
                     elif "Asymmetric" in collage_layout:
@@ -1326,15 +1338,27 @@ if files_to_process:
                             img_big = edited_images[0].resize((big_width, content_height), Image.Resampling.LANCZOS)
                             if img_big.mode != 'RGBA':
                                 img_big = img_big.convert('RGBA')
-                            shadowed_big = add_modern_shadow(img_big, shadow_size=15, shadow_blur=25)
-                            collage.paste(shadowed_big, (padding, padding), shadowed_big)
+                            styled_big = add_photo_effects(
+                                img_big,
+                                enable_border=enable_white_border,
+                                enable_rounded=enable_rounded_corners,
+                                enable_shadow=enable_shadow_effect,
+                                shadow_size=shadow_strength
+                            )
+                            collage.paste(styled_big, (padding, padding), styled_big)
                             
                             # Maža nuotrauka (viršuje dešinėje)
                             img_small = edited_images[1].resize((small_width, half_height - gap), Image.Resampling.LANCZOS)
                             if img_small.mode != 'RGBA':
                                 img_small = img_small.convert('RGBA')
-                            shadowed_small = add_modern_shadow(img_small, shadow_size=10, shadow_blur=20)
-                            collage.paste(shadowed_small, (padding + big_width + gap, padding), shadowed_small)
+                            styled_small = add_photo_effects(
+                                img_small,
+                                enable_border=enable_white_border,
+                                enable_rounded=enable_rounded_corners,
+                                enable_shadow=enable_shadow_effect,
+                                shadow_size=shadow_strength
+                            )
+                            collage.paste(styled_small, (padding + big_width + gap, padding), styled_small)
                             
                             # Teksto kvadratas (apačioje dešinėje)
                             text_box = create_text_box(
@@ -1358,17 +1382,29 @@ if files_to_process:
                             img_big = edited_images[0].resize((big_width, content_height), Image.Resampling.LANCZOS)
                             if img_big.mode != 'RGBA':
                                 img_big = img_big.convert('RGBA')
-                            shadowed_big = add_modern_shadow(img_big, shadow_size=15, shadow_blur=25)
-                            collage.paste(shadowed_big, (padding, padding), shadowed_big)
+                            styled_big = add_photo_effects(
+                                img_big,
+                                enable_border=enable_white_border,
+                                enable_rounded=enable_rounded_corners,
+                                enable_shadow=enable_shadow_effect,
+                                shadow_size=shadow_strength
+                            )
+                            collage.paste(styled_big, (padding, padding), styled_big)
                             
                             # 2 mažos nuotraukos + tekstas dešinėje
                             for i in range(2):
                                 img_small = edited_images[i + 1].resize((small_width, third_height - gap), Image.Resampling.LANCZOS)
                                 if img_small.mode != 'RGBA':
                                     img_small = img_small.convert('RGBA')
-                                shadowed_small = add_modern_shadow(img_small, shadow_size=10, shadow_blur=20)
+                                styled_small = add_photo_effects(
+                                    img_small,
+                                    enable_border=enable_white_border,
+                                    enable_rounded=enable_rounded_corners,
+                                    enable_shadow=enable_shadow_effect,
+                                    shadow_size=shadow_strength
+                                )
                                 y_pos = padding + i * (third_height + gap)
-                                collage.paste(shadowed_small, (padding + big_width + gap, y_pos), shadowed_small)
+                                collage.paste(styled_small, (padding + big_width + gap, y_pos), styled_small)
                             
                             # Teksto kvadratas apačioje
                             text_box = create_text_box(
@@ -1391,15 +1427,27 @@ if files_to_process:
                         img1 = edited_images[0].resize((half_width - gap, half_height - gap), Image.Resampling.LANCZOS)
                         if img1.mode != 'RGBA':
                             img1 = img1.convert('RGBA')
-                        shadowed1 = add_modern_shadow(img1, shadow_size=10, shadow_blur=20)
-                        collage.paste(shadowed1, (padding, padding), shadowed1)
+                        styled1 = add_photo_effects(
+                            img1,
+                            enable_border=enable_white_border,
+                            enable_rounded=enable_rounded_corners,
+                            enable_shadow=enable_shadow_effect,
+                            shadow_size=shadow_strength
+                        )
+                        collage.paste(styled1, (padding, padding), styled1)
                         
                         # Nuotrauka 2 (viršuje dešinėje - didelė)
                         img2 = edited_images[1].resize((half_width - gap, content_height), Image.Resampling.LANCZOS)
                         if img2.mode != 'RGBA':
                             img2 = img2.convert('RGBA')
-                        shadowed2 = add_modern_shadow(img2, shadow_size=10, shadow_blur=20)
-                        collage.paste(shadowed2, (padding + half_width + gap, padding), shadowed2)
+                        styled2 = add_photo_effects(
+                            img2,
+                            enable_border=enable_white_border,
+                            enable_rounded=enable_rounded_corners,
+                            enable_shadow=enable_shadow_effect,
+                            shadow_size=shadow_strength
+                        )
+                        collage.paste(styled2, (padding + half_width + gap, padding), styled2)
                         
                         # Teksto kvadratas (apačioje kairėje)
                         text_box = create_text_box(
@@ -1422,8 +1470,14 @@ if files_to_process:
                         img_big = edited_images[0].resize((big_size, big_size), Image.Resampling.LANCZOS)
                         if img_big.mode != 'RGBA':
                             img_big = img_big.convert('RGBA')
-                        shadowed_big = add_modern_shadow(img_big, shadow_size=15, shadow_blur=25)
-                        collage.paste(shadowed_big, (padding, padding), shadowed_big)
+                        styled_big = add_photo_effects(
+                            img_big,
+                            enable_border=enable_white_border,
+                            enable_rounded=enable_rounded_corners,
+                            enable_shadow=enable_shadow_effect,
+                            shadow_size=shadow_strength
+                        )
+                        collage.paste(styled_big, (padding, padding), styled_big)
                         
                         # 2 mažos nuotraukos dešinėje viršuje
                         small_size = (content_width - big_size - gap * 2) // 2
@@ -1431,9 +1485,15 @@ if files_to_process:
                             img_small = edited_images[i + 1].resize((small_size, small_size), Image.Resampling.LANCZOS)
                             if img_small.mode != 'RGBA':
                                 img_small = img_small.convert('RGBA')
-                            shadowed_small = add_modern_shadow(img_small, shadow_size=10, shadow_blur=20)
+                            styled_small = add_photo_effects(
+                                img_small,
+                                enable_border=enable_white_border,
+                                enable_rounded=enable_rounded_corners,
+                                enable_shadow=enable_shadow_effect,
+                                shadow_size=shadow_strength
+                            )
                             x_pos = padding + big_size + gap + i * (small_size + gap)
-                            collage.paste(shadowed_small, (x_pos, padding), shadowed_small)
+                            collage.paste(styled_small, (x_pos, padding), styled_small)
                         
                         # Teksto kvadratas apačioje dešinėje
                         text_width = content_width - big_size - gap
