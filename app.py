@@ -333,18 +333,22 @@ def image_to_base64(image_file):
     image_file.seek(0)
     return base64.b64encode(image_file.read()).decode()
 
-def generate_themed_background(season, canvas_width, canvas_height):
-    """Generuoja tematinį foną pagal sezoną naudojant AI (DALL-E)"""
+def generate_themed_background(season, canvas_width, canvas_height, custom_prompt=""):
+    """Generuoja tematinį foną pagal sezoną arba custom prompt naudojant AI (DALL-E)"""
     try:
-        # Teminės nuotraukos promptai pagal sezoną
-        prompts = {
-            "Pavasaris": "soft spring background with blooming flowers, cherry blossoms, pastel colors, gentle bokeh effect, professional photography, high resolution, peaceful atmosphere",
-            "Vasara": "bright summer background with green grass meadow, blue sky, sunshine, vibrant colors, professional photography, high resolution, fresh atmosphere",
-            "Ruduo": "warm autumn background with colorful falling leaves, orange and golden tones, cozy atmosphere, professional photography, high resolution",
-            "Žiema": "winter background with soft snow, snowflakes, cool blue and white tones, peaceful atmosphere, professional photography, high resolution"
-        }
-        
-        prompt = prompts.get(season, prompts["Vasara"])
+        # Jei yra custom prompt, naudojame jį
+        if custom_prompt and custom_prompt.strip():
+            prompt = f"{custom_prompt}, professional photography, high resolution, aesthetic background, suitable for social media"
+        else:
+            # Teminės nuotraukos promptai pagal sezoną
+            prompts = {
+                "Pavasaris": "soft spring background with blooming flowers, cherry blossoms, pastel colors, gentle bokeh effect, professional photography, high resolution, peaceful atmosphere",
+                "Vasara": "bright summer background with green grass meadow, blue sky, sunshine, vibrant colors, professional photography, high resolution, fresh atmosphere",
+                "Ruduo": "warm autumn background with colorful falling leaves, orange and golden tones, cozy atmosphere, professional photography, high resolution",
+                "Žiema": "winter background with soft snow, snowflakes, cool blue and white tones, peaceful atmosphere, professional photography, high resolution"
+            }
+            
+            prompt = prompts.get(season, prompts["Vasara"])
         
         # Generuojame nuotrauką su DALL-E 3
         response = client.images.generate(
@@ -775,20 +779,48 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
 
-season = st.sidebar.selectbox(
-    "🌤️ Metų laikas",
-    ["Pavasaris", "Vasara", "Ruduo", "Žiema"],
-    index=1
+# AI Fono generavimo tipas
+background_type = st.sidebar.radio(
+    "🎨 AI Fono tipas",
+    ["🌤️ Metų laikas", "🎉 Šventė", "✍️ Custom AI Prompt"],
+    index=0,
+    help="Pasirinkite kaip sugeneruoti foną: pagal metų laiką, šventę arba savo aprašymą"
 )
 
-holiday = st.sidebar.selectbox(
-    "🎉 Lietuviškos šventės (pasirinktinai)",
-    ["Nėra", "Naujieji metai", "Šv. Valentino diena", "Vasario 16-oji", "Kovo 11-oji", 
-     "Velykos", "Gegužės 1-oji (Darbo diena)", "Motinos diena", "Tėvo diena", 
-     "Joninės", "Liepos 6-oji (Karaliaus Mindaugo diena)", "Žolinė", "Rugsėjo 1-oji", 
-     "Šv. Kalėdos", "Kūčios"],
-    index=0
-)
+# Metų laikas
+if background_type == "🌤️ Metų laikas":
+    season = st.sidebar.selectbox(
+        "Pasirinkite sezoną",
+        ["Pavasaris", "Vasara", "Ruduo", "Žiema"],
+        index=1
+    )
+    holiday = "Nėra"
+    custom_prompt = ""
+
+# Šventė
+elif background_type == "🎉 Šventė":
+    season = "Vasara"  # default
+    holiday = st.sidebar.selectbox(
+        "Pasirinkite šventę",
+        ["Naujieji metai", "Šv. Valentino diena", "Vasario 16-oji", "Kovo 11-oji", 
+         "Velykos", "Gegužės 1-oji (Darbo diena)", "Motinos diena", "Tėvo diena", 
+         "Joninės", "Liepos 6-oji (Karaliaus Mindaugo diena)", "Žolinė", "Rugsėjo 1-oji", 
+         "Šv. Kalėdos", "Kūčios"],
+        index=0
+    )
+    custom_prompt = ""
+
+# Custom AI Prompt
+else:  # "✍️ Custom AI Prompt"
+    season = "Vasara"  # default
+    holiday = "Nėra"
+    custom_prompt = st.sidebar.text_area(
+        "✍️ Aprašykite norimą foną",
+        value="",
+        placeholder="Pvz: medziai rugiai pieva, kviečiai ir medžio tekstūra, jūra saulėlydis, kalnų peizažas su gėlėmis...",
+        help="AI sugeneruos foną pagal jūsų aprašymą",
+        height=100
+    )
 
 auto_process = st.sidebar.checkbox("🤖 Automatinis apdorojimas", value=True)
 
@@ -1076,13 +1108,16 @@ if files_to_process:
         use_themed_bg = st.checkbox(
             "🖼️ Naudoti AI tematinį foną",
             value=True,
-            help="AI sugeneruotas sezoninis fonas bus matomas aplink nuotraukas"
+            help="AI sugeneruotas fonas bus matomas aplink nuotraukas"
         )
         
         if use_themed_bg:
-            st.info(f"✨ **{season}** tematinis fonas bus matomas aplink nuotraukas (padding efektas)")
-        if use_themed_bg:
-            st.info(f"✨ **{season}** tematinis fonas bus matomas aplink nuotraukas (padding efektas)")
+            if custom_prompt and custom_prompt.strip():
+                st.info(f"✨ **Custom AI** fonas: '{custom_prompt[:50]}...' bus sugeneruotas aplink nuotraukas")
+            elif holiday != "Nėra":
+                st.info(f"✨ **{holiday}** tematinis fonas bus matomas aplink nuotraukas")
+            else:
+                st.info(f"✨ **{season}** tematinis fonas bus matomas aplink nuotraukas")
         
         # NAUJAS: Teksto turinys (VISADA ĮJUNGTAS dabar, nes tekstas = dalis layout'o)
         st.markdown("---")
@@ -1156,7 +1191,7 @@ if files_to_process:
                     
                     # Sukuriame foną (AI arba gradientą)
                     if use_themed_bg:
-                        themed_bg = generate_themed_background(season, canvas_width, canvas_height)
+                        themed_bg = generate_themed_background(season, canvas_width, canvas_height, custom_prompt)
                         if themed_bg:
                             collage = themed_bg
                         else:
@@ -1201,7 +1236,7 @@ if files_to_process:
                             cell_y = padding + row * (cell_size + gap)
                             
                             if idx < num_photos:
-                                # Nuotrauka - CROP vietoj resize!
+                                # Nuotrauka - automatinis crop
                                 original_img = edited_images[idx]
                                 
                                 # Apskaičiuojame crop (centruota)
