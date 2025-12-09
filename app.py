@@ -399,15 +399,18 @@ def create_gradient_background(width, height, color1, color2, direction='vertica
     
     return gradient
 
-def add_modern_shadow(img, shadow_size=20, shadow_blur=30, shadow_color=(0, 0, 0, 80)):
+def add_modern_shadow(img, shadow_size=20, shadow_blur=30, shadow_color=(0, 0, 0, 120)):
     """Prideda modernų šešėlį nuotraukai (drop shadow efektas - offset žemyn ir dešinėn)"""
     # Offset šešėliui (žemyn ir dešinėn)
     offset_x = shadow_size
     offset_y = shadow_size
     
+    # Blur negali būti per didelis - ribojame
+    shadow_blur = min(shadow_blur, shadow_size + 5)
+    
     # Sukuriame naują paveikslėlį su vieta šešėliui
-    total_width = img.width + offset_x + shadow_blur
-    total_height = img.height + offset_y + shadow_blur
+    total_width = img.width + offset_x + shadow_blur * 2
+    total_height = img.height + offset_y + shadow_blur * 2
     
     # Sukuriame šešėlio sluoksnį
     shadow = Image.new('RGBA', (total_width, total_height), (255, 255, 255, 0))
@@ -415,8 +418,8 @@ def add_modern_shadow(img, shadow_size=20, shadow_blur=30, shadow_color=(0, 0, 0
     
     # Piešiame šešėlį (offset pozicijoje)
     shadow_draw.rectangle(
-        [offset_x, offset_y, 
-         img.width + offset_x, img.height + offset_y],
+        [offset_x + shadow_blur, offset_y + shadow_blur, 
+         img.width + offset_x + shadow_blur, img.height + offset_y + shadow_blur],
         fill=shadow_color
     )
     
@@ -430,7 +433,7 @@ def add_modern_shadow(img, shadow_size=20, shadow_blur=30, shadow_color=(0, 0, 0
     # Sukuriame galutinį paveikslėlį
     result = Image.new('RGBA', (total_width, total_height), (255, 255, 255, 0))
     result.paste(shadow, (0, 0), shadow)
-    result.paste(img, (0, 0), img)  # Nuotrauka viršuje kairėje
+    result.paste(img, (shadow_blur, shadow_blur), img)  # Nuotrauka su blur offset
     
     return result
 
@@ -486,7 +489,9 @@ def add_photo_effects(img, enable_border=True, border_width=15, enable_rounded=T
     
     # 3. Šešėlis (3D efektas)
     if enable_shadow:
-        result = add_modern_shadow(result, shadow_size=shadow_size, shadow_blur=shadow_blur)
+        # Blur yra proporcingas shadow_size (bet ne per didelis)
+        calculated_blur = min(shadow_size + 5, 15)
+        result = add_modern_shadow(result, shadow_size=shadow_size, shadow_blur=calculated_blur)
     
     return result
 
