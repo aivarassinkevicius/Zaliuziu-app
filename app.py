@@ -399,14 +399,27 @@ def create_gradient_background(width, height, color1, color2, direction='vertica
     
     return gradient
 
-def add_modern_shadow(img, shadow_size=20, shadow_blur=30, shadow_color=(0, 0, 0, 120)):
-    """Prideda modernų šešėlį nuotraukai (drop shadow efektas - offset žemyn ir dešinėn)"""
-    # Offset šešėliui (žemyn ir dešinėn)
-    offset_x = shadow_size
-    offset_y = shadow_size
+def add_modern_shadow(img, shadow_strength=50, shadow_offset=15):
+    """Prideda modernų šešėlį nuotraukai (drop shadow efektas - offset žemyn ir dešinėn)
     
-    # Blur negali būti per didelis - ribojame
-    shadow_blur = min(shadow_blur, shadow_size + 5)
+    Args:
+        img: Nuotrauka
+        shadow_strength: 0-100, kur 0=nematomas, 100=juodas, 50=vidutinis
+        shadow_offset: Offset dydis px (žemyn ir dešinėn)
+    """
+    if shadow_strength == 0:
+        return img
+    
+    # Konvertuojame strength (0-100) į opacity (0-255)
+    shadow_opacity = int((shadow_strength / 100) * 255)
+    shadow_color = (0, 0, 0, shadow_opacity)
+    
+    # Offset šešėliui (žemyn ir dešinėn)
+    offset_x = shadow_offset
+    offset_y = shadow_offset
+    
+    # Blur proporcingas offset'ui
+    shadow_blur = min(shadow_offset + 5, 20)
     
     # Sukuriame naują paveikslėlį su vieta šešėliui
     total_width = img.width + offset_x + shadow_blur * 2
@@ -469,8 +482,12 @@ def add_white_border(img, border_width=10):
     return bordered
 
 def add_photo_effects(img, enable_border=True, border_width=15, enable_rounded=True, corner_radius=20, 
-                      enable_shadow=True, shadow_size=15, shadow_blur=25):
-    """Prideda visus foto efektus: rėmelį, užapvalintus kampus, šešėlį"""
+                      enable_shadow=True, shadow_strength=50):
+    """Prideda visus foto efektus: rėmelį, užapvalintus kampus, šešėlį
+    
+    Args:
+        shadow_strength: 0-100, kur 0=nematomas, 100=juodas, 50=vidutinis
+    """
     result = img.copy()
     
     if img.mode != 'RGBA':
@@ -488,10 +505,8 @@ def add_photo_effects(img, enable_border=True, border_width=15, enable_rounded=T
             result = add_rounded_corners(result, radius=corner_radius + border_width)
     
     # 3. Šešėlis (3D efektas)
-    if enable_shadow:
-        # Blur yra proporcingas shadow_size (bet ne per didelis)
-        calculated_blur = min(shadow_size + 5, 15)
-        result = add_modern_shadow(result, shadow_size=shadow_size, shadow_blur=calculated_blur)
+    if enable_shadow and shadow_strength > 0:
+        result = add_modern_shadow(result, shadow_strength=shadow_strength, shadow_offset=15)
     
     return result
 
@@ -1144,7 +1159,7 @@ if files_to_process:
         
         with col_fx2:
             enable_shadow_effect = st.checkbox("🌑 Šešėlio efektas", value=True, help="3D šešėlis (drop shadow)")
-            shadow_strength = st.slider("Šešėlio stiprumas:", 5, 30, 15, 5, help="Šešėlio dydis px") if enable_shadow_effect else 0
+            shadow_strength = st.slider("Šešėlio stiprumas:", 0, 100, 50, 5, help="0 = nematomas, 100 = juodas") if enable_shadow_effect else 0
         
         st.markdown("---")
         
@@ -1255,8 +1270,7 @@ if files_to_process:
                                     enable_rounded=enable_rounded_corners,
                                     corner_radius=25,
                                     enable_shadow=enable_shadow_effect,
-                                    shadow_size=shadow_strength,
-                                    shadow_blur=shadow_strength * 2
+                                    shadow_strength=shadow_strength
                                 )
                                 
                                 # Centruojame nuotrauką ląstelėje
@@ -1281,8 +1295,7 @@ if files_to_process:
                                     enable_rounded=enable_rounded_corners,
                                     corner_radius=25,
                                     enable_shadow=enable_shadow_effect,
-                                    shadow_size=shadow_strength,
-                                    shadow_blur=shadow_strength * 2
+                                    shadow_strength=shadow_strength
                                 )
                                 
                                 # Centruojame tekstą ląstelėje
@@ -1306,7 +1319,7 @@ if files_to_process:
                             enable_border=enable_white_border,
                             enable_rounded=enable_rounded_corners,
                             enable_shadow=enable_shadow_effect,
-                            shadow_size=shadow_strength
+                            shadow_strength=shadow_strength
                         )
                         collage.paste(styled1, (padding, padding), styled1)
                         
@@ -1318,7 +1331,7 @@ if files_to_process:
                             style=collage_style,
                             font_size=text_font_size
                         )
-                        shadowed_text = add_modern_shadow(text_box, shadow_size=10, shadow_blur=20)
+                        shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
                         collage.paste(shadowed_text, (padding + cell_width + gap, padding), shadowed_text)
                         
                         # Nuotrauka 2 (dešinėje)
@@ -1330,7 +1343,7 @@ if files_to_process:
                             enable_border=enable_white_border,
                             enable_rounded=enable_rounded_corners,
                             enable_shadow=enable_shadow_effect,
-                            shadow_size=shadow_strength
+                            shadow_strength=shadow_strength
                         )
                         collage.paste(styled2, (padding + cell_width * 2 + gap * 2, padding), styled2)
                     
@@ -1352,7 +1365,7 @@ if files_to_process:
                                 enable_border=enable_white_border,
                                 enable_rounded=enable_rounded_corners,
                                 enable_shadow=enable_shadow_effect,
-                                shadow_size=shadow_strength
+                                shadow_strength=shadow_strength
                             )
                             collage.paste(styled_big, (padding, padding), styled_big)
                             
@@ -1365,7 +1378,7 @@ if files_to_process:
                                 enable_border=enable_white_border,
                                 enable_rounded=enable_rounded_corners,
                                 enable_shadow=enable_shadow_effect,
-                                shadow_size=shadow_strength
+                                shadow_strength=shadow_strength
                             )
                             collage.paste(styled_small, (padding + big_width + gap, padding), styled_small)
                             
@@ -1377,7 +1390,7 @@ if files_to_process:
                                 style=collage_style,
                                 font_size=text_font_size
                             )
-                            shadowed_text = add_modern_shadow(text_box, shadow_size=10, shadow_blur=20)
+                            shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
                             collage.paste(shadowed_text, (padding + big_width + gap, padding + half_height + gap), shadowed_text)
                         
                         elif num_photos == 3:
@@ -1396,7 +1409,7 @@ if files_to_process:
                                 enable_border=enable_white_border,
                                 enable_rounded=enable_rounded_corners,
                                 enable_shadow=enable_shadow_effect,
-                                shadow_size=shadow_strength
+                                shadow_strength=shadow_strength
                             )
                             collage.paste(styled_big, (padding, padding), styled_big)
                             
@@ -1410,7 +1423,7 @@ if files_to_process:
                                     enable_border=enable_white_border,
                                     enable_rounded=enable_rounded_corners,
                                     enable_shadow=enable_shadow_effect,
-                                    shadow_size=shadow_strength
+                                    shadow_strength=shadow_strength
                                 )
                                 y_pos = padding + i * (third_height + gap)
                                 collage.paste(styled_small, (padding + big_width + gap, y_pos), styled_small)
@@ -1423,7 +1436,7 @@ if files_to_process:
                                 style=collage_style,
                                 font_size=text_font_size
                             )
-                            shadowed_text = add_modern_shadow(text_box, shadow_size=10, shadow_blur=20)
+                            shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
                             collage.paste(shadowed_text, (padding + big_width + gap, padding + third_height * 2 + gap * 2), shadowed_text)
                     
                     # ============ MAGAZINE LAYOUT ============
@@ -1441,7 +1454,7 @@ if files_to_process:
                             enable_border=enable_white_border,
                             enable_rounded=enable_rounded_corners,
                             enable_shadow=enable_shadow_effect,
-                            shadow_size=shadow_strength
+                            shadow_strength=shadow_strength
                         )
                         collage.paste(styled1, (padding, padding), styled1)
                         
@@ -1454,7 +1467,7 @@ if files_to_process:
                             enable_border=enable_white_border,
                             enable_rounded=enable_rounded_corners,
                             enable_shadow=enable_shadow_effect,
-                            shadow_size=shadow_strength
+                            shadow_strength=shadow_strength
                         )
                         collage.paste(styled2, (padding + half_width + gap, padding), styled2)
                         
@@ -1466,7 +1479,7 @@ if files_to_process:
                             style=collage_style,
                             font_size=text_font_size - 10
                         )
-                        shadowed_text = add_modern_shadow(text_box, shadow_size=10, shadow_blur=20)
+                        shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
                         collage.paste(shadowed_text, (padding, padding + half_height + gap), shadowed_text)
                     
                     # ============ MOSAIC LAYOUT (4 nuotraukos) ============
@@ -1484,7 +1497,7 @@ if files_to_process:
                             enable_border=enable_white_border,
                             enable_rounded=enable_rounded_corners,
                             enable_shadow=enable_shadow_effect,
-                            shadow_size=shadow_strength
+                            shadow_strength=shadow_strength
                         )
                         collage.paste(styled_big, (padding, padding), styled_big)
                         
@@ -1499,7 +1512,7 @@ if files_to_process:
                                 enable_border=enable_white_border,
                                 enable_rounded=enable_rounded_corners,
                                 enable_shadow=enable_shadow_effect,
-                                shadow_size=shadow_strength
+                                shadow_strength=shadow_strength
                             )
                             x_pos = padding + big_size + gap + i * (small_size + gap)
                             collage.paste(styled_small, (x_pos, padding), styled_small)
@@ -1514,7 +1527,7 @@ if files_to_process:
                             style=collage_style,
                             font_size=text_font_size
                         )
-                        shadowed_text = add_modern_shadow(text_box, shadow_size=10, shadow_blur=20)
+                        shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
                         collage.paste(shadowed_text, (padding + big_size + gap, padding + small_size + gap), shadowed_text)
                         
                         # 1 nuotrauka apačioje kairėje
@@ -1523,7 +1536,7 @@ if files_to_process:
                             img_bottom = edited_images[3].resize((big_size, bottom_size), Image.Resampling.LANCZOS)
                             if img_bottom.mode != 'RGBA':
                                 img_bottom = img_bottom.convert('RGBA')
-                            shadowed_bottom = add_modern_shadow(img_bottom, shadow_size=10, shadow_blur=20)
+                            shadowed_bottom = add_modern_shadow(img_bottom, shadow_strength=50, shadow_offset=10)
                             collage.paste(shadowed_bottom, (padding, padding + big_size + gap), shadowed_bottom)
                     
                     # Konvertuojame į RGB
@@ -1672,3 +1685,5 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
 # Footer
 st.markdown("---")
 st.markdown("🌿 *Sukūrta žaliuzių ir roletų verslui* | Powered by OpenAI")
+
+
