@@ -134,6 +134,80 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
         img.save(output, format='JPEG', quality=98, optimize=False)
         output.seek(0)
         return output
+    except Exception as e:
+        st.error(f"Klaida redaguojant nuotrauką: {str(e)}")
+        return None
+
+def remove_white_background(img, threshold=240):
+    """Pašalina baltą foną iš logo ir padaro jį skaidrų"""
+    # Konvertuojame į RGBA
+    img = img.convert('RGBA')
+    
+    # Gauname pikselių duomenis
+    pixels = img.load()
+    width, height = img.size
+    
+    # Pakeičiame baltus pikselius į skaidrius
+    for y in range(height):
+        for x in range(width):
+            r, g, b, a = pixels[x, y]
+            # Jei pikselis baltesnis už threshold - darome skaidrų
+            if r > threshold and g > threshold and b > threshold:
+                pixels[x, y] = (r, g, b, 0)  # Alpha = 0 (skaidrus)
+    
+    return img
+
+def add_logo_to_image(img, logo_file, logo_size=100, position='top-left'):
+    """Prideda logo prie nuotraukos viršutiniame kairiame kampe
+    
+    Args:
+        img: PIL Image objektas (collage)
+        logo_file: Uploaded logo file
+        logo_size: Logo dydis px (aukštis)
+        position: 'top-left', 'top-right', 'bottom-left', 'bottom-right'
+    """
+    try:
+        # Įkeliame logo
+        logo = Image.open(logo_file)
+        
+        # Pašaliname baltą foną
+        logo = remove_white_background(logo)
+        
+        # Resize logo išlaikant proporcijas
+        aspect_ratio = logo.width / logo.height
+        new_height = logo_size
+        new_width = int(logo_size * aspect_ratio)
+        logo = logo.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Konvertuojame img į RGBA jei reikia
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        
+        # Apskaičiuojame poziciją
+        padding = 20  # Atitraukimas nuo krašto
+        
+        if position == 'top-left':
+            x, y = padding, padding
+        elif position == 'top-right':
+            x = img.width - logo.width - padding
+            y = padding
+        elif position == 'bottom-left':
+            x = padding
+            y = img.height - logo.height - padding
+        elif position == 'bottom-right':
+            x = img.width - logo.width - padding
+            y = img.height - logo.height - padding
+        else:
+            x, y = padding, padding
+        
+        # Priklijuojame logo
+        img.paste(logo, (x, y), logo)  # Logo kaip mask - skaidrumas išlieka
+        
+        return img
+    except Exception as e:
+        st.error(f"Klaida pridedant logo: {str(e)}")
+        return img
+        return output
         
     except Exception as e:
         st.error(f"Klaida redaguojant nuotrauką: {e}")
@@ -837,6 +911,18 @@ else:
 
 add_border = st.sidebar.checkbox("🖼️ Pridėti baltą rėmelį", value=False)
 
+# Logo nustatymai
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🏢 Įmonės Logo")
+
+add_logo = st.sidebar.checkbox("📌 Pridėti logo", value=False, help="Pridės logo viršutiniame kairiame kampe (be balto fono)")
+if add_logo:
+    logo_file = st.sidebar.file_uploader("Įkelkite logo (PNG, JPG)", type=['png', 'jpg', 'jpeg'], help="Baltas fonas bus automatiškai pašalintas")
+    logo_size = st.sidebar.slider("📏 Logo dydis (px)", 50, 200, 100, 10, help="Logo aukštis pikseliais")
+else:
+    logo_file = None
+    logo_size = 100
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("**🤖 Automatinė optimizacija**")
 auto_enhance = st.sidebar.checkbox("✨ AUTO spalvų optimizacija", value=True, help="Automatiškai pagerina šviesumą, kontrastą ir sodrumo")
@@ -1539,6 +1625,10 @@ if files_to_process:
                                 img_bottom = img_bottom.convert('RGBA')
                             shadowed_bottom = add_modern_shadow(img_bottom, shadow_strength=50, shadow_offset=10)
                             collage.paste(shadowed_bottom, (padding, padding + big_size + gap), shadowed_bottom)
+                    
+                    # Pridedame logo (jei įjungtas)
+                    if add_logo and logo_file:
+                        collage = add_logo_to_image(collage, logo_file, logo_size=logo_size, position='top-left')
                     
                     # Konvertuojame į RGB
                     collage = collage.convert('RGB')
