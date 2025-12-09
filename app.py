@@ -400,19 +400,23 @@ def create_gradient_background(width, height, color1, color2, direction='vertica
     return gradient
 
 def add_modern_shadow(img, shadow_size=20, shadow_blur=30, shadow_color=(0, 0, 0, 80)):
-    """Prideda modernų šešėlį nuotraukai (drop shadow efektas)"""
+    """Prideda modernų šešėlį nuotraukai (drop shadow efektas - offset žemyn ir dešinėn)"""
+    # Offset šešėliui (žemyn ir dešinėn)
+    offset_x = shadow_size
+    offset_y = shadow_size
+    
     # Sukuriame naują paveikslėlį su vieta šešėliui
-    total_width = img.width + shadow_size * 2
-    total_height = img.height + shadow_size * 2
+    total_width = img.width + offset_x + shadow_blur
+    total_height = img.height + offset_y + shadow_blur
     
     # Sukuriame šešėlio sluoksnį
     shadow = Image.new('RGBA', (total_width, total_height), (255, 255, 255, 0))
     shadow_draw = ImageDraw.Draw(shadow)
     
-    # Piešiame šešėlį
+    # Piešiame šešėlį (offset pozicijoje)
     shadow_draw.rectangle(
-        [shadow_size + 5, shadow_size + 5, 
-         total_width - shadow_size + 5, total_height - shadow_size + 5],
+        [offset_x, offset_y, 
+         img.width + offset_x, img.height + offset_y],
         fill=shadow_color
     )
     
@@ -426,7 +430,7 @@ def add_modern_shadow(img, shadow_size=20, shadow_blur=30, shadow_color=(0, 0, 0
     # Sukuriame galutinį paveikslėlį
     result = Image.new('RGBA', (total_width, total_height), (255, 255, 255, 0))
     result.paste(shadow, (0, 0), shadow)
-    result.paste(img, (shadow_size, shadow_size), img)
+    result.paste(img, (0, 0), img)  # Nuotrauka viršuje kairėje
     
     return result
 
