@@ -816,7 +816,6 @@ if use_custom_background:
         help="AI sugeneruos foną pagal šį aprašymą",
         height=100
     )
-    st.sidebar.info("ℹ️ Turinio aprašymai vis tiek naudos metų laiką ir šventes")
 
 auto_process = st.sidebar.checkbox("🤖 Automatinis apdorojimas", value=True)
 
