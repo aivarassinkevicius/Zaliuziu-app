@@ -784,7 +784,7 @@ season = st.sidebar.selectbox(
     "🌤️ Metų laikas",
     ["Pavasaris", "Vasara", "Ruduo", "Žiema"],
     index=1,
-    help="AI turinio aprašymams ir fonui (jei nenaudoji custom)"
+    help="AI turinio aprašymams ir fonui"
 )
 
 # Šventė (papildomas)
@@ -797,25 +797,6 @@ holiday = st.sidebar.selectbox(
     index=0,
     help="Papildoma tema turinio aprašymams ir fonui"
 )
-
-st.sidebar.markdown("---")
-
-# Custom AI Fono Prompt (papildomas)
-use_custom_background = st.sidebar.checkbox(
-    "✍️ Naudoti Custom AI Foną",
-    value=False,
-    help="Jei įjungta, AI sukurs foną pagal tavo aprašymą (ignoruos metų laiką/šventę fonui)"
-)
-
-custom_prompt = ""
-if use_custom_background:
-    custom_prompt = st.sidebar.text_area(
-        "Aprašykite norimą foną:",
-        value="",
-        placeholder="Pvz: medžiai rugiai pieva, kviečiai ir medžio tekstūra, jūra saulėlydis...",
-        help="AI sugeneruos foną pagal šį aprašymą",
-        height=100
-    )
 
 auto_process = st.sidebar.checkbox("🤖 Automatinis apdorojimas", value=True)
 
@@ -1099,21 +1080,37 @@ if files_to_process:
             help="Layout su integruotu teksto kvadratu (ne overlay!)"
         )
         
-        # Tematinio fono pasirinkimas (VISADA ĮJUNGTAS dabar)
+        # AI Fono generavimas
         use_themed_bg = st.checkbox(
             "🖼️ Naudoti AI tematinį foną",
-            value=True,
-            help="AI sugeneruotas fonas bus matomas aplink nuotraukas"
+            value=False,
+            help="AI sugeneruos foną pagal metų laiką/šventę arba tavo aprašymą"
         )
         
+        custom_prompt = ""
         if use_themed_bg:
+            use_custom_background = st.checkbox(
+                "✍️ Naudoti Custom AI Prompt fonui",
+                value=False,
+                help="Aprašyk foną savo žodžiais (pvz: 'medžiai rugiai pieva')"
+            )
+            
+            if use_custom_background:
+                custom_prompt = st.text_area(
+                    "Aprašykite norimą foną:",
+                    value="",
+                    placeholder="Pvz: medžiai rugiai pieva, kviečiai ir medžio tekstūra, jūra saulėlydis...",
+                    help="AI (DALL-E 3) sugeneruos foną pagal šį aprašymą",
+                    height=80
+                )
+            
+            # Info pranešimas
             if use_custom_background and custom_prompt and custom_prompt.strip():
                 st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
-                st.caption(f"📝 Turinio aprašymams: {season}" + (f" + {holiday}" if holiday != "Nėra" else ""))
             elif holiday != "Nėra":
-                st.info(f"✨ **{holiday}** + **{season}** tematinis fonas ir turinys")
+                st.info(f"✨ **{holiday}** + **{season}** tematinis fonas")
             else:
-                st.info(f"✨ **{season}** tematinis fonas ir turinys")
+                st.info(f"✨ **{season}** tematinis fonas")
         
         # NAUJAS: Teksto turinys (VISADA ĮJUNGTAS dabar, nes tekstas = dalis layout'o)
         st.markdown("---")
