@@ -1644,7 +1644,31 @@ if files_to_process:
     if "collage_result" in st.session_state and st.session_state.collage_result:
         st.markdown("---")
         st.markdown("### ✅ Sukurtas Collage")
-        st.image(st.session_state.collage_result, caption="Jūsų Collage", use_container_width=True)
+        
+        # Initialize session state for full size view
+        if "show_full_collage" not in st.session_state:
+            st.session_state.show_full_collage = False
+        
+        # Toggle button
+        col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
+        with col_btn2:
+            if st.button("👁️ Peržiūrėti pilną dydį" if not st.session_state.show_full_collage else "📱 Sumažinti peržiūrą", 
+                        use_container_width=True, 
+                        key="toggle_collage_view"):
+                st.session_state.show_full_collage = not st.session_state.show_full_collage
+                st.rerun()
+        
+        # Display collage based on view mode
+        if st.session_state.show_full_collage:
+            # Full size - centered with max width
+            col1, col2, col3 = st.columns([1, 4, 1])
+            with col2:
+                st.image(st.session_state.collage_result, caption="Pilnas dydis", use_column_width=True)
+        else:
+            # Thumbnail preview - limited width
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                st.image(st.session_state.collage_result, caption="Peržiūra (spauskite mygtuką pilnam dydžiui)", use_column_width=True)
         
         st.download_button(
             label="📥 Atsisiųsti Collage",
