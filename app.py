@@ -1,5 +1,6 @@
 import streamlit as st
-import io, os, base64
+import io, os, base64, json
+from datetime import datetime
 from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
@@ -279,6 +280,49 @@ def add_logo_to_image(img, logo_path='assets/logo.png', logo_size=100, position=
         st.error(traceback.format_exc())
         image_file.seek(0)
         return image_file
+
+# ---------- JSON Duomenų bazė ----------
+
+HISTORY_FILE = "data/history.json"
+
+def load_history():
+    """Įkelia aprašymų istoriją iš JSON failo"""
+    try:
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return []
+    except Exception as e:
+        st.warning(f"Nepavyko įkelti istorijos: {e}")
+        return []
+
+def save_to_history(description, season, holiday, num_photos):
+    """Išsaugo aprašymą į JSON istoriją"""
+    try:
+        history = load_history()
+        
+        entry = {
+            "id": len(history) + 1,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "description": description,
+            "season": season,
+            "holiday": holiday,
+            "num_photos": num_photos
+        }
+        
+        history.insert(0, entry)  # Naujausi viršuje
+        
+        # Saugom tik paskutinius 50 įrašų
+        history = history[:50]
+        
+        os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        
+        return True
+    except Exception as e:
+        st.error(f"Nepavyko išsaugoti į istoriją: {e}")
+        return False
 
 def analyze_image(image_bytes):
     """Naudoja GPT-4o-mini vaizdo analizei su konkrečiu produktų atpažinimu"""
@@ -846,12 +890,12 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
     text_box = Image.new('RGBA', (width, height), (255, 255, 255, 0))
     draw = ImageDraw.Draw(text_box)
     
-    # Fontų paieška
+    # Fontų paieška - Times New Roman
     font = None
     font_paths = [
+        "C:/Windows/Fonts/timesbd.ttf",   # Times New Roman Bold
+        "C:/Windows/Fonts/times.ttf",     # Times New Roman
         "C:/Windows/Fonts/arialbd.ttf",
-        "C:/Windows/Fonts/calibrib.ttf",
-        "C:/Windows/Fonts/ariblk.ttf",
         "C:/Windows/Fonts/arial.ttf",
     ]
     
@@ -1172,8 +1216,8 @@ if files_to_process:
             )
             edited.seek(0)
             
-            # Rodyti peržiūrą
-            st.image(edited, caption=f"Nuotrauka {i+1}", use_container_width=True)
+            # Rodyti peržiūrą (sumažinta)
+            st.image(edited, caption=f"Nuotrauka {i+1}", width=400)
             
             # Download mygtukas kiekvienai nuotraukai
             filename = getattr(file, 'name', f'nuotrauka_{i+1}.jpg')
@@ -1811,8 +1855,30 @@ if files_to_process:
     st.markdown("### 📝 AI Turinio Generavimas")
     st.info("💡 Sukurkite tekstus socialiniams tinklams pagal jūsų nuotraukas")
     
+    # 📚 ISTORIJA - Senesnių aprašymų rodymas
+    history = load_history()
+    if history and len(history) > 0:
+        with st.expander(f"📚 Aprašymų istorija ({len(history)} išsaugotų)", expanded=False):
+            st.caption("Pasirinkite senesnį aprašymą arba sukurkite naują")
+            
+            for entry in history[:10]:  # Rodome tik 10 naujausių
+                col1, col2 = st.columns([4, 1])
+                
+                with col1:
+                    st.markdown(f"**{entry['timestamp']}** - {entry['season']}, {entry['num_photos']} nuotr.")
+                    preview = entry['description'][:150] + "..." if len(entry['description']) > 150 else entry['description']
+                    st.text(preview)
+                
+                with col2:
+                    if st.button("📋 Naudoti", key=f"use_history_{entry['id']}"):
+                        st.session_state.ai_content_result = entry['description']
+                        st.success("✅ Aprašymas užkrautas!")
+                        st.rerun()
+                
+                st.markdown("---")
+    
     # Mygtukas čia
-    if st.button("🚀 Sukurti AI Turinį", type="primary", use_container_width=True, key="create_ai_content_btn"):
+    if st.button("🚀 Sukurti NAUJĄ AI Turinį", type="primary", use_container_width=True, key="create_ai_content_btn"):
         st.session_state.trigger_ai_content = True
     
     # Mygtukas išvalyti failus
@@ -1887,6 +1953,9 @@ if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_cont
             # Išsaugome į session_state
             st.session_state.ai_content_result = captions
             st.session_state.ai_analyses = all_analyses
+            
+            # 💾 Išsaugome į JSON duomenų bazę
+            save_to_history(captions, season, holiday, len(files_to_process))
             
         except Exception as e:
             st.error(f"❌ Klaida generuojant turinį: {e}")
