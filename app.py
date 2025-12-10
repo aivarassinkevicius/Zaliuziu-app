@@ -1162,15 +1162,13 @@ if files_to_process:
                 "Grid 2x2 (2 nuotraukos + 2 teksto kvadratai)",
                 "Horizontal (2 nuotraukos + 1 tekstas viduryje)",
                 "Asymmetric (1 didelė + 1 maža + tekstas)",
-                "✨ Overlap (nuotraukos persidengia + tekstas)",
                 "⚡ Dynamic (pasvirusios nuotraukos + tekstas)"
             ]
         elif num_photos == 3:
             layout_options = [
                 "Grid 2x2 (3 nuotraukos + 1 teksto kvadratas)",
                 "Magazine (3 nuotraukos + teksto zona)",
-                "Asymmetric (1 didelė + 2 mažos + tekstas)",
-                "✨ Overlap (3 nuotraukos persidengia + tekstas)"
+                "Asymmetric (1 didelė + 2 mažos + tekstas)"
             ]
         else:  # 4 ar daugiau
             layout_options = [
@@ -1625,98 +1623,6 @@ if files_to_process:
                                 img_bottom = img_bottom.convert('RGBA')
                             shadowed_bottom = add_modern_shadow(img_bottom, shadow_strength=50, shadow_offset=10)
                             collage.paste(shadowed_bottom, (padding, padding + big_size + gap), shadowed_bottom)
-                    
-                    # ============ OVERLAP LAYOUT (Nuotraukos persidengia) ============
-                    elif "Overlap" in collage_layout:
-                        if num_photos == 2:
-                            # 2 nuotraukos persidengia + tekstas apačioje
-                            photo_width = int(content_width * 0.55)
-                            photo_height = int(content_height * 0.55)
-                            overlap = 80  # Persidengimo dydis
-                            
-                            # 1-a nuotrauka (kairiau, priekyje)
-                            img1 = edited_images[0].resize((photo_width, photo_height), Image.Resampling.LANCZOS)
-                            if img1.mode != 'RGBA':
-                                img1 = img1.convert('RGBA')
-                            styled1 = add_photo_effects(
-                                img1,
-                                enable_border=enable_white_border,
-                                enable_rounded=enable_rounded_corners,
-                                enable_shadow=enable_shadow_effect,
-                                shadow_strength=shadow_strength
-                            )
-                            x1 = padding + 50
-                            y1 = content_start_y + 20
-                            collage.paste(styled1, (x1, y1), styled1)
-                            
-                            # 2-a nuotrauka (dešiniau, pasvirusiai)
-                            img2 = edited_images[1].resize((photo_width, photo_height), Image.Resampling.LANCZOS)
-                            if img2.mode != 'RGBA':
-                                img2 = img2.convert('RGBA')
-                            styled2 = add_photo_effects(
-                                img2,
-                                enable_border=enable_white_border,
-                                enable_rounded=enable_rounded_corners,
-                                enable_shadow=enable_shadow_effect,
-                                shadow_strength=shadow_strength
-                            )
-                            # Pasukame 3 laipsnius
-                            styled2_rotated = styled2.rotate(3, expand=True, fillcolor=(0, 0, 0, 0))
-                            x2 = x1 + photo_width - overlap
-                            y2 = y1 + 40
-                            collage.paste(styled2_rotated, (x2, y2), styled2_rotated)
-                            
-                            # Teksto kvadratas apačioje
-                            text_width = content_width - 40
-                            text_height = 150
-                            text_box = create_text_box(
-                                text_width,
-                                text_height,
-                                text_content,
-                                style=collage_style,
-                                font_size=text_font_size
-                            )
-                            shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
-                            text_y = content_start_y + photo_height + 80
-                            collage.paste(shadowed_text, (padding + 20, text_y), shadowed_text)
-                        
-                        elif num_photos == 3:
-                            # 3 nuotraukos cascade style
-                            photo_size = int(content_width * 0.45)
-                            cascade_step = 60
-                            
-                            for i in range(3):
-                                img = edited_images[i].resize((photo_size, photo_size), Image.Resampling.LANCZOS)
-                                if img.mode != 'RGBA':
-                                    img = img.convert('RGBA')
-                                styled = add_photo_effects(
-                                    img,
-                                    enable_border=enable_white_border,
-                                    enable_rounded=enable_rounded_corners,
-                                    enable_shadow=enable_shadow_effect,
-                                    shadow_strength=shadow_strength
-                                )
-                                # Pasukame skirtingais kampais
-                                angles = [-2, 0, 2]
-                                styled_rotated = styled.rotate(angles[i], expand=True, fillcolor=(0, 0, 0, 0))
-                                
-                                x = padding + i * cascade_step
-                                y = content_start_y + i * cascade_step
-                                collage.paste(styled_rotated, (x, y), styled_rotated)
-                            
-                            # Tekstas dešinėje
-                            text_width = content_width - photo_size - cascade_step * 3 - 40
-                            text_height = photo_size + cascade_step * 2
-                            text_box = create_text_box(
-                                text_width,
-                                text_height,
-                                text_content,
-                                style=collage_style,
-                                font_size=text_font_size - 10
-                            )
-                            shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
-                            text_x = padding + photo_size + cascade_step * 2 + 20
-                            collage.paste(shadowed_text, (text_x, content_start_y + 20), shadowed_text)
                     
                     # ============ DYNAMIC ANGLES LAYOUT (Pasvirusios nuotraukos) ============
                     elif "Dynamic" in collage_layout and num_photos == 2:
