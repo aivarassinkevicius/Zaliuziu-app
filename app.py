@@ -2010,12 +2010,12 @@ if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_cont
         try:
             captions = generate_captions(combined_analysis, season, holiday)
             
-            # Išsaugome į session_state
-            st.session_state.ai_content_result = captions
+            # 🤔 HUMAN-IN-THE-LOOP: Išsaugome kaip "pending" (laukia patvirtinimo)
+            st.session_state.ai_content_pending = captions
             st.session_state.ai_analyses = all_analyses
-            
-            # 💾 Išsaugome į JSON duomenų bazę
-            save_to_history(captions, season, holiday, len(files_to_process))
+            st.session_state.ai_pending_season = season
+            st.session_state.ai_pending_holiday = holiday
+            st.session_state.ai_pending_num_photos = len(files_to_process)
             
         except Exception as e:
             st.error(f"❌ Klaida generuojant turinį: {e}")
@@ -2026,13 +2026,48 @@ if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_cont
     # Reset trigger TIKTAI pabaigoje
     st.session_state.trigger_ai_content = False
 
-# Rodyti AI turinio rezultatus (jei sukurti)
+# 🤔 HUMAN-IN-THE-LOOP: Patvirtinimo UI (jei yra pending turinys)
+if "ai_content_pending" in st.session_state and st.session_state.ai_content_pending:
+    st.markdown("---")
+    st.info("🤔 **AI sugeneravo turinį. Ar patvirtinate?**")
+    
+    # Preview sugeneruoto turinio
+    st.subheader("📝 Peržiūra:")
+    st.text_area("Sugeneruotas tekstas:", value=st.session_state.ai_content_pending, height=200, key="preview_pending", disabled=True)
+    
+    # Patvirtinimo mygtukai
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("✅ Patvirtinti ir Išsaugoti", type="primary", use_container_width=True):
+            # Patvirtinta! Išsaugome į rezultatus ir JSON
+            st.session_state.ai_content_result = st.session_state.ai_content_pending
+            save_to_history(
+                st.session_state.ai_content_pending,
+                st.session_state.ai_pending_season,
+                st.session_state.ai_pending_holiday,
+                st.session_state.ai_pending_num_photos
+            )
+            # Išvalome pending
+            del st.session_state.ai_content_pending
+            st.success("✅ Turinys patvirtintas ir išsaugotas!")
+            st.rerun()
+    
+    with col2:
+        if st.button("🔄 Regeneruoti (sukurti kitą versiją)", type="secondary", use_container_width=True):
+            # Atmesta! Išvalome pending ir trigger'iname naują generavimą
+            del st.session_state.ai_content_pending
+            st.session_state.trigger_ai_content = True
+            st.info("♻️ Generuojama nauja versija...")
+            st.rerun()
+
+# Rodyti PATVIRTINTĄ AI turinio rezultatą
 if "ai_content_result" in st.session_state and st.session_state.ai_content_result:
     st.markdown("---")
-    st.success("✅ Turinys sėkmingai sukurtas!")
+    st.success("✅ Turinys patvirtintas ir išsaugotas!")
     
     # Rezultatai
-    st.subheader("📝 Socialinių tinklų įrašai")
+    st.subheader("📝 Patvirtinti socialinių tinklų įrašai")
     
     # Rodyti sugeneruotą turinį
     st.markdown("### 🎯 Paruošti tekstai:")
