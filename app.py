@@ -34,7 +34,63 @@ st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tin
 
 # ---------- Pagalbinės funkcijos ----------
 
-def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=150):
+def professional_auto_enhance(img):
+    """
+    PROFESIONALUS AUTO pagerinimas - geriau nei Canva!
+    - Auto Levels (histogramos optimizavimas)
+    - Smart Sharpening (detalių sustiprinimas)
+    - Color Balance (spalvų balansas)
+    - Contrast Enhancement (protingas kontrasto didinimas)
+    - Saturation Boost (sodrumas)
+    """
+    import numpy as np
+    
+    # 1. AUTO LEVELS - optimizuoja histogramą
+    img_array = np.array(img)
+    
+    # Kiekvienam spalvų kanalui (R, G, B)
+    enhanced_array = np.zeros_like(img_array)
+    for channel in range(3):
+        channel_data = img_array[:, :, channel]
+        
+        # Randame 2% ir 98% percentiles (ignoruojam kraštutinumus)
+        p2, p98 = np.percentile(channel_data, (2, 98))
+        
+        # Stretch histogramą
+        if p98 > p2:
+            stretched = np.clip((channel_data - p2) * 255.0 / (p98 - p2), 0, 255)
+            enhanced_array[:, :, channel] = stretched.astype(np.uint8)
+        else:
+            enhanced_array[:, :, channel] = channel_data
+    
+    img = Image.fromarray(enhanced_array.astype(np.uint8))
+    
+    # 2. SMART SHARPENING - sustiprina detales
+    from PIL import ImageFilter, ImageEnhance
+    
+    # Unsharp mask - profesionalus sharpening
+    img = img.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
+    
+    # 3. CONTRAST BOOST - protingas kontrasto didinimas
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(1.25)  # +25% kontrasto
+    
+    # 4. SATURATION BOOST - gyvesnės spalvos
+    enhancer = ImageEnhance.Color(img)
+    img = enhancer.enhance(1.20)  # +20% sodrumo
+    
+    # 5. BRIGHTNESS FIX - šiek tiek šviesiau (jei per tamsu)
+    img_array = np.array(img)
+    avg_brightness = np.mean(img_array)
+    
+    if avg_brightness < 110:  # Jei tamsu - šviesinu
+        enhancer = ImageEnhance.Brightness(img)
+        brightness_boost = min(1.15, 110 / avg_brightness)
+        img = enhancer.enhance(brightness_boost)
+    
+    return img
+
+def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=150, auto_enhance=True):
     """
     Prideda marketinginius elementus prie nuotraukos:
     - Vandens ženklą (ryškų, baltą su šešėliu)
@@ -57,18 +113,22 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
         elif img.mode != 'RGB':
             img = img.convert('RGB')
         
-        # Spalvų koregavimai
-        if brightness != 1.0:
-            enhancer = ImageEnhance.Brightness(img)
-            img = enhancer.enhance(brightness)
-        
-        if contrast != 1.0:
-            enhancer = ImageEnhance.Contrast(img)
-            img = enhancer.enhance(contrast)
-        
-        if saturation != 1.0:
-            enhancer = ImageEnhance.Color(img)
-            img = enhancer.enhance(saturation)
+        # PROFESIONALUS AUTO PAGERINIMAS (jei įjungtas)
+        if auto_enhance:
+            img = professional_auto_enhance(img)
+        else:
+            # Rankiniai spalvų koregavimai (jei auto išjungtas)
+            if brightness != 1.0:
+                enhancer = ImageEnhance.Brightness(img)
+                img = enhancer.enhance(brightness)
+            
+            if contrast != 1.0:
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(contrast)
+            
+            if saturation != 1.0:
+                enhancer = ImageEnhance.Color(img)
+                img = enhancer.enhance(saturation)
         
         # Pridedame rėmelį
         if add_border:
@@ -916,15 +976,22 @@ else:
 add_border = st.sidebar.checkbox("🖼️ Pridėti baltą rėmelį", value=False)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("**🤖 Automatinė optimizacija**")
-auto_enhance = st.sidebar.checkbox("✨ AUTO spalvų optimizacija", value=True, help="Automatiškai pagerina šviesumą, kontrastą ir sodrumo")
+st.sidebar.markdown("**🤖 Profesionalus Auto Pagerinimas**")
+auto_enhance = st.sidebar.checkbox("✨ PRO Auto Enhancement", value=True, help="Profesionalus nuotraukų pagerinimas - geriau nei Canva!")
 
 if auto_enhance:
-    st.sidebar.info("💡 Automatinė optimizacija įjungta - nuotraukos bus pagerintos!")
-    # Automatiniai nustatymai marketinginėms nuotraukoms
-    brightness = 1.1  # Šiek tiek šviesiau
-    contrast = 1.15   # Ryškesnis kontrastas
-    saturation = 1.1  # Sodresni spalvos
+    st.sidebar.success("🚀 **PRO Enhancement įjungtas!**")
+    st.sidebar.markdown("""
+    **Kas bus padaryta:**
+    - ✅ Auto Levels (histogramos optimizavimas)
+    - ✅ Smart Sharpening (detalių ryškinimas)
+    - ✅ Contrast Boost (+25%)
+    - ✅ Saturation Boost (+20%)
+    - ✅ Brightness Fix (jei reikia)
+    """)
+    brightness = 1.0
+    contrast = 1.0
+    saturation = 1.0
 else:
     st.sidebar.markdown("**Rankinė spalvų korekcija:**")
     brightness = st.sidebar.slider("☀️ Šviesumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 tamsiau, >1.0 šviesiau")
@@ -1100,7 +1167,8 @@ if files_to_process:
                 contrast=contrast,
                 saturation=saturation,
                 watermark_text=watermark_text,
-                watermark_size=watermark_size
+                watermark_size=watermark_size,
+                auto_enhance=auto_enhance
             )
             edited.seek(0)
             
@@ -1261,8 +1329,9 @@ if files_to_process:
                             contrast=contrast,
                             saturation=saturation,
                             watermark_text=watermark_text,
-                            watermark_size=watermark_size
-                        )
+                            watermark_size=watermark_size,
+                auto_enhance=auto_enhance
+            )
                         edited.seek(0)
                         img = Image.open(edited)
                         edited_images.append(img)
@@ -1788,7 +1857,8 @@ if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_cont
                 contrast=contrast,
                 saturation=saturation,
                 watermark_text=watermark_text,
-                watermark_size=watermark_size
+                watermark_size=watermark_size,
+                auto_enhance=auto_enhance
             )
             edited.seek(0)
             
@@ -1849,5 +1919,6 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
 # Footer
 st.markdown("---")
 st.markdown("🌿 *Sukūrta žaliuzių ir roletų verslui* | Powered by OpenAI")
+
 
 
