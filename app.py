@@ -324,6 +324,34 @@ def save_to_history(description, season, holiday, num_photos):
         st.error(f"Nepavyko išsaugoti į istoriją: {e}")
         return False
 
+# ---------- Discord Webhook ----------
+
+def send_to_discord(webhook_url, image_bytes, message=""):
+    """Siunčia collage į Discord per webhook"""
+    try:
+        import requests
+        
+        # Paruošiame failą
+        files = {
+            'file': ('collage.png', image_bytes, 'image/png')
+        }
+        
+        # Paruošiame žinutę
+        data = {}
+        if message:
+            data['content'] = message
+        
+        # Siunčiame POST request
+        response = requests.post(webhook_url, files=files, data=data)
+        
+        if response.status_code == 200 or response.status_code == 204:
+            return True, "✅ Sėkmingai išsiųsta į Discord!"
+        else:
+            return False, f"❌ Discord klaida: {response.status_code}"
+            
+    except Exception as e:
+        return False, f"❌ Nepavyko išsiųsti: {str(e)}"
+
 def analyze_image(image_bytes):
     """Naudoja GPT-4o-mini vaizdo analizei su konkrečiu produktų atpažinimu"""
     response = client.chat.completions.create(
@@ -1041,6 +1069,19 @@ else:
     brightness = st.sidebar.slider("☀️ Šviesumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 tamsiau, >1.0 šviesiau")
     contrast = st.sidebar.slider("🎭 Kontrastas", 0.5, 1.5, 1.0, 0.05, help="<1.0 blankiau, >1.0 ryškiau")
     saturation = st.sidebar.slider("🎨 Sodrumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 pilkiau, >1.0 sodresni spalvos")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🔗 Discord Integracija")
+enable_discord = st.sidebar.checkbox("📤 Siųsti į Discord", value=False, help="Automatiškai siųsti collage į Discord kanalą")
+if enable_discord:
+    discord_webhook_url = st.sidebar.text_input(
+        "Discord Webhook URL:",
+        placeholder="https://discord.com/api/webhooks/...",
+        type="password",
+        help="Įveskite Discord webhook URL (Settings → Integrations → Webhooks)"
+    )
+else:
+    discord_webhook_url = ""
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotraukas su žaliuzėmis ar roletais.")
@@ -1841,14 +1882,33 @@ if files_to_process:
             with col2:
                 st.image(st.session_state.collage_result, caption="Peržiūra (spauskite mygtuką pilnam dydžiui)", use_column_width=True)
         
-        st.download_button(
-            label="📥 Atsisiųsti Collage",
-            data=st.session_state.collage_result,
-            file_name=st.session_state.collage_filename,
-            mime="image/jpeg",
-            use_container_width=True,
-            key="download_collage_persistent"
-        )
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.download_button(
+                label="📥 Atsisiųsti Collage",
+                data=st.session_state.collage_result,
+                file_name=st.session_state.collage_filename,
+                mime="image/jpeg",
+                use_container_width=True,
+                key="download_collage_persistent"
+            )
+        
+        with col2:
+            if enable_discord and discord_webhook_url:
+                if st.button("📤 Siųsti į Discord", type="secondary", use_container_width=True):
+                    with st.spinner("Siunčiama į Discord..."):
+                        success, message = send_to_discord(
+                            discord_webhook_url,
+                            st.session_state.collage_result,
+                            f"🌿 Naujas {season} kolekcijos collage!"
+                        )
+                        if success:
+                            st.success(message)
+                        else:
+                            st.error(message)
+            elif enable_discord and not discord_webhook_url:
+                st.warning("⚠️ Įveskite Discord Webhook URL sidebar'e")
     
     # AI TURINIO GENERAVIMAS
     st.markdown("---")
