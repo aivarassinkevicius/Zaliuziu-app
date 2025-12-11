@@ -9,9 +9,9 @@ from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
 try:
     from lib.image_processing import process_blinds_photo
     OPENCV_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     OPENCV_AVAILABLE = False
-    st.warning("⚠️ OpenCV not available - advanced processing disabled")
+    print(f"OpenCV import failed: {e}")  # Debug log
 
 # ---------- Nustatymai ----------
 load_dotenv()
