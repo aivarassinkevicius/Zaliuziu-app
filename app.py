@@ -1197,15 +1197,6 @@ st.sidebar.markdown("**🤖 Profesionalus Auto Pagerinimas**")
 auto_enhance = st.sidebar.checkbox("✨ PRO Auto Enhancement", value=True, help="Profesionalus nuotraukų pagerinimas - geriau nei Canva!")
 
 if auto_enhance:
-    st.sidebar.success("🚀 **PRO Enhancement įjungtas!**")
-    st.sidebar.markdown("""
-    **Kas bus padaryta:**
-    - ✅ Auto Levels (histogramos optimizavimas)
-    - ✅ Smart Sharpening (detalių ryškinimas)
-    - ✅ Contrast Boost (+25%)
-    - ✅ Saturation Boost (+20%)
-    - ✅ Brightness Fix (jei reikia)
-    """)
     brightness = 1.0
     contrast = 1.0
     saturation = 1.0
