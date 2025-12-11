@@ -994,6 +994,9 @@ def wrap_text(text, font, max_width):
 def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg_color=(255, 255, 255)):
     """Sukuria teksto kvadratą kaip atskirą paveikslėlį (ne overlay!)"""
     
+    # SVARBU: Išsaugome font_size į lokalų kintamąjį
+    actual_font_size = int(font_size)  # Užtikrina kad tai skaičius
+    
     # Sukuriame RGBA paveikslėlį
     text_box = Image.new('RGBA', (width, height), (255, 255, 255, 0))
     draw = ImageDraw.Draw(text_box)
@@ -1011,13 +1014,15 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
     
     for font_path in font_paths:
         try:
-            font = ImageFont.truetype(font_path, font_size)
+            font = ImageFont.truetype(font_path, actual_font_size)
             break
         except Exception as e:
             continue
     
     if font is None:
         font = ImageFont.load_default()
+        # Jei default - padarome tekstą DIDELĮ kartojant
+        actual_font_size = 12  # Default font dydis
     
     # STILIŲ IMPLEMENTACIJOS
     if "Glassmorphism" in style:
@@ -1033,14 +1038,14 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
         lines = wrap_text(text, font, max_text_width)
         
         # Centruojame tekstą
-        total_height = len(lines) * (font_size + 20)
+        total_height = len(lines) * (actual_font_size + 20)
         y_start = (height - total_height) // 2
         
         for i, line in enumerate(lines):
             bbox = draw.textbbox((0, 0), line, font=font)
             text_width = bbox[2] - bbox[0]
             x = (width - text_width) // 2
-            y = y_start + i * (font_size + 20)
+            y = y_start + i * (actual_font_size + 20)
             
             # Šešėlis
             draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
@@ -1064,14 +1069,14 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
         # Automatinis teksto lūžimas
         max_text_width = width - 50  # Accounting for borders and padding
         lines = wrap_text(text, font, max_text_width)
-        total_height = len(lines) * (font_size + 20)
+        total_height = len(lines) * (actual_font_size + 20)
         y_start = (height - total_height) // 2
         
         for i, line in enumerate(lines):
             bbox = draw.textbbox((0, 0), line, font=font)
             text_width = bbox[2] - bbox[0]
             x = (width - text_width) // 2
-            y = y_start + i * (font_size + 20)
+            y = y_start + i * (actual_font_size + 20)
             draw.text((x, y), line, fill=(0, 0, 0, 255), font=font)
     
     elif "Minimalist" in style:
@@ -1081,14 +1086,14 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
         # Automatinis teksto lūžimas
         max_text_width = width - 40  # 20px padding
         lines = wrap_text(text, font, max_text_width)
-        total_height = len(lines) * (font_size + 20)
+        total_height = len(lines) * (actual_font_size + 20)
         y_start = (height - total_height) // 2
         
         for i, line in enumerate(lines):
             bbox = draw.textbbox((0, 0), line, font=font)
             text_width = bbox[2] - bbox[0]
             x = (width - text_width) // 2
-            y = y_start + i * (font_size + 20)
+            y = y_start + i * (actual_font_size + 20)
             
             # Subtilus šešėlis
             draw.text((x + 1, y + 1), line, fill=(0, 0, 0, 50), font=font)
