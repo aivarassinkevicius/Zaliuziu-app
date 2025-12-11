@@ -976,16 +976,18 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
     font = None
     font_paths = [
         "C:/Windows/Fonts/timesbd.ttf",   # Times New Roman Bold
-        "C:/Windows/Fonts/times.ttf",     # Times New Roman
-        "C:/Windows/Fonts/arialbd.ttf",
-        "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/timesbi.ttf",   # Times New Roman Bold Italic
+        "C:/Windows/Fonts/times.ttf",     # Times New Roman Regular
+        "C:/Windows/Fonts/timesi.ttf",    # Times New Roman Italic
+        "C:/Windows/Fonts/arialbd.ttf",   # Fallback: Arial Bold
+        "C:/Windows/Fonts/arial.ttf",     # Fallback: Arial
     ]
     
     for font_path in font_paths:
         try:
             font = ImageFont.truetype(font_path, font_size)
             break
-        except:
+        except Exception as e:
             continue
     
     if font is None:
