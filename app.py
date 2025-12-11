@@ -506,12 +506,23 @@ def generate_captions(analysis_text, season, holiday):
         forbidden_list.extend(current_holiday["forbidden"])
         must_have_list.extend(current_holiday["must_have"])
         holiday_text = f"""
-🎄 PRIVALOMA ŠVENTĖ: {holiday}
-Kiekviename tekste TURI būti: {current_holiday["keywords"]}
-NIEKADA nerašyk apie: {', '.join(current_holiday["forbidden"])}
+🎄 PRIVALOMA ŠVENTĖ: {holiday.upper()}
+══════════════════════════════════════
+KIEKVIENAME TEKSTE PRIVALO BŪTI:
+- Žodžiai: {current_holiday["keywords"]}
+- Kontekstas: {holiday} šventė
+
+PAVYZDŽIAI TEISINGŲ SAKINIŲ:
+- "Velykų proga..." ✅ (jei Velykos)
+- "Kalėdų magijai..." ✅ (jei Kalėdos)
+- "Valentino dienai..." ✅ (jei Valentinas)
+
+NIEKADA NERAŠYK:
+{', '.join(current_holiday["forbidden"])}
+══════════════════════════════════════
 """
     else:
-        holiday_text = "Šventės nėra - nerašyk apie jokias šventes!"
+        holiday_text = "⚠️ ŠVENTĖS NĖRA - NERAŠYK APIE JOKIAS ŠVENTES (nei Kalėdas, nei Velykas, nei Valentiną)!"
     
     prompt = f"""KRITIŠKAI SVARBU! Perskaityk šias taisykles 3 KARTUS prieš rašydamas:
 
@@ -581,14 +592,17 @@ Atskirk variantus su "---"
 Rašyk LIETUVIŠKAI.
 """
     
+    import random
+    
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": f"Tu esi AI asistentas. ABSOLIUTI TAISYKLĖ: Dabar yra {season} sezonas{f' ir {holiday} šventė' if holiday != 'Nėra' else ''}. Tu NIEKADA nerašai apie kitus sezonus ar šventes. Jei bandysi pažeisti - tekstas bus atmestas."},
             {"role": "user", "content": prompt}
         ],
-        temperature=0.5,  # DAR sumažinta - maksimalus tikslumas
-        max_tokens=1200
+        temperature=0.8,  # Padidinta - daugiau kūrybingumo ir įvairovės
+        max_tokens=1200,
+        seed=random.randint(1, 1000000)  # Random seed - kiekvieną kartą skirtingas rezultatas
     )
     return response.choices[0].message.content.strip()
 
@@ -2220,10 +2234,19 @@ if "ai_content_pending" in st.session_state and st.session_state.ai_content_pend
     
     with col2:
         if st.button("🔄 Regeneruoti (sukurti kitą versiją)", type="secondary", use_container_width=True):
-            # Atmesta! Išvalome pending ir trigger'iname naują generavimą
-            del st.session_state.ai_content_pending
+            # Ištriname VISUS senus duomenis
+            if "ai_content_pending" in st.session_state:
+                del st.session_state.ai_content_pending
+            if "ai_analyses" in st.session_state:
+                del st.session_state.ai_analyses  # Ištrinam senus analysis - generuosim iš naujo!
+            if "ai_pending_season" in st.session_state:
+                del st.session_state.ai_pending_season
+            if "ai_pending_holiday" in st.session_state:
+                del st.session_state.ai_pending_holiday
+            
+            # Trigger'inam NAUJĄ generavimą su NAUJAIS parametrais
             st.session_state.trigger_ai_content = True
-            st.info("♻️ Generuojama nauja versija...")
+            st.info("♻️ Generuojama nauja versija su skirtingu stiliumi...")
             st.rerun()
 
 # Rodyti PATVIRTINTĄ AI turinio rezultatą
