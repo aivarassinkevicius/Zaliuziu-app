@@ -1006,15 +1006,23 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
     text_box = Image.new('RGBA', (width, height), (255, 255, 255, 0))
     draw = ImageDraw.Draw(text_box)
     
-    # Fontų paieška - Times New Roman
+    # Fontų paieška - Times New Roman (Windows) + Linux backup
     font = None
     font_paths = [
+        # Windows fonts
         "C:/Windows/Fonts/timesbd.ttf",   # Times New Roman Bold
         "C:/Windows/Fonts/timesbi.ttf",   # Times New Roman Bold Italic
         "C:/Windows/Fonts/times.ttf",     # Times New Roman Regular
         "C:/Windows/Fonts/timesi.ttf",    # Times New Roman Italic
-        "C:/Windows/Fonts/arialbd.ttf",   # Fallback: Arial Bold
-        "C:/Windows/Fonts/arial.ttf",     # Fallback: Arial
+        "C:/Windows/Fonts/arialbd.ttf",   # Arial Bold
+        "C:/Windows/Fonts/arial.ttf",     # Arial Regular
+        # Linux fonts (Streamlit Cloud)
+        "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     ]
     
     for font_path in font_paths:
@@ -1026,10 +1034,9 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
             continue
     
     if font is None:
-        st.warning(f"⚠️ Nepavyko įkelti Times New Roman! Naudojamas default font.")
+        st.error(f"❌ KRITINĖ KLAIDA: Nepavyko įkelti JOKIO TrueType font! Default font neveiks su dydžiu {actual_font_size}")
         font = ImageFont.load_default()
-        # Tik DABAR keičiame dydį (nes default font turi fixed dydį)
-        # BET NEKEIČIAME actual_font_size - palikime originalų!
+        # Default font IGNORUOJA dydį - tai bitmap font!
     
     # STILIŲ IMPLEMENTACIJOS
     if "Glassmorphism" in style:
