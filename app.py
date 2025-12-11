@@ -1703,7 +1703,7 @@ if files_to_process:
                             enable_opencv_clarity=enable_opencv_clarity,
                             enable_aspect_ratio=enable_aspect_ratio,
                             target_aspect_ratio=target_aspect_ratio
-            )
+                        )
                         edited.seek(0)
                         img = Image.open(edited)
                         edited_images.append(img)
