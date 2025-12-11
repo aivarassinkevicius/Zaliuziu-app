@@ -1042,6 +1042,9 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
         max_text_width = width - 40  # 20px padding iš kiekvienos pusės
         lines = wrap_text(text, font, max_text_width)
         
+        # DEBUG: Patikrinam font dydį
+        st.write(f"🔍 DEBUG Glassmorphism: font={font}, actual_font_size={actual_font_size}, lines={len(lines)}")
+        
         # Centruojame tekstą
         total_height = len(lines) * (actual_font_size + 20)
         y_start = (height - total_height) // 2
@@ -1049,8 +1052,11 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
         for i, line in enumerate(lines):
             bbox = draw.textbbox((0, 0), line, font=font)
             text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
             x = (width - text_width) // 2
             y = y_start + i * (actual_font_size + 20)
+            
+            st.write(f"🔍 Line {i}: '{line}' width={text_width}px height={text_height}px pos=({x},{y})")
             
             # Šešėlis
             draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
