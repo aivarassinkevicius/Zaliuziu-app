@@ -1450,7 +1450,7 @@ if files_to_process:
         st.markdown("#### ✍️ Teksto kvadrato turinys")
         
         # Jei 2 nuotraukos Grid 2x2 - rodyti 2 tekstus
-        if len(files_to_process) == 2 and layout_option == "Grid 2x2 (2 nuotraukos + 2 teksto kvadratai)":
+        if len(files_to_process) == 2 and collage_layout == "Grid 2x2 (2 nuotraukos + 2 teksto kvadratai)":
             st.info("💡 2 nuotraukos → 2 skirtingi tekstai")
             
             col1, col2 = st.columns(2)
