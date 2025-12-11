@@ -1472,6 +1472,13 @@ if files_to_process:
                     key="text_box_2",
                     help="Antras teksto kvadratas"
                 )
+            
+            # Šrifto dydis ATSKIROJE EILUTĖJE
+            text_font_size = st.slider(
+                "Šrifto dydis (abiem tekstams):",
+                30, 120, 60, 10,
+                help="Teksto dydis teksto kvadratuose"
+            )
         else:
             # Vienas tekstas visiem kitiems layoutams
             col1, col2 = st.columns([2, 1])
@@ -1483,14 +1490,15 @@ if files_to_process:
                     height=100,
                     help="Šis tekstas bus atskirame kvadrate collage (ne overlay!)"
                 )
+            
+            with col2:
+                text_font_size = st.slider(
+                    "Šrifto dydis:",
+                    30, 120, 60, 10,
+                    help="Teksto dydis teksto kvadrate"
+                )
+            
             text_content_2 = None  # Nėra antro teksto
-        
-        with col2:
-            text_font_size = st.slider(
-                "Šrifto dydis:",
-                30, 120, 60, 10,
-                help="Teksto dydis teksto kvadrate"
-            )
         
         # NAUJAS: Nuotraukų efektai
         st.markdown("---")
