@@ -296,8 +296,13 @@ def load_history():
         st.warning(f"Nepavyko įkelti istorijos: {e}")
         return []
 
-def save_to_history(description, season, holiday, num_photos):
-    """Išsaugo aprašymą į JSON istoriją"""
+def save_to_history(description, season, holiday, num_photos, status="approved", version=1):
+    """Išsaugo aprašymą į JSON istoriją
+    
+    Args:
+        status: "generated" (auto-save) arba "approved" (user patvirtino)
+        version: Versijos numeris (1, 2, 3...)
+    """
     try:
         history = load_history()
         
@@ -307,13 +312,15 @@ def save_to_history(description, season, holiday, num_photos):
             "description": description,
             "season": season,
             "holiday": holiday,
-            "num_photos": num_photos
+            "num_photos": num_photos,
+            "status": status,
+            "version": version
         }
         
         history.insert(0, entry)  # Naujausi viršuje
         
-        # Saugom tik paskutinius 50 įrašų
-        history = history[:50]
+        # Saugom daugiau versijų - 100 vietoj 50
+        history = history[:100]
         
         os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
         with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
@@ -2089,21 +2096,30 @@ if files_to_process:
     # 📚 ISTORIJA - Senesnių aprašymų rodymas
     history = load_history()
     if history and len(history) > 0:
-        with st.expander(f"📚 Aprašymų istorija ({len(history)} išsaugotų)", expanded=False):
-            st.caption("Pasirinkite senesnį aprašymą arba sukurkite naują")
+        # Statistika
+        approved_count = sum(1 for h in history if h.get('status') == 'approved')
+        generated_count = sum(1 for h in history if h.get('status') == 'generated')
+        
+        with st.expander(f"📚 Versijų istorija: {len(history)} iš viso (✅ {approved_count} patvirtintų, 🔄 {generated_count} sugeneruotų)", expanded=False):
+            st.caption("Kiekviena sugeneruota versija automatiškai išsaugoma. Pasirinkite norimą versiją.")
             
-            for entry in history[:10]:  # Rodome tik 10 naujausių
+            for entry in history[:20]:  # Rodome 20 naujausių (daugiau versijų)
                 col1, col2 = st.columns([4, 1])
                 
                 with col1:
-                    st.markdown(f"**{entry['timestamp']}** - {entry['season']}, {entry['num_photos']} nuotr.")
+                    # Statusas ir versija
+                    status_icon = "✅" if entry.get('status') == 'approved' else "🔄"
+                    version_text = f"v{entry.get('version', 1)}"
+                    holiday_text = f", {entry.get('holiday', 'Nėra')}" if entry.get('holiday') != 'Nėra' else ""
+                    
+                    st.markdown(f"{status_icon} **{version_text}** | {entry['timestamp']} | {entry['season']}{holiday_text}, {entry['num_photos']} nuotr.")
                     preview = entry['description'][:150] + "..." if len(entry['description']) > 150 else entry['description']
                     st.text(preview)
                 
                 with col2:
                     if st.button("📋 Naudoti", key=f"use_history_{entry['id']}"):
                         st.session_state.ai_content_result = entry['description']
-                        st.success("✅ Aprašymas užkrautas!")
+                        st.success(f"✅ {version_text} užkrautas!")
                         st.rerun()
                 
                 st.markdown("---")
@@ -2189,6 +2205,27 @@ if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_cont
         try:
             captions = generate_captions(combined_analysis, season, holiday)
             
+            # Apskaičiuojame versijos numerį IŠ JSON ISTORIJOS
+            # Randame paskutinę versiją su tais pačiais parametrais
+            history = load_history()
+            matching_versions = [
+                h.get('version', 1) for h in history 
+                if h.get('season') == season 
+                and h.get('holiday') == holiday 
+                and h.get('num_photos') == len(files_to_process)
+            ]
+            next_version = max(matching_versions) + 1 if matching_versions else 1
+            
+            # AUTOMATIŠKAI išsaugome kiekvieną sugeneruotą versiją
+            save_to_history(
+                captions,
+                season,
+                holiday,
+                len(files_to_process),
+                status="generated",
+                version=next_version
+            )
+            
             # 🤔 HUMAN-IN-THE-LOOP: Išsaugome kaip "pending" (laukia patvirtinimo)
             st.session_state.ai_content_pending = captions
             st.session_state.ai_analyses = all_analyses
@@ -2221,15 +2258,32 @@ if "ai_content_pending" in st.session_state and st.session_state.ai_content_pend
         if st.button("✅ Patvirtinti ir Išsaugoti", type="primary", use_container_width=True):
             # Patvirtinta! Išsaugome į rezultatus ir JSON
             st.session_state.ai_content_result = st.session_state.ai_content_pending
+            
+            # Randame paskutinę versiją IŠ JSON (ši versija jau išsaugota kaip "generated")
+            history = load_history()
+            # Ieškome šio teksto istorijoje
+            matching_entry = None
+            for h in history:
+                if (h.get('description') == st.session_state.ai_content_pending 
+                    and h.get('season') == st.session_state.ai_pending_season
+                    and h.get('holiday') == st.session_state.ai_pending_holiday):
+                    matching_entry = h
+                    break
+            
+            current_version = matching_entry.get('version', 1) if matching_entry else 1
+            
+            # Išsaugojame kaip APPROVED su atnaujintu statusu
             save_to_history(
                 st.session_state.ai_content_pending,
                 st.session_state.ai_pending_season,
                 st.session_state.ai_pending_holiday,
-                st.session_state.ai_pending_num_photos
+                st.session_state.ai_pending_num_photos,
+                status="approved",
+                version=current_version
             )
             # Išvalome pending
             del st.session_state.ai_content_pending
-            st.success("✅ Turinys patvirtintas ir išsaugotas!")
+            st.success(f"✅ Versija #{current_version} patvirtinta ir išsaugota!")
             st.rerun()
     
     with col2:
