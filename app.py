@@ -99,10 +99,10 @@ def professional_auto_enhance(img):
     
     return img
 
-def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=150, auto_enhance=True, enable_opencv=False, enable_auto_crop=False, enable_perspective=False, enable_white_balance=False, enable_opencv_clarity=False):
+def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=150, auto_enhance=True, enable_opencv=False, enable_auto_crop=False, enable_perspective=False, enable_white_balance=False, enable_opencv_clarity=False, enable_aspect_ratio=False, target_aspect_ratio="4:3"):
     """
     Prideda marketinginius elementus prie nuotraukos:
-    - OpenCV preprocessing (auto-crop, perspective, white balance)
+    - OpenCV preprocessing (auto-crop, perspective, white balance, aspect ratio)
     - Vandens ženklą (ryškų, baltą su šešėliu)
     - Rėmelį
     - Spalvų koregavimą (šviesumas, kontrastas, sodrumas)
@@ -121,7 +121,9 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
                     enable_auto_crop=enable_auto_crop,
                     enable_perspective=enable_perspective,
                     enable_white_balance=enable_white_balance,
-                    enable_clarity=enable_opencv_clarity
+                    enable_clarity=enable_opencv_clarity,
+                    enable_aspect_ratio=enable_aspect_ratio,
+                    target_aspect_ratio=target_aspect_ratio
                 )
             except Exception as e:
                 st.warning(f"OpenCV processing failed: {e}")
@@ -1227,18 +1229,33 @@ if OPENCV_AVAILABLE:
         enable_white_balance = st.sidebar.checkbox("🎨 White Balance", value=True, help="Remove yellow/blue tint")
         enable_opencv_clarity = st.sidebar.checkbox("✨ Clarity Boost", value=True, help="Enhance texture and detail")
         
+        enable_aspect_ratio = st.sidebar.checkbox("📏 Aspect Ratio Normalize", value=False, help="Make all photos same aspect ratio")
+        if enable_aspect_ratio:
+            target_aspect_ratio = st.sidebar.selectbox(
+                "Target Ratio:",
+                options=["4:3", "16:9", "1:1", "3:4", "9:16"],
+                index=0,
+                help="All photos will be normalized to this ratio"
+            )
+        else:
+            target_aspect_ratio = "4:3"
+        
         st.sidebar.info("⏱️ Apdorojimas gali užtrukti 2-5 sek per nuotrauką")
     else:
         enable_auto_crop = False
         enable_perspective = False
         enable_white_balance = False
         enable_opencv_clarity = False
+        enable_aspect_ratio = False
+        target_aspect_ratio = "4:3"
 else:
     enable_opencv = False
     enable_auto_crop = False
     enable_perspective = False
     enable_white_balance = False
     enable_opencv_clarity = False
+    enable_aspect_ratio = False
+    target_aspect_ratio = "4:3"
     st.sidebar.warning("⚠️ OpenCV neprieinamas")
 
 st.sidebar.markdown("---")
@@ -1429,7 +1446,9 @@ if files_to_process:
                 enable_auto_crop=enable_auto_crop,
                 enable_perspective=enable_perspective,
                 enable_white_balance=enable_white_balance,
-                enable_opencv_clarity=enable_opencv_clarity
+                enable_opencv_clarity=enable_opencv_clarity,
+                enable_aspect_ratio=enable_aspect_ratio,
+                target_aspect_ratio=target_aspect_ratio
             )
             edited.seek(0)
             
@@ -1644,7 +1663,9 @@ if files_to_process:
                             enable_auto_crop=enable_auto_crop,
                             enable_perspective=enable_perspective,
                             enable_white_balance=enable_white_balance,
-                            enable_opencv_clarity=enable_opencv_clarity
+                            enable_opencv_clarity=enable_opencv_clarity,
+                            enable_aspect_ratio=enable_aspect_ratio,
+                            target_aspect_ratio=target_aspect_ratio
             )
                         edited.seek(0)
                         img = Image.open(edited)
@@ -2244,7 +2265,9 @@ if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_cont
                 enable_auto_crop=enable_auto_crop,
                 enable_perspective=enable_perspective,
                 enable_white_balance=enable_white_balance,
-                enable_opencv_clarity=enable_opencv_clarity
+                enable_opencv_clarity=enable_opencv_clarity,
+                enable_aspect_ratio=enable_aspect_ratio,
+                target_aspect_ratio=target_aspect_ratio
             )
             edited.seek(0)
             
