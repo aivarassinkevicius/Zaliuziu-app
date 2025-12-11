@@ -994,13 +994,8 @@ def wrap_text(text, font, max_width):
 def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg_color=(255, 255, 255)):
     """Sukuria teksto kvadratą kaip atskirą paveikslėlį (ne overlay!)"""
     
-    # DEBUG: Pažiūrėkim kas ateina
-    import streamlit as st
-    st.write(f"🔍 DEBUG create_text_box: font_size={font_size}, type={type(font_size)}")
-    
     # SVARBU: Išsaugome font_size į lokalų kintamąjį
     actual_font_size = int(font_size)  # Užtikrina kad tai skaičius
-    st.write(f"🔍 DEBUG actual_font_size={actual_font_size}")
     
     # Sukuriame RGBA paveikslėlį
     text_box = Image.new('RGBA', (width, height), (255, 255, 255, 0))
@@ -1028,15 +1023,13 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
     for font_path in font_paths:
         try:
             font = ImageFont.truetype(font_path, actual_font_size)
-            st.write(f"✅ Font loaded: {font_path} with size {actual_font_size}")
             break
         except Exception as e:
             continue
     
     if font is None:
-        st.error(f"❌ KRITINĖ KLAIDA: Nepavyko įkelti JOKIO TrueType font! Default font neveiks su dydžiu {actual_font_size}")
+        # Fallback į default (bitmap font - fiksuotas dydis)
         font = ImageFont.load_default()
-        # Default font IGNORUOJA dydį - tai bitmap font!
     
     # STILIŲ IMPLEMENTACIJOS
     if "Glassmorphism" in style:
@@ -1051,9 +1044,6 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
         max_text_width = width - 40  # 20px padding iš kiekvienos pusės
         lines = wrap_text(text, font, max_text_width)
         
-        # DEBUG: Patikrinam font dydį
-        st.write(f"🔍 DEBUG Glassmorphism: font={font}, actual_font_size={actual_font_size}, lines={len(lines)}")
-        
         # Centruojame tekstą
         total_height = len(lines) * (actual_font_size + 20)
         y_start = (height - total_height) // 2
@@ -1064,8 +1054,6 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
             text_height = bbox[3] - bbox[1]
             x = (width - text_width) // 2
             y = y_start + i * (actual_font_size + 20)
-            
-            st.write(f"🔍 Line {i}: '{line}' width={text_width}px height={text_height}px pos=({x},{y})")
             
             # Šešėlis
             draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
@@ -1498,12 +1486,25 @@ if files_to_process:
                     help="Antras teksto kvadratas"
                 )
             
-            # Šrifto dydis ATSKIROJE EILUTĖJE
-            text_font_size = st.slider(
-                "Šrifto dydis (abiem tekstams):",
-                30, 120, 60, 10,
-                help="Teksto dydis teksto kvadratuose"
-            )
+            # 2 ATSKIRI SLIDER'IAI KIEKVIENAM TEKSTUI
+            st.markdown("##### 🔤 Šriftų dydžiai")
+            col_s1, col_s2 = st.columns(2)
+            
+            with col_s1:
+                text_font_size = st.slider(
+                    "Šrifto dydis tekstui 1:",
+                    30, 120, 60, 10,
+                    key="font_size_1",
+                    help="Teksto dydis pirmame kvadrate"
+                )
+            
+            with col_s2:
+                text_font_size_2 = st.slider(
+                    "Šrifto dydis tekstui 2:",
+                    30, 120, 60, 10,
+                    key="font_size_2",
+                    help="Teksto dydis antrame kvadrate"
+                )
         else:
             # Vienas tekstas visiem kitiems layoutams
             col1, col2 = st.columns([2, 1])
@@ -1524,6 +1525,7 @@ if files_to_process:
                 )
             
             text_content_2 = None  # Nėra antro teksto
+            text_font_size_2 = text_font_size  # Naudojame tą patį dydį
         
         # NAUJAS: Nuotraukų efektai
         st.markdown("---")
@@ -1665,17 +1667,22 @@ if files_to_process:
                                 collage.paste(img_with_effects, (paste_x, paste_y), img_with_effects)
                             else:
                                 # Teksto kvadratas
-                                # Jei 2 nuotraukos → naudojame text_content_2 antram tekstui
+                                # Jei 2 nuotraukos → naudojame text_content_2 ir text_font_size_2 antram tekstui
                                 text_to_use = text_content
+                                font_size_to_use = text_font_size
+                                
                                 if num_photos == 2 and idx == 3 and text_content_2:
                                     text_to_use = text_content_2
+                                    # Naudojame antrą font_size jei jis egzistuoja
+                                    if 'text_font_size_2' in locals():
+                                        font_size_to_use = text_font_size_2
                                 
                                 text_box = create_text_box(
                                     target_size, 
                                     target_size, 
                                     text_to_use,
                                     style=collage_style,
-                                    font_size=text_font_size
+                                    font_size=font_size_to_use
                                 )
                                 # Pridedame tuos pačius efektus tekstui
                                 text_with_effects = add_photo_effects(
@@ -1692,7 +1699,6 @@ if files_to_process:
                                 paste_x = cell_x + (cell_size - text_with_effects.width) // 2
                                 paste_y = cell_y + (cell_size - text_with_effects.height) // 2
                                 
-                                st.write(f"✅ Tekstas įklijuojamas į poziciją ({paste_x}, {paste_y})")
                                 collage.paste(text_with_effects, (paste_x, paste_y), text_with_effects)
                     
                     # ============ HORIZONTAL LAYOUT (2 nuotraukos + tekstas) ============
