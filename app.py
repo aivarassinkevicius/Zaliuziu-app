@@ -1020,14 +1020,16 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
     for font_path in font_paths:
         try:
             font = ImageFont.truetype(font_path, actual_font_size)
+            st.write(f"✅ Font loaded: {font_path} with size {actual_font_size}")
             break
         except Exception as e:
             continue
     
     if font is None:
+        st.warning(f"⚠️ Nepavyko įkelti Times New Roman! Naudojamas default font.")
         font = ImageFont.load_default()
-        # Jei default - padarome tekstą DIDELĮ kartojant
-        actual_font_size = 12  # Default font dydis
+        # Tik DABAR keičiame dydį (nes default font turi fixed dydį)
+        # BET NEKEIČIAME actual_font_size - palikime originalų!
     
     # STILIŲ IMPLEMENTACIJOS
     if "Glassmorphism" in style:
