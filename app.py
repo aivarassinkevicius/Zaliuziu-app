@@ -99,7 +99,7 @@ def professional_auto_enhance(img):
     
     return img
 
-def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=150, auto_enhance=True, enable_opencv=False, enable_auto_crop=False, enable_perspective=False, enable_white_balance=False, enable_opencv_clarity=False, enable_aspect_ratio=False, target_aspect_ratio="4:3"):
+def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=150, watermark_position="Apačia dešinėje", auto_enhance=True, enable_opencv=False, enable_auto_crop=False, enable_perspective=False, enable_white_balance=False, enable_opencv_clarity=False, enable_aspect_ratio=False, target_aspect_ratio="4:3"):
     """
     Prideda marketinginius elementus prie nuotraukos:
     - OpenCV preprocessing (auto-crop, perspective, white balance, aspect ratio)
@@ -195,7 +195,7 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
                 # Default font nemažas - pakartojame tekstą kad būtų didesnis
                 watermark_text = watermark_text * 2
             
-            # Pozicija - dešiniame apatiniame kampe
+            # Pozicija pagal pasirinkimą su DIDESNIU padding
             try:
                 text_bbox = draw.textbbox((0, 0), watermark_text, font=font)
             except:
@@ -204,12 +204,34 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
             text_width = text_bbox[2] - text_bbox[0]
             text_height = text_bbox[3] - text_bbox[1]
             
-            x = width - text_width - 30
-            y = height - text_height - 30
+            # DIDESNIS padding nuo krašto (5% of width/height arba min 50px)
+            padding_x = max(50, int(width * 0.05))
+            padding_y = max(50, int(height * 0.05))
             
-            # Piešiame STORESNI šešėlį (juodą)
-            for offset in [(3, 3), (2, 2), (1, 1), (4, 4)]:
-                draw.text((x + offset[0], y + offset[1]), watermark_text, fill=(0, 0, 0), font=font)
+            # Pozicionavimas pagal pasirinkimą
+            if watermark_position == "Apačia dešinėje":
+                x = width - text_width - padding_x
+                y = height - text_height - padding_y
+            elif watermark_position == "Apačia kairėje":
+                x = padding_x
+                y = height - text_height - padding_y
+            elif watermark_position == "Viršus dešinėje":
+                x = width - text_width - padding_x
+                y = padding_y
+            elif watermark_position == "Viršus kairėje":
+                x = padding_x
+                y = padding_y
+            else:  # Centras
+                x = (width - text_width) // 2
+                y = (height - text_height) // 2
+            
+            # Užtikriname kad tekstas neišlenda už nuotraukos ribų
+            x = max(20, min(x, width - text_width - 20))
+            y = max(20, min(y, height - text_height - 20))
+            
+            # Piešiame STORESNĮ šešėlį (juodą) su didesniu offset
+            for offset in [(5, 5), (4, 4), (3, 3), (2, 2), (1, 1)]:
+                draw.text((x + offset[0], y + offset[1]), watermark_text, fill=(0, 0, 0, 180), font=font)
             
             # Piešiame BALTĄ RYŠKŲ tekstą
             draw.text((x, y), watermark_text, fill=(255, 255, 255), font=font)
@@ -272,22 +294,23 @@ def add_logo_to_image(img, logo_path='assets/logo.png', logo_size=100, position=
         if img.mode != 'RGBA':
             img = img.convert('RGBA')
         
-        # Apskaičiuojame poziciją
-        padding = 20  # Atitraukimas nuo krašto
+        # Apskaičiuojame poziciją su DIDESNIU padding (5% nuotraukos arba min 50px)
+        padding_x = max(50, int(img.width * 0.05))
+        padding_y = max(50, int(img.height * 0.05))
         
         if position == 'top-left':
-            x, y = padding, padding
+            x, y = padding_x, padding_y
         elif position == 'top-right':
-            x = img.width - logo.width - padding
-            y = padding
+            x = img.width - logo.width - padding_x
+            y = padding_y
         elif position == 'bottom-left':
-            x = padding
-            y = img.height - logo.height - padding
+            x = padding_x
+            y = img.height - logo.height - padding_y
         elif position == 'bottom-right':
-            x = img.width - logo.width - padding
-            y = img.height - logo.height - padding
+            x = img.width - logo.width - padding_x
+            y = img.height - logo.height - padding_y
         else:
-            x, y = padding, padding
+            x, y = padding_x, padding_y
         
         # Priklijuojame logo
         img.paste(logo, (x, y), logo)  # Logo kaip mask - skaidrumas išlieka
@@ -1182,12 +1205,19 @@ auto_process = st.sidebar.checkbox("🤖 Automatinis apdorojimas", value=True)
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
 
-add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=True, help="Pridės jūsų tekstą dešiniame apatiniame kampe")
+add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=True, help="Pridės jūsų tekstą ant nuotraukos")
 if add_watermark:
     watermark_text = st.sidebar.text_input("Vandens ženklo tekstas", value="#RūbaiLangams", help="Pvz: #RūbaiLangams arba © Jūsų Įmonė")
+    watermark_position = st.sidebar.selectbox(
+        "Pozicija:",
+        options=["Apačia dešinėje", "Apačia kairėje", "Viršus dešinėje", "Viršus kairėje", "Centras"],
+        index=0,
+        help="Kur bus dedamas vandens ženklas"
+    )
     watermark_size = st.sidebar.slider("📏 Vandens ženklo dydis (px)", 30, 300, 40, 10, help="Šrifto dydis pikseliais. 120px = vidutinis, 250px = DIDELIS")
 else:
     watermark_text = ""
+    watermark_position = "Apačia dešinėje"
     watermark_size = 40
 
 add_border = st.sidebar.checkbox("🖼️ Pridėti baltą rėmelį", value=False)
@@ -1649,6 +1679,7 @@ if files_to_process:
                             saturation=saturation,
                             watermark_text=watermark_text,
                             watermark_size=watermark_size,
+                            watermark_position=watermark_position,
                             auto_enhance=auto_enhance,
                             enable_opencv=enable_opencv,
                             enable_auto_crop=enable_auto_crop,
@@ -2251,6 +2282,7 @@ if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_cont
                 saturation=saturation,
                 watermark_text=watermark_text,
                 watermark_size=watermark_size,
+                watermark_position=watermark_position,
                 auto_enhance=auto_enhance,
                 enable_opencv=enable_opencv,
                 enable_auto_crop=enable_auto_crop,
