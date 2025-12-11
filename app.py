@@ -965,6 +965,32 @@ def add_collage_text_overlay(img, text, position='bottom', style='glassmorphism'
     
     return Image.alpha_composite(img, overlay)
 
+def wrap_text(text, font, max_width):
+    """Automatiškai lūžo tekstą į eilutes pagal plotį"""
+    words = text.split()
+    lines = []
+    current_line = []
+    
+    for word in words:
+        test_line = ' '.join(current_line + [word])
+        bbox = font.getbbox(test_line)
+        text_width = bbox[2] - bbox[0]
+        
+        if text_width <= max_width:
+            current_line.append(word)
+        else:
+            if current_line:
+                lines.append(' '.join(current_line))
+                current_line = [word]
+            else:
+                # Žodis per ilgas - pridedame tokį kokis yra
+                lines.append(word)
+    
+    if current_line:
+        lines.append(' '.join(current_line))
+    
+    return lines
+
 def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg_color=(255, 255, 255)):
     """Sukuria teksto kvadratą kaip atskirą paveikslėlį (ne overlay!)"""
     
@@ -1002,8 +1028,11 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
         text_box = text_box.filter(ImageFilter.GaussianBlur(2))
         draw = ImageDraw.Draw(text_box)
         
-        # Tekstas su šešėliu
-        lines = text.split('\n')
+        # Automatinis teksto lūžimas
+        max_text_width = width - 40  # 20px padding iš kiekvienos pusės
+        lines = wrap_text(text, font, max_text_width)
+        
+        # Centruojame tekstą
         total_height = len(lines) * (font_size + 20)
         y_start = (height - total_height) // 2
         
@@ -1032,8 +1061,9 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
         for i in range(border_width):
             draw.rectangle([i, i, width - 10 - i, height - 10 - i], outline=(0, 0, 0, 255), width=2)
         
-        # Tekstas
-        lines = text.split('\n')
+        # Automatinis teksto lūžimas
+        max_text_width = width - 50  # Accounting for borders and padding
+        lines = wrap_text(text, font, max_text_width)
         total_height = len(lines) * (font_size + 20)
         y_start = (height - total_height) // 2
         
@@ -1048,8 +1078,9 @@ def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg
         # Švarus baltas fonas
         draw.rectangle([0, 0, width, height], fill=(255, 255, 255, 250))
         
-        # Tekstas
-        lines = text.split('\n')
+        # Automatinis teksto lūžimas
+        max_text_width = width - 40  # 20px padding
+        lines = wrap_text(text, font, max_text_width)
         total_height = len(lines) * (font_size + 20)
         y_start = (height - total_height) // 2
         
@@ -1418,15 +1449,41 @@ if files_to_process:
         st.markdown("---")
         st.markdown("#### ✍️ Teksto kvadrato turinys")
         
-        col1, col2 = st.columns([2, 1])
-        
-        with col1:
-            text_content = st.text_area(
-                "Tekstas teksto kvadrate:",
-                value=f"{season} kolekcija 2025 🌿",
-                height=100,
-                help="Šis tekstas bus atskirame kvadrate collage (ne overlay!)"
-            )
+        # Jei 2 nuotraukos Grid 2x2 - rodyti 2 tekstus
+        if len(files_to_process) == 2 and layout_option == "Grid 2x2 (2 nuotraukos + 2 teksto kvadratai)":
+            st.info("💡 2 nuotraukos → 2 skirtingi tekstai")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                text_content = st.text_area(
+                    "Tekstas kvadrate 1:",
+                    value=f"{season} kolekcija 2025 🌿",
+                    height=80,
+                    key="text_box_1",
+                    help="Pirmas teksto kvadratas"
+                )
+            
+            with col2:
+                text_content_2 = st.text_area(
+                    "Tekstas kvadrate 2:",
+                    value=f"Naujiena! {season} stilius 🎨",
+                    height=80,
+                    key="text_box_2",
+                    help="Antras teksto kvadratas"
+                )
+        else:
+            # Vienas tekstas visiem kitiems layoutams
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                text_content = st.text_area(
+                    "Tekstas teksto kvadrate:",
+                    value=f"{season} kolekcija 2025 🌿",
+                    height=100,
+                    help="Šis tekstas bus atskirame kvadrate collage (ne overlay!)"
+                )
+            text_content_2 = None  # Nėra antro teksto
         
         with col2:
             text_font_size = st.slider(
@@ -1575,10 +1632,15 @@ if files_to_process:
                                 collage.paste(img_with_effects, (paste_x, paste_y), img_with_effects)
                             else:
                                 # Teksto kvadratas
+                                # Jei 2 nuotraukos → naudojame text_content_2 antram tekstui
+                                text_to_use = text_content
+                                if num_photos == 2 and idx == 3 and text_content_2:
+                                    text_to_use = text_content_2
+                                
                                 text_box = create_text_box(
                                     target_size, 
                                     target_size, 
-                                    text_content,
+                                    text_to_use,
                                     style=collage_style,
                                     font_size=text_font_size
                                 )
