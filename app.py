@@ -208,26 +208,33 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
             padding_x = max(50, int(width * 0.05))
             padding_y = max(50, int(height * 0.05))
             
+            # Saugus minimum padding - jei tekstas per ilgas, sumažiname
+            safe_padding_x = min(padding_x, (width - text_width) // 2 - 10)
+            safe_padding_x = max(15, safe_padding_x)  # Min 15px
+            
+            safe_padding_y = min(padding_y, (height - text_height) // 2 - 10)
+            safe_padding_y = max(15, safe_padding_y)  # Min 15px
+            
             # Pozicionavimas pagal pasirinkimą
             if watermark_position == "Apačia dešinėje":
-                x = width - text_width - padding_x
-                y = height - text_height - padding_y
+                x = width - text_width - safe_padding_x
+                y = height - text_height - safe_padding_y
             elif watermark_position == "Apačia kairėje":
-                x = padding_x
-                y = height - text_height - padding_y
+                x = safe_padding_x
+                y = height - text_height - safe_padding_y
             elif watermark_position == "Viršus dešinėje":
-                x = width - text_width - padding_x
-                y = padding_y
+                x = width - text_width - safe_padding_x
+                y = safe_padding_y
             elif watermark_position == "Viršus kairėje":
-                x = padding_x
-                y = padding_y
+                x = safe_padding_x
+                y = safe_padding_y
             else:  # Centras
                 x = (width - text_width) // 2
                 y = (height - text_height) // 2
             
-            # Užtikriname kad tekstas neišlenda už nuotraukos ribų
-            x = max(20, min(x, width - text_width - 20))
-            y = max(20, min(y, height - text_height - 20))
+            # GRIEŽTAS boundary check - VISUOMET telpa
+            x = max(5, min(x, width - text_width - 5))
+            y = max(5, min(y, height - text_height - 5))
             
             # Piešiame STORESNĮ šešėlį (juodą) su didesniu offset
             for offset in [(5, 5), (4, 4), (3, 3), (2, 2), (1, 1)]:
@@ -294,23 +301,31 @@ def add_logo_to_image(img, logo_path='assets/logo.png', logo_size=100, position=
         if img.mode != 'RGBA':
             img = img.convert('RGBA')
         
-        # Apskaičiuojame poziciją su DIDESNIU padding (5% nuotraukos arba min 50px)
-        padding_x = max(50, int(img.width * 0.05))
-        padding_y = max(50, int(img.height * 0.05))
+        # DIDESNIS padding kad logo TIKRAI nepersidengtų su nuotraukomis
+        # Dedame į patį kampą su mažu padding - nuotraukos turės content_start
+        padding_edge = 20  # Tik nuo pat krašto
+        
+        # Bet užtikriname kad logo telpa
+        safe_margin = 10
         
         if position == 'top-left':
-            x, y = padding_x, padding_y
+            # Logo į patį viršutinį kairį kampą - nuotraukos prasidės žemiau/dešiniau
+            x, y = padding_edge, padding_edge
         elif position == 'top-right':
-            x = img.width - logo.width - padding_x
-            y = padding_y
+            x = img.width - logo.width - padding_edge
+            y = padding_edge
         elif position == 'bottom-left':
-            x = padding_x
-            y = img.height - logo.height - padding_y
+            x = padding_edge
+            y = img.height - logo.height - padding_edge
         elif position == 'bottom-right':
-            x = img.width - logo.width - padding_x
-            y = img.height - logo.height - padding_y
+            x = img.width - logo.width - padding_edge
+            y = img.height - logo.height - padding_edge
         else:
-            x, y = padding_x, padding_y
+            x, y = padding_edge, padding_edge
+        
+        # Užtikriname kad logo telpa canvas ribose
+        x = max(safe_margin, min(x, img.width - logo.width - safe_margin))
+        y = max(safe_margin, min(y, img.height - logo.height - safe_margin))
         
         # Priklijuojame logo
         img.paste(logo, (x, y), logo)  # Logo kaip mask - skaidrumas išlieka
@@ -1716,7 +1731,7 @@ if files_to_process:
                     
                     # PADDING - mažesnis padding, bet palikta vieta logo viršuje kairėje!
                     padding = int(canvas_width * 0.04)  # 4% padding
-                    logo_safe_zone = 130  # Vieta logo (100px + 30px margin)
+                    logo_safe_zone = 160  # PADIDINTA vieta logo (100px aukštis + 60px margin)
                     
                     content_width = canvas_width - padding * 2
                     content_height = canvas_height - padding * 2
