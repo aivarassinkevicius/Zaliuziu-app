@@ -994,8 +994,13 @@ def wrap_text(text, font, max_width):
 def create_text_box(width, height, text, style='glassmorphism', font_size=60, bg_color=(255, 255, 255)):
     """Sukuria teksto kvadratą kaip atskirą paveikslėlį (ne overlay!)"""
     
+    # DEBUG: Pažiūrėkim kas ateina
+    import streamlit as st
+    st.write(f"🔍 DEBUG create_text_box: font_size={font_size}, type={type(font_size)}")
+    
     # SVARBU: Išsaugome font_size į lokalų kintamąjį
     actual_font_size = int(font_size)  # Užtikrina kad tai skaičius
+    st.write(f"🔍 DEBUG actual_font_size={actual_font_size}")
     
     # Sukuriame RGBA paveikslėlį
     text_box = Image.new('RGBA', (width, height), (255, 255, 255, 0))
