@@ -5,6 +5,14 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
 
+# Import our new image processing module
+try:
+    from lib.image_processing import process_blinds_photo
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
+    st.warning("⚠️ OpenCV not available - advanced processing disabled")
+
 # ---------- Nustatymai ----------
 load_dotenv()
 
@@ -91,9 +99,10 @@ def professional_auto_enhance(img):
     
     return img
 
-def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=150, auto_enhance=True):
+def add_marketing_overlay(image_file, add_watermark=False, add_border=False, brightness=1.0, contrast=1.0, saturation=1.0, watermark_text="", watermark_size=150, auto_enhance=True, enable_opencv=False, enable_auto_crop=False, enable_perspective=False, enable_white_balance=False, enable_opencv_clarity=False):
     """
     Prideda marketinginius elementus prie nuotraukos:
+    - OpenCV preprocessing (auto-crop, perspective, white balance)
     - Vandens ženklą (ryškų, baltą su šešėliu)
     - Rėmelį
     - Spalvų koregavimą (šviesumas, kontrastas, sodrumas)
@@ -103,6 +112,19 @@ def add_marketing_overlay(image_file, add_watermark=False, add_border=False, bri
         
         # Atidarome nuotrauką
         img = Image.open(image_file)
+        
+        # NAUJAS: OPENCV PREPROCESSING (prieš viską)
+        if enable_opencv and OPENCV_AVAILABLE:
+            try:
+                img = process_blinds_photo(
+                    img,
+                    enable_auto_crop=enable_auto_crop,
+                    enable_perspective=enable_perspective,
+                    enable_white_balance=enable_white_balance,
+                    enable_clarity=enable_opencv_clarity
+                )
+            except Exception as e:
+                st.warning(f"OpenCV processing failed: {e}")
         
         # Konvertuojame į RGB jei reikia
         if img.mode in ('RGBA', 'LA', 'P'):
@@ -1192,6 +1214,34 @@ else:
     saturation = st.sidebar.slider("🎨 Sodrumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 pilkiau, >1.0 sodresni spalvos")
 
 st.sidebar.markdown("---")
+st.sidebar.markdown("### 🔬 Advanced Preprocessing (OpenCV)")
+
+if OPENCV_AVAILABLE:
+    enable_opencv = st.sidebar.checkbox("🎯 Smart Photo Processing", value=False, help="AI photo enhancement: auto-crop, straighten, color correction")
+    
+    if enable_opencv:
+        st.sidebar.success("🤖 **OpenCV aktyvuotas!**")
+        
+        enable_auto_crop = st.sidebar.checkbox("✂️ Auto-Crop (detect blinds)", value=True, help="Automatically detect and crop blinds area")
+        enable_perspective = st.sidebar.checkbox("📐 Straighten (perspective fix)", value=True, help="Auto-straighten vertical lines")
+        enable_white_balance = st.sidebar.checkbox("🎨 White Balance", value=True, help="Remove yellow/blue tint")
+        enable_opencv_clarity = st.sidebar.checkbox("✨ Clarity Boost", value=True, help="Enhance texture and detail")
+        
+        st.sidebar.info("⏱️ Apdorojimas gali užtrukti 2-5 sek per nuotrauką")
+    else:
+        enable_auto_crop = False
+        enable_perspective = False
+        enable_white_balance = False
+        enable_opencv_clarity = False
+else:
+    enable_opencv = False
+    enable_auto_crop = False
+    enable_perspective = False
+    enable_white_balance = False
+    enable_opencv_clarity = False
+    st.sidebar.warning("⚠️ OpenCV neprieinamas")
+
+st.sidebar.markdown("---")
 st.sidebar.markdown("### 🔗 Discord Integracija")
 enable_discord = st.sidebar.checkbox("📤 Siųsti į Discord", value=False, help="Automatiškai siųsti collage į Discord kanalą")
 if enable_discord:
@@ -1374,7 +1424,12 @@ if files_to_process:
                 saturation=saturation,
                 watermark_text=watermark_text,
                 watermark_size=watermark_size,
-                auto_enhance=auto_enhance
+                auto_enhance=auto_enhance,
+                enable_opencv=enable_opencv,
+                enable_auto_crop=enable_auto_crop,
+                enable_perspective=enable_perspective,
+                enable_white_balance=enable_white_balance,
+                enable_opencv_clarity=enable_opencv_clarity
             )
             edited.seek(0)
             
@@ -1584,7 +1639,12 @@ if files_to_process:
                             saturation=saturation,
                             watermark_text=watermark_text,
                             watermark_size=watermark_size,
-                auto_enhance=auto_enhance
+                            auto_enhance=auto_enhance,
+                            enable_opencv=enable_opencv,
+                            enable_auto_crop=enable_auto_crop,
+                            enable_perspective=enable_perspective,
+                            enable_white_balance=enable_white_balance,
+                            enable_opencv_clarity=enable_opencv_clarity
             )
                         edited.seek(0)
                         img = Image.open(edited)
@@ -2179,7 +2239,12 @@ if "trigger_ai_content" in st.session_state and st.session_state.trigger_ai_cont
                 saturation=saturation,
                 watermark_text=watermark_text,
                 watermark_size=watermark_size,
-                auto_enhance=auto_enhance
+                auto_enhance=auto_enhance,
+                enable_opencv=enable_opencv,
+                enable_auto_crop=enable_auto_crop,
+                enable_perspective=enable_perspective,
+                enable_white_balance=enable_white_balance,
+                enable_opencv_clarity=enable_opencv_clarity
             )
             edited.seek(0)
             
