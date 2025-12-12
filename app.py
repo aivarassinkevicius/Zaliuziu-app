@@ -1387,8 +1387,8 @@ auto_enhance = st.sidebar.checkbox(
 
 if auto_enhance:
     brightness = 1.0
-    contrast = 1.0
-    saturation = 1.0
+    contrast = 1.3
+    saturation = 1.3
 else:
     st.sidebar.markdown("**Rankinė spalvų korekcija:**")
     brightness = st.sidebar.slider("☀️ Šviesumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 tamsiau, >1.0 šviesiau")
@@ -1445,21 +1445,6 @@ else:
     enable_aspect_ratio = False
     target_aspect_ratio = "4:3"
     st.sidebar.warning("⚠️ OpenCV neprieinamas")
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🔗 Discord Integracija")
-enable_discord = st.sidebar.checkbox(
-    "📤 Siųsti į Discord", value=False, help="Automatiškai siųsti collage į Discord kanalą"
-)
-if enable_discord:
-    discord_webhook_url = st.sidebar.text_input(
-        "Discord Webhook URL:",
-        placeholder="https://discord.com/api/webhooks/...",
-        type="password",
-        help="Įveskite Discord webhook URL (Settings → Integrations → Webhooks)",
-    )
-else:
-    discord_webhook_url = ""
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotraukas su žaliuzėmis ar roletais.")
@@ -1596,10 +1581,6 @@ if st.session_state.uploaded_files:
         if "manual_files" in st.session_state:
             st.session_state.manual_files = []
         st.rerun()
-
-# Rodyti instrukcijas jei nėra failų
-if not st.session_state.uploaded_files:
-    st.info("👆 **Pasirinkite vieną iš būdų aukščiau įkelti nuotraukas**")
 
 # Naudojame session_state failus
 files_to_process = st.session_state.uploaded_files
