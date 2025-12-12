@@ -1042,6 +1042,132 @@ def add_text_overlay_modern(img, text, position="bottom", font_size=60, bg_opaci
     return Image.alpha_composite(img, overlay)
 
 
+def create_modern_landing_layout(product_image, logo_path="assets/logo.png"):
+    """
+    Sukuria modernų landing page stilių su produkto nuotrauka ir informacija.
+    Layout: Nuotrauka kairėje (40%), informacija dešinėje (60%)
+    """
+    # Canvas dydis
+    canvas_width = 1920
+    canvas_height = 1080
+    
+    # Spalvų paletė
+    bg_gradient_start = (240, 244, 248)  # Šviesi pilka-mėlyna
+    bg_gradient_end = (255, 255, 255)     # Balta
+    accent_color = (30, 64, 175)          # Tamsiai mėlyna
+    text_color = (30, 41, 59)             # Tamsiai pilka
+    
+    # Sukuriame canvas su gradientu
+    canvas = Image.new("RGB", (canvas_width, canvas_height), bg_gradient_start)
+    draw = ImageDraw.Draw(canvas)
+    
+    # Vertikalus gradientas
+    for y in range(canvas_height):
+        ratio = y / canvas_height
+        r = int(bg_gradient_start[0] + (bg_gradient_end[0] - bg_gradient_start[0]) * ratio)
+        g = int(bg_gradient_start[1] + (bg_gradient_end[1] - bg_gradient_start[1]) * ratio)
+        b = int(bg_gradient_start[2] + (bg_gradient_end[2] - bg_gradient_start[2]) * ratio)
+        draw.line([(0, y), (canvas_width, y)], fill=(r, g, b))
+    
+    # === KAIRĖ PUSĖ: PRODUKTO NUOTRAUKA ===
+    left_width = int(canvas_width * 0.4)
+    
+    # Resize produkto nuotrauką
+    product_img = product_image.copy()
+    if product_img.mode != "RGB":
+        product_img = product_img.convert("RGB")
+    
+    # Proporcingas resize kad tilptų į kairę pusę su padding
+    max_img_height = canvas_height - 100
+    max_img_width = left_width - 100
+    
+    product_img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
+    
+    # Centruojame nuotrauką kairėje pusėje
+    img_x = (left_width - product_img.width) // 2
+    img_y = (canvas_height - product_img.height) // 2
+    
+    # Pridedame subtilų šešėlį po nuotrauka
+    shadow = Image.new("RGBA", (product_img.width + 20, product_img.height + 20), (0, 0, 0, 0))
+    shadow_draw = ImageDraw.Draw(shadow)
+    shadow_draw.rectangle([10, 10, product_img.width + 10, product_img.height + 10], 
+                          fill=(0, 0, 0, 40))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=15))
+    canvas.paste(shadow, (img_x - 10, img_y - 10), shadow)
+    
+    # Įklijuojame produkto nuotrauką
+    canvas.paste(product_img, (img_x, img_y))
+    
+    # === DEŠINĖ PUSĖ: INFORMACIJA ===
+    right_x_start = left_width + 80
+    content_width = canvas_width - right_x_start - 100
+    
+    # Įkeliame logo
+    try:
+        logo = Image.open(logo_path)
+        logo.thumbnail((200, 100), Image.Resampling.LANCZOS)
+        logo_x = canvas_width - logo.width - 80
+        logo_y = 60
+        
+        if logo.mode == "RGBA":
+            canvas.paste(logo, (logo_x, logo_y), logo)
+        else:
+            canvas.paste(logo, (logo_x, logo_y))
+    except:
+        pass  # Jei logo nepavyksta įkelti, praleisti
+    
+    # Fontai
+    try:
+        font_title = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 72)
+        font_phone = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 56)
+        font_heading = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 48)
+        font_bullet = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 36)
+        font_tagline = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 42)
+    except:
+        font_title = ImageFont.load_default()
+        font_phone = font_title
+        font_heading = font_title
+        font_bullet = font_title
+        font_tagline = font_title
+    
+    current_y = 180
+    
+    # Telefono numeris su CTA
+    phone_text = "Užsakymai tel.:"
+    draw.text((right_x_start, current_y), phone_text, fill=text_color, font=font_phone)
+    current_y += 70
+    
+    phone_number = "+370 (606) 50 414"
+    draw.text((right_x_start, current_y), phone_number, fill=accent_color, font=font_phone)
+    current_y += 120
+    
+    # Pagrindinė antraštė
+    heading = "Kodėl verta rinktis plisuotas\nžaliuzes?"
+    draw.text((right_x_start, current_y), heading, fill=text_color, font=font_heading)
+    current_y += 180
+    
+    # Bullet points
+    bullets = [
+        "• tinka visų formų langams;",
+        "• patogus valdymo būdas;",
+        "• lengva priežiūra;",
+        "• drėgmei atsparus audiniai;",
+        "• didelis spalvų pasirinkimas;"
+    ]
+    
+    for bullet in bullets:
+        # Bullet point su hover efektu (vizualiai)
+        draw.text((right_x_start, current_y), bullet, fill=text_color, font=font_bullet)
+        current_y += 55
+    
+    # Tagline apačioje
+    current_y += 60
+    tagline = "Gražu, praktiška, modernu!"
+    draw.text((right_x_start, current_y), tagline, fill=accent_color, font=font_tagline)
+    
+    return canvas
+
+
 def add_collage_text_overlay(img, text, position="bottom", style="glassmorphism", font_size=70):
     """Prideda stilingą tekstą ant collage su įvairiais efektais"""
     if not text or text.strip() == "":
@@ -1678,8 +1804,13 @@ if files_to_process:
 
         num_photos = len(files_to_process)
 
-        if num_photos == 2:
+        if num_photos == 1:
             layout_options = [
+                "🎯 Modern Landing (produktas + info)",
+            ]
+        elif num_photos == 2:
+            layout_options = [
+                "🎯 Modern Landing (produktas + info)",
                 "Grid 2x2 (2 nuotraukos + 2 teksto kvadratai)",
                 "Horizontal (2 nuotraukos + 1 tekstas viduryje)",
                 "Asymmetric (1 didelė + 1 maža + tekstas)",
@@ -1687,12 +1818,14 @@ if files_to_process:
             ]
         elif num_photos == 3:
             layout_options = [
+                "🎯 Modern Landing (produktas + info)",
                 "Grid 2x2 (3 nuotraukos + 1 teksto kvadratas)",
                 "Magazine (3 nuotraukos + teksto zona)",
                 "Asymmetric (1 didelė + 2 mažos + tekstas)",
             ]
         else:  # 4 ar daugiau
             layout_options = [
+                "🎯 Modern Landing (produktas + info)",
                 "Grid 2x2 (4 nuotraukos be teksto)",
                 "Grid 3x2 (4 nuotraukos + 2 teksto kvadratai)",
                 "Mosaic (4 nuotraukos skirtingų dydžių + tekstas)",
@@ -1875,8 +2008,15 @@ if files_to_process:
                     # Nustatome layout pagal pasirinkimą
                     num_photos = len(edited_images)
 
+                    # ============ MODERN LANDING LAYOUT ============
+                    if "Modern Landing" in collage_layout:
+                        # Naudojame pirmą nuotrauką kaip produkto nuotrauką
+                        product_img = edited_images[0]
+                        collage = create_modern_landing_layout(product_img, logo_path="assets/logo.png")
+                        collage = collage.convert("RGBA")
+
                     # ============ GRID 2x2 LAYOUTS ============
-                    if "Grid 2x2" in collage_layout:
+                    elif "Grid 2x2" in collage_layout:
                         cell_size = content_width // 2
                         gap = 20
 
