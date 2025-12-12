@@ -51,10 +51,19 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
-st.set_page_config(page_title="Žaliuzių turinio kūrėjas", page_icon="🌞", layout="wide")
+st.set_page_config(
+    page_title="Žaliuzių turinio kūrėjas", 
+    page_icon="assets/logo.png",
+    layout="wide"
+)
 
-st.title("🌿 Žaliuzių ir Roletų turinio kūrėjas")
-st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tinklams.")
+# Header su logo
+col1, col2 = st.columns([1, 10])
+with col1:
+    st.image("assets/logo.png", width=80)
+with col2:
+    st.title("Žaliuzių ir Roletų turinio kūrėjas")
+    st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tinklams.")
 
 # ---------- Pagalbinės funkcijos ----------
 
