@@ -4,6 +4,7 @@ from datetime import datetime
 from openai import OpenAI
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
+from supabase import create_client, Client
 
 # Import our new image processing module
 try:
@@ -17,7 +18,7 @@ except ImportError as e:
 # ---------- Nustatymai ----------
 load_dotenv()
 
-# Version: 2.3 - Simplified, no AI editing
+# Version: 2.4 - Supabase integration for version history
 # Bandome gauti API raktą iš .env failo (vietinis) arba Streamlit secrets (cloud)
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
@@ -26,6 +27,23 @@ if not api_key:
         api_key = st.secrets["OPENAI_API_KEY"]
     except:
         pass
+
+# Supabase inicializacija
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+if not supabase_url or not supabase_key:
+    try:
+        supabase_url = st.secrets["SUPABASE_URL"]
+        supabase_key = st.secrets["SUPABASE_KEY"]
+    except:
+        pass
+
+supabase: Client = None
+if supabase_url and supabase_key:
+    try:
+        supabase = create_client(supabase_url, supabase_key)
+    except Exception as e:
+        st.warning(f"Supabase prisijungimas nepavyko: {e}")
 
 if not api_key:
     st.error("❌ OpenAI API raktas nerastas! Patikrinkite konfigūraciją.")
@@ -371,8 +389,15 @@ HISTORY_FILE = "data/history.json"
 
 
 def load_history():
-    """Įkelia aprašymų istoriją iš JSON failo"""
+    """Įkelia aprašymų istoriją iš Supabase arba JSON failo (fallback)"""
     try:
+        # Bandome iš Supabase
+        if supabase:
+            response = supabase.table("version_history").select("*").order("created_at", desc=True).limit(100).execute()
+            if response.data:
+                return response.data
+        
+        # Fallback į JSON failą (lokaliai)
         if os.path.exists(HISTORY_FILE):
             with open(HISTORY_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
@@ -383,17 +408,14 @@ def load_history():
 
 
 def save_to_history(description, season, holiday, num_photos, status="approved", version=1):
-    """Išsaugo aprašymą į JSON istoriją
+    """Išsaugo aprašymą į Supabase arba JSON istoriją (fallback)
 
     Args:
         status: "generated" (auto-save) arba "approved" (user patvirtino)
         version: Versijos numeris (1, 2, 3...)
     """
     try:
-        history = load_history()
-
         entry = {
-            "id": len(history) + 1,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "description": description,
             "season": season,
@@ -403,10 +425,22 @@ def save_to_history(description, season, holiday, num_photos, status="approved",
             "version": version,
         }
 
+        # Bandome įrašyti į Supabase
+        if supabase:
+            supabase.table("version_history").insert(entry).execute()
+            # Ištrinti senus įrašus, palikti tik 5 naujausius
+            all_entries = supabase.table("version_history").select("id").order("created_at", desc=True).execute()
+            if len(all_entries.data) > 5:
+                old_ids = [e["id"] for e in all_entries.data[5:]]
+                for old_id in old_ids:
+                    supabase.table("version_history").delete().eq("id", old_id).execute()
+            return True
+        
+        # Fallback į JSON failą (lokaliai)
+        history = load_history()
+        entry["id"] = len(history) + 1
         history.insert(0, entry)  # Naujausi viršuje
-
-        # Saugom daugiau versijų - 100 vietoj 50
-        history = history[:100]
+        history = history[:5]  # Saugom tik 5 versijas
 
         os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
@@ -415,6 +449,28 @@ def save_to_history(description, season, holiday, num_photos, status="approved",
         return True
     except Exception as e:
         st.error(f"Nepavyko išsaugoti į istoriją: {e}")
+        return False
+
+
+def delete_from_history(entry_id):
+    """Ištrina įrašą iš Supabase arba JSON istorijos"""
+    try:
+        # Bandome ištrinti iš Supabase
+        if supabase:
+            supabase.table("version_history").delete().eq("id", entry_id).execute()
+            return True
+        
+        # Fallback į JSON failą (lokaliai)
+        history = load_history()
+        history = [h for h in history if h.get("id") != entry_id]
+        
+        os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        
+        return True
+    except Exception as e:
+        st.error(f"Nepavyko ištrinti: {e}")
         return False
 
 
@@ -2324,8 +2380,8 @@ if files_to_process:
         ):
             st.caption("Kiekviena sugeneruota versija automatiškai išsaugoma. Pasirinkite norimą versiją.")
 
-            for entry in history[:20]:  # Rodome 20 naujausių (daugiau versijų)
-                col1, col2 = st.columns([4, 1])
+            for entry in history[:5]:  # Rodome tik 5 naujausius
+                col1, col2, col3 = st.columns([4, 1, 1])
 
                 with col1:
                     # Statusas ir versija
@@ -2346,6 +2402,12 @@ if files_to_process:
                         st.session_state.ai_content_result = entry["description"]
                         st.success(f"✅ {version_text} užkrautas!")
                         st.rerun()
+                
+                with col3:
+                    if st.button("🗑️", key=f"delete_history_{entry['id']}", help="Ištrinti šią versiją"):
+                        if delete_from_history(entry["id"]):
+                            st.success("✅ Ištrinta!")
+                            st.rerun()
 
                 st.markdown("---")
 
