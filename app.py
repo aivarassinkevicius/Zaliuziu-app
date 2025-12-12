@@ -107,11 +107,11 @@ def professional_auto_enhance(img):
 
     # 3. CONTRAST BOOST - protingas kontrasto didinimas
     enhancer = ImageEnhance.Contrast(img)
-    img = enhancer.enhance(1.25)  # +25% kontrasto
+    img = enhancer.enhance(1.30)  # +30% kontrasto
 
     # 4. SATURATION BOOST - gyvesnės spalvos
     enhancer = ImageEnhance.Color(img)
-    img = enhancer.enhance(1.20)  # +20% sodrumo
+    img = enhancer.enhance(1.30)  # +30% sodrumo
 
     # 5. BRIGHTNESS FIX - šiek tiek šviesiau (jei per tamsu)
     img_array = np.array(img)
