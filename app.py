@@ -1195,20 +1195,22 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
     if phone_number:
         draw = ImageDraw.Draw(canvas)
         
-        # Telefono numerio fontas - Times New Roman 40px - keletas fallback
+        # Telefono numerio fontas - Times New Roman 80px - keletas fallback
         font_phone = None
         font_paths = [
             "C:/Windows/Fonts/timesbd.ttf",  # Times New Roman Bold
             "C:/Windows/Fonts/times.ttf",  # Times New Roman Regular
             "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",  # Linux
             "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",  # Linux DejaVu
+            "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
             "/System/Library/Fonts/Times New Roman.ttf",  # macOS
             "C:/Windows/Fonts/arial.ttf",  # Arial fallback
         ]
         
         for font_path in font_paths:
             try:
-                font_phone = ImageFont.truetype(font_path, 40)
+                font_phone = ImageFont.truetype(font_path, 80)
                 break
             except:
                 continue
@@ -1216,7 +1218,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
         # Jei joks fontas nerastas
         if font_phone is None:
             try:
-                font_phone = ImageFont.truetype("arial.ttf", 40)
+                font_phone = ImageFont.truetype("arial.ttf", 80)
             except:
                 font_phone = ImageFont.load_default()
         
@@ -2703,20 +2705,22 @@ if files_to_process:
                         collage = collage.convert("RGB")
                         draw = ImageDraw.Draw(collage)
                         
-                        # Telefono numerio fontas - Times New Roman 40px - keletas fallback
+                        # Telefono numerio fontas - Times New Roman 80px - keletas fallback
                         font_phone = None
                         font_paths = [
                             "C:/Windows/Fonts/timesbd.ttf",  # Times New Roman Bold
                             "C:/Windows/Fonts/times.ttf",  # Times New Roman Regular
                             "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",  # Linux
                             "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+                            "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",  # Linux DejaVu
+                            "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
                             "/System/Library/Fonts/Times New Roman.ttf",  # macOS
                             "C:/Windows/Fonts/arial.ttf",  # Arial fallback
                         ]
                         
                         for font_path in font_paths:
                             try:
-                                font_phone = ImageFont.truetype(font_path, 40)
+                                font_phone = ImageFont.truetype(font_path, 80)
                                 break
                             except:
                                 continue
@@ -2724,7 +2728,7 @@ if files_to_process:
                         # Jei joks fontas nerastas
                         if font_phone is None:
                             try:
-                                font_phone = ImageFont.truetype("arial.ttf", 40)
+                                font_phone = ImageFont.truetype("arial.ttf", 80)
                             except:
                                 font_phone = ImageFont.load_default()
                         
