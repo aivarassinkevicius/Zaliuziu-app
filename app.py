@@ -1195,24 +1195,42 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
     if phone_number:
         draw = ImageDraw.Draw(canvas)
         
-        # Telefono numerio fontas - LABAI DIDELIS (CTA elementas)
-        try:
-            font_phone = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 120)  # EKSTRA DIDELIS - 120px
-        except:
-            font_phone = ImageFont.load_default()
+        # Telefono numerio fontas - LABAI DIDELIS (120px) - keletas fallback
+        font_phone = None
+        font_paths = [
+            "C:/Windows/Fonts/arialbd.ttf",  # Windows
+            "C:/Windows/Fonts/arial.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Linux
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/System/Library/Fonts/Helvetica.ttc",  # macOS
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        ]
+        
+        for font_path in font_paths:
+            try:
+                font_phone = ImageFont.truetype(font_path, 120)
+                break
+            except:
+                continue
+        
+        # Jei joks fontas nerastas
+        if font_phone is None:
+            try:
+                font_phone = ImageFont.truetype("arial.ttf", 120)
+            except:
+                font_phone = ImageFont.load_default()
         
         # Apskaičiuojame telefono numerio dydį
         phone_bbox = draw.textbbox((0, 0), phone_number, font=font_phone)
         phone_width = phone_bbox[2] - phone_bbox[0]
+        phone_height = phone_bbox[3] - phone_bbox[1]
         
-        # Centruojame telefono numerį
+        # Centruojame telefono numerį (dinaminis Y pagal aukštį)
         phone_x = (canvas_width - phone_width) // 2
-        phone_y = canvas_height - 160  # 160px nuo apačios (daugiau vietos dėl didesnio šrifto)
+        phone_y = canvas_height - phone_height - 80
         
         # Piešiame telefono numerį su RYŠKESNIU šešėliu
-        # Šešėlis (didesnis offset ir tamsesnis)
-        draw.text((phone_x + 4, phone_y + 4), phone_number, fill=(0, 0, 0, 180), font=font_phone)
-        # Tekstas (tamsiai pilkas - geras kontrastas su baltu fonu)
+        draw.text((phone_x + 5, phone_y + 5), phone_number, fill=(0, 0, 0, 200), font=font_phone)
         draw.text((phone_x, phone_y), phone_number, fill=(30, 41, 59), font=font_phone)
     
     return canvas
@@ -2680,69 +2698,49 @@ if files_to_process:
                         text_y = content_start_y + photo_height + 50
                         collage.paste(shadowed_text, (padding + 50, text_y), shadowed_text)
 
-                    # === TELEFONO NUMERIS (VISIEMS LAYOUT'AMS) ===
-                    # DEBUG: Patikriname sąlygą PRIEŠ if bloką
-                    st.warning(f"🔍 DEBUG PRIEŠ IF: show_phone_number={show_phone_number}, default_phone='{default_phone}', layout='{collage_layout}', 'Modern Landing' in layout = {'Modern Landing' in collage_layout}", icon="🔍")
-                    
+                    # === TELEFONO NUMERIS (VISIEMS LAYOUT'AMS IŠSKYRUS MODERN LANDING) ===
                     if show_phone_number and default_phone and "Modern Landing" not in collage_layout:
-                        st.success(f"✅ IF BLOKAS ĮVYKDYTAS! Pridedam telefono numerį.", icon="✅")
-                        
                         # Konvertuojame į RGB prieš piešiant tekstą
                         collage = collage.convert("RGB")
                         draw = ImageDraw.Draw(collage)
                         
-                        # Telefono numerio fontas - DIDELIS (120px) - išbandome VISUS galimus fontus
+                        # Telefono numerio fontas - DIDELIS (120px) - keletas fallback
                         font_phone = None
-                        font_found = None
                         font_paths = [
                             "C:/Windows/Fonts/arialbd.ttf",  # Windows
                             "C:/Windows/Fonts/arial.ttf",
                             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Linux
                             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
                             "/System/Library/Fonts/Helvetica.ttc",  # macOS
-                            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",  # Linux alternative
+                            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
                         ]
                         
                         for font_path in font_paths:
                             try:
                                 font_phone = ImageFont.truetype(font_path, 120)
-                                font_found = font_path
-                                st.success(f"✅ Rastas fontas: {font_path}", icon="✅")
                                 break
-                            except Exception as e:
+                            except:
                                 continue
                         
-                        # Jei JOKIO fonto nerado - naudojame default bet DIDESNIU mastu
+                        # Jei joks fontas nerastas
                         if font_phone is None:
-                            # Bandome sukurti default fontą su dideliu dydžiu (ignoruojame klaidą)
                             try:
                                 font_phone = ImageFont.truetype("arial.ttf", 120)
-                                font_found = "arial.ttf"
-                                st.success(f"✅ Rastas fontas: arial.ttf", icon="✅")
                             except:
-                                # PASKUTINIS variantas - default (bus mažas, bet bent kažkas)
                                 font_phone = ImageFont.load_default()
-                                font_found = "load_default() - MAŽAS!"
-                                st.error(f"❌ Nepavyko rasti TrueType fonto! Naudojamas load_default() - telefono numeris bus MAŽAS!", icon="🚨")
                         
                         # Apskaičiuojame telefono numerio dydį
                         phone_bbox = draw.textbbox((0, 0), default_phone, font=font_phone)
                         phone_width = phone_bbox[2] - phone_bbox[0]
                         phone_height = phone_bbox[3] - phone_bbox[1]
                         
-                        st.info(f"📏 Telefono numerio dydis: {phone_width}x{phone_height}px, fontas: {font_found}", icon="📏")
-                        
                         # Centruojame telefono numerį apačioje
                         phone_x = (canvas_width - phone_width) // 2
-                        phone_y = canvas_height - phone_height - 80  # Dinaminis offset pagal aukštį
+                        phone_y = canvas_height - phone_height - 80
                         
-                        st.info(f"📍 Telefono numerio pozicija: x={phone_x}, y={phone_y}, canvas={canvas_width}x{canvas_height}", icon="📍")
-                        
-                        # Piešiame telefono numerį su RYŠKESNIU šešėliu
+                        # Piešiame telefono numerį su šešėliu
                         draw.text((phone_x + 5, phone_y + 5), default_phone, fill=(0, 0, 0, 200), font=font_phone)
                         draw.text((phone_x, phone_y), default_phone, fill=(30, 41, 59), font=font_phone)
-                        
-                        st.success("✅ Telefono numeris nupieštas!", icon="✅")
                     
                     # Pridedame logo (automatiškai iš assets/logo.png)
                     collage = add_logo_to_image(
