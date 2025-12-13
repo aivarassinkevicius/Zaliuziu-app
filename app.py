@@ -1042,7 +1042,7 @@ def add_text_overlay_modern(img, text, position="bottom", font_size=60, bg_opaci
     return Image.alpha_composite(img, overlay)
 
 
-def create_modern_landing_layout(product_image, text_content="", phone_number="+370 (606) 50 414", background=None, logo_path="assets/logo.png", text_columns=1, underline_first_word=False):
+def create_modern_landing_layout(product_image, text_content="", phone_number="+370 (606) 50 414", background=None, logo_path="assets/logo.png", text_columns=1, underline_first_word=False, style="Minimalist"):
     """
     Modernus landing page layout su:
     - Produkto nuotrauka kairėje
@@ -1173,7 +1173,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
             text_box_width,
             text_box_height,
             text_content,
-            style="Minimalist",  # Švarus stilius baltam fonui
+            style=style,  # Naudojame pasirinktą stilį iš sidebar
             font_size=70,
             columns=text_columns,  # text_columns parametras iš funkcijos
             underline_first_word=underline_first_word
@@ -2218,7 +2218,8 @@ if files_to_process:
                             background=collage if use_themed_bg else None,  # AI fonas jei pasirinktas
                             logo_path="assets/logo.png",
                             text_columns=text_columns_num,
-                            underline_first_word=underline_first
+                            underline_first_word=underline_first,
+                            style=collage_style  # Perduodame pasirinktą stilių
                         )
                         collage = collage.convert("RGBA")
 
