@@ -1175,7 +1175,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
             text_content,
             style="Minimalist",  # Švarus stilius baltam fonui
             font_size=70,
-            columns=text_columns,
+            columns=text_columns,  # text_columns parametras iš funkcijos
             underline_first_word=underline_first_word
         )
         
@@ -1190,7 +1190,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
         
         # Telefono numerio fontas - LABAI DIDELIS (CTA elementas)
         try:
-            font_phone = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 100)  # Padidintas iki 100px
+            font_phone = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 120)  # EKSTRA DIDELIS - 120px
         except:
             font_phone = ImageFont.load_default()
         
