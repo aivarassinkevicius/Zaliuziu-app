@@ -2185,8 +2185,8 @@ if files_to_process:
                 else 0
             )
         
-        # Telefono numerio pasirinkimas (tik Modern Landing layout'ui)
-        show_phone_number = st.checkbox("📞 Rodyti telefono numerį", value=True, help="Telefono numeris apačioje centre (Modern Landing layout'ui)")
+        # Telefono numerio pasirinkimas (visiems layout'ams)
+        show_phone_number = st.checkbox("📞 Rodyti telefono numerį", value=True, help="Telefono numeris apačioje centre (120px šriftas, visiems layout'ams)")
         default_phone = "+370 (606) 50 414"
 
         st.markdown("---")
@@ -2680,13 +2680,41 @@ if files_to_process:
                         text_y = content_start_y + photo_height + 50
                         collage.paste(shadowed_text, (padding + 50, text_y), shadowed_text)
 
+                    # === TELEFONO NUMERIS (VISIEMS LAYOUT'AMS) ===
+                    if show_phone_number and default_phone and "Modern Landing" not in collage_layout:
+                        # Konvertuojame į RGB prieš piešiant tekstą
+                        collage = collage.convert("RGB")
+                        draw = ImageDraw.Draw(collage)
+                        
+                        # Telefono numerio fontas - DIDELIS (120px)
+                        try:
+                            font_phone = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 120)
+                        except:
+                            try:
+                                font_phone = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 120)
+                            except:
+                                font_phone = ImageFont.load_default()
+                        
+                        # Apskaičiuojame telefono numerio dydį
+                        phone_bbox = draw.textbbox((0, 0), default_phone, font=font_phone)
+                        phone_width = phone_bbox[2] - phone_bbox[0]
+                        
+                        # Centruojame telefono numerį apačioje
+                        phone_x = (canvas_width - phone_width) // 2
+                        phone_y = canvas_height - 160  # 160px nuo apačios
+                        
+                        # Piešiame telefono numerį su šešėliu
+                        draw.text((phone_x + 4, phone_y + 4), default_phone, fill=(0, 0, 0, 180), font=font_phone)
+                        draw.text((phone_x, phone_y), default_phone, fill=(30, 41, 59), font=font_phone)
+                    
                     # Pridedame logo (automatiškai iš assets/logo.png)
                     collage = add_logo_to_image(
                         collage, logo_path="assets/logo.png", logo_size=100, position="top-left"
                     )
 
-                    # Konvertuojame į RGB
-                    collage = collage.convert("RGB")
+                    # Konvertuojame į RGB (jei dar nekonvertuotas)
+                    if collage.mode != "RGB":
+                        collage = collage.convert("RGB")
 
                     # Išsaugome
                     collage_bytes = io.BytesIO()
