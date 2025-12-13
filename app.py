@@ -1229,8 +1229,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
         phone_x = (canvas_width - phone_width) // 2
         phone_y = canvas_height - phone_height - 80
         
-        # Piešiame telefono numerį su RYŠKESNIU šešėliu
-        draw.text((phone_x + 5, phone_y + 5), phone_number, fill=(0, 0, 0, 200), font=font_phone)
+        # Piešiame telefono numerį (be šešėlio)
         draw.text((phone_x, phone_y), phone_number, fill=(30, 41, 59), font=font_phone)
     
     return canvas
@@ -2738,8 +2737,7 @@ if files_to_process:
                         phone_x = (canvas_width - phone_width) // 2
                         phone_y = canvas_height - phone_height - 80
                         
-                        # Piešiame telefono numerį su šešėliu
-                        draw.text((phone_x + 5, phone_y + 5), default_phone, fill=(0, 0, 0, 200), font=font_phone)
+                        # Piešiame telefono numerį (be šešėlio)
                         draw.text((phone_x, phone_y), default_phone, fill=(30, 41, 59), font=font_phone)
                     
                     # Pridedame logo (automatiškai iš assets/logo.png)
