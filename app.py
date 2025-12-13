@@ -1172,7 +1172,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
             text_box_width,
             text_box_height,
             text_content,
-            style="clean",  # Švarus stilius baltam fonui
+            style="Minimalist",  # Švarus stilius baltam fonui
             font_size=70
         )
         
