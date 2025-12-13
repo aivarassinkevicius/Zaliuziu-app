@@ -2681,8 +2681,11 @@ if files_to_process:
                         collage.paste(shadowed_text, (padding + 50, text_y), shadowed_text)
 
                     # === TELEFONO NUMERIS (VISIEMS LAYOUT'AMS) ===
+                    # DEBUG: Patikriname sąlygą PRIEŠ if bloką
+                    st.warning(f"🔍 DEBUG PRIEŠ IF: show_phone_number={show_phone_number}, default_phone='{default_phone}', layout='{collage_layout}', 'Modern Landing' in layout = {'Modern Landing' in collage_layout}", icon="🔍")
+                    
                     if show_phone_number and default_phone and "Modern Landing" not in collage_layout:
-                        st.warning(f"🔍 DEBUG: Bandome pridėti telefono numerį. show_phone_number={show_phone_number}, default_phone={default_phone}, layout={collage_layout}", icon="🔍")
+                        st.success(f"✅ IF BLOKAS ĮVYKDYTAS! Pridedam telefono numerį.", icon="✅")
                         
                         # Konvertuojame į RGB prieš piešiant tekstą
                         collage = collage.convert("RGB")
