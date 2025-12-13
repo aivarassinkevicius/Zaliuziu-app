@@ -1195,7 +1195,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
     if phone_number:
         draw = ImageDraw.Draw(canvas)
         
-        # Telefono numerio fontas - Times New Roman 60px - keletas fallback
+        # Telefono numerio fontas - Times New Roman 50px - keletas fallback
         font_phone = None
         font_paths = [
             "C:/Windows/Fonts/timesbd.ttf",  # Times New Roman Bold
@@ -1210,7 +1210,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
         
         for font_path in font_paths:
             try:
-                font_phone = ImageFont.truetype(font_path, 60)
+                font_phone = ImageFont.truetype(font_path, 50)
                 break
             except:
                 continue
@@ -1218,7 +1218,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
         # Jei joks fontas nerastas
         if font_phone is None:
             try:
-                font_phone = ImageFont.truetype("arial.ttf", 60)
+                font_phone = ImageFont.truetype("arial.ttf", 50)
             except:
                 font_phone = ImageFont.load_default()
         
@@ -2705,7 +2705,7 @@ if files_to_process:
                         collage = collage.convert("RGB")
                         draw = ImageDraw.Draw(collage)
                         
-                        # Telefono numerio fontas - Times New Roman 60px - keletas fallback
+                        # Telefono numerio fontas - Times New Roman 50px - keletas fallback
                         font_phone = None
                         font_paths = [
                             "C:/Windows/Fonts/timesbd.ttf",  # Times New Roman Bold
@@ -2720,7 +2720,7 @@ if files_to_process:
                         
                         for font_path in font_paths:
                             try:
-                                font_phone = ImageFont.truetype(font_path, 60)
+                                font_phone = ImageFont.truetype(font_path, 50)
                                 break
                             except:
                                 continue
@@ -2728,7 +2728,7 @@ if files_to_process:
                         # Jei joks fontas nerastas
                         if font_phone is None:
                             try:
-                                font_phone = ImageFont.truetype("arial.ttf", 60)
+                                font_phone = ImageFont.truetype("arial.ttf", 50)
                             except:
                                 font_phone = ImageFont.load_default()
                         
