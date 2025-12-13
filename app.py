@@ -1425,12 +1425,8 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
 
     # STILIŲ IMPLEMENTACIJOS
     if "Glassmorphism" in style:
-        # Blur baltas fonas su skaidrumu
-        draw.rectangle([0, 0, width, height], fill=(255, 255, 255, 220))
-
-        # Pridedame lengvą blur efektą
-        text_box = text_box.filter(ImageFilter.GaussianBlur(2))
-        draw = ImageDraw.Draw(text_box)
+        # Šviesus, pusiau skaidrus fonas (glassmorphism efektas)
+        draw.rectangle([0, 0, width, height], fill=(255, 255, 255, 230))
 
         # Automatinis teksto lūžimas
         if columns == 2:
