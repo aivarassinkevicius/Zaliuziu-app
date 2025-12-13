@@ -1169,6 +1169,10 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
     
     # Naudojame tą pačią create_text_box funkciją kaip ir kituose layout'uose
     if text_content and text_content.strip():
+        # DEBUG: Patikriname parametrus prieš perduodant į create_text_box
+        import streamlit as st
+        st.warning(f"🔍 VIDUJE create_modern_landing_layout: text_columns={text_columns}, underline_first_word={underline_first_word}, style='{style}'", icon="🔎")
+        
         text_box = create_text_box(
             text_box_width,
             text_box_height,
@@ -1178,6 +1182,8 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
             columns=text_columns,  # text_columns parametras iš funkcijos
             underline_first_word=underline_first_word
         )
+        
+        st.success(f"✅ create_text_box baigtas! text_box.size={text_box.size}", icon="📦")
         
         # Paste teksto kvadratą
         canvas_rgba = canvas.convert("RGBA")
@@ -1386,6 +1392,10 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
     - underline_first_word: True pabrauks pirmą žodį
     """
     
+    # DEBUG: Parodome GAUNAMUS parametrus
+    import streamlit as st
+    st.warning(f"🔍 VIDUJE create_text_box: columns={columns} (type={type(columns)}), underline_first_word={underline_first_word} (type={type(underline_first_word)}), style='{style}'", icon="🔬")
+    
     # SVARBU: Išsaugome font_size į lokalų kintamąjį
     actual_font_size = int(font_size)  # Užtikrina kad tai skaičius
 
@@ -1515,13 +1525,18 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
         # Švarus baltas fonas
         draw.rectangle([0, 0, width, height], fill=(255, 255, 255, 250))
 
+        # DEBUG: Patikriname columns reikšmę PRIEŠ if sąlygą
+        st.warning(f"🔍 MINIMALIST STYLE: columns={columns}, columns==2 yra {columns == 2}, type(columns)={type(columns)}", icon="🎨")
+
         # Automatinis teksto lūžimas
         if columns == 2:
+            st.success("✅ ĮĖJOME Į columns==2 BLOKĄ!", icon="📰")
             # STULPELINIS LAYOUT (kaip laikraštyje)
             column_gap = 30  # Tarpas tarp stulpelių
             column_width = (width - 60 - column_gap) // 2  # 30px padding iš kiekvienos pusės + gap
             max_text_width = column_width
         else:
+            st.error(f"❌ NEĮĖJOME į columns==2 bloką! columns={columns}", icon="⚠️")
             # ĮPRASTAS LAYOUT
             max_text_width = width - 40  # 20px padding
         
@@ -2211,16 +2226,25 @@ if files_to_process:
                         # Naudojame pirmą nuotrauką kaip produkto nuotrauką
                         product_img = edited_images[0]
                         
-                        collage = create_modern_landing_layout(
-                            product_img, 
-                            text_content=text_content,
-                            phone_number=default_phone if show_phone_number else None,
-                            background=collage if use_themed_bg else None,  # AI fonas jei pasirinktas
-                            logo_path="assets/logo.png",
-                            text_columns=text_columns_num,
-                            underline_first_word=underline_first,
-                            style=collage_style  # Perduodame pasirinktą stilių
-                        )
+                        # DEBUG PRIEŠ KURIANT
+                        st.warning(f"🔍 PRIEŠ create_modern_landing_layout: text_columns={text_columns_num}, underline_first={underline_first}, style='{collage_style}'", icon="⚠️")
+                        
+                        try:
+                            collage = create_modern_landing_layout(
+                                product_img, 
+                                text_content=text_content,
+                                phone_number=default_phone if show_phone_number else None,
+                                background=collage if use_themed_bg else None,  # AI fonas jei pasirinktas
+                                logo_path="assets/logo.png",
+                                text_columns=text_columns_num,
+                                underline_first_word=underline_first,
+                                style=collage_style  # Perduodame pasirinktą stilių
+                            )
+                            st.success(f"✅ PO create_modern_landing_layout: collage sukurtas sėkmingai!", icon="✅")
+                        except Exception as e:
+                            st.error(f"❌ KLAIDA create_modern_landing_layout: {str(e)}", icon="🚨")
+                            raise
+                        
                         collage = collage.convert("RGBA")
 
                     # ============ GRID 2x2 LAYOUTS ============
