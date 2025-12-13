@@ -1042,12 +1042,13 @@ def add_text_overlay_modern(img, text, position="bottom", font_size=60, bg_opaci
     return Image.alpha_composite(img, overlay)
 
 
-def create_modern_landing_layout(product_image, text_content="", phone_number="+370 (606) 50 414", background=None, logo_path="assets/logo.png"):
+def create_modern_landing_layout(product_image, text_content="", phone_number="+370 (606) 50 414", background=None, logo_path="assets/logo.png", text_columns=1, underline_first_word=False):
     """
     Modernus landing page layout su:
     - Produkto nuotrauka kairėje
     - Tekstu dešinėje (su rounded corners)
     - Telefono numeriu apačioje centre
+    - Teksto formatavimo opcijomis (stulpeliai, pabraukimas)
     - Baltu fonu (arba custom AI fonu)
     """
     # Canvas dydis
@@ -1173,7 +1174,9 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
             text_box_height,
             text_content,
             style="Minimalist",  # Švarus stilius baltam fonui
-            font_size=70
+            font_size=70,
+            columns=text_columns,
+            underline_first_word=underline_first_word
         )
         
         # Paste teksto kvadratą
@@ -1185,9 +1188,9 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
     if phone_number:
         draw = ImageDraw.Draw(canvas)
         
-        # Telefono numerio fontas
+        # Telefono numerio fontas - DIDELIS (CTA elementas)
         try:
-            font_phone = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 54)
+            font_phone = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 80)  # Padidintas iš 54px į 80px
         except:
             font_phone = ImageFont.load_default()
         
@@ -1197,12 +1200,12 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
         
         # Centruojame telefono numerį
         phone_x = (canvas_width - phone_width) // 2
-        phone_y = canvas_height - 120  # 120px nuo apačios
+        phone_y = canvas_height - 140  # 140px nuo apačios (daugiau vietos dėl didesnio šrifto)
         
-        # Piešiame telefono numerį su subtiliu šešėliu
-        # Šešėlis
-        draw.text((phone_x + 2, phone_y + 2), phone_number, fill=(0, 0, 0, 100), font=font_phone)
-        # Tekstas
+        # Piešiame telefono numerį su RYŠKESNIU šešėliu
+        # Šešėlis (didesnis offset ir tamsesnis)
+        draw.text((phone_x + 3, phone_y + 3), phone_number, fill=(0, 0, 0, 150), font=font_phone)
+        # Tekstas (accent spalva - mėlyna)
         draw.text((phone_x, phone_y), phone_number, fill=accent_color, font=font_phone)
     
     return canvas
@@ -1362,8 +1365,14 @@ def wrap_text(text, font, max_width):
     return lines
 
 
-def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg_color=(255, 255, 255)):
-    """Sukuria teksto kvadratą kaip atskirą paveikslėlį (ne overlay!)"""
+def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg_color=(255, 255, 255), columns=1, underline_first_word=False):
+    """
+    Sukuria teksto kvadratą kaip atskirą paveikslėlį (ne overlay!)
+    
+    Parametrai:
+    - columns: 1 (įprastas) arba 2 (stulpelinis layout kaip laikraštyje)
+    - underline_first_word: True pabrauks pirmą žodį
+    """
 
     # SVARBU: Išsaugome font_size į lokalų kintamąjį
     actual_font_size = int(font_size)  # Užtikrina kad tai skaičius
@@ -1463,21 +1472,112 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
         draw.rectangle([0, 0, width, height], fill=(255, 255, 255, 250))
 
         # Automatinis teksto lūžimas
-        max_text_width = width - 40  # 20px padding
+        if columns == 2:
+            # STULPELINIS LAYOUT (kaip laikraštyje)
+            column_gap = 30  # Tarpas tarp stulpelių
+            column_width = (width - 60 - column_gap) // 2  # 30px padding iš kiekvienos pusės + gap
+            max_text_width = column_width
+        else:
+            # ĮPRASTAS LAYOUT
+            max_text_width = width - 40  # 20px padding
+        
         lines = wrap_text(text, font, max_text_width)
-        total_height = len(lines) * (actual_font_size + 20)
-        y_start = (height - total_height) // 2
+        
+        if columns == 2:
+            # Padalijame eilutes į 2 stulpelius
+            mid_point = (len(lines) + 1) // 2
+            left_lines = lines[:mid_point]
+            right_lines = lines[mid_point:]
+            
+            # Kairys stulpelis
+            line_height = actual_font_size + 20
+            y = 30  # Top padding
+            
+            for i, line in enumerate(left_lines):
+                # Patikriname ar tai pirma eilutė ir ar reikia pabraukti pirmą žodį
+                if i == 0 and underline_first_word and line.strip():
+                    words = line.split(maxsplit=1)
+                    first_word = words[0]
+                    rest = " " + words[1] if len(words) > 1 else ""
+                    
+                    # Pirmą žodį su pabraukimu
+                    bbox_first = draw.textbbox((0, 0), first_word, font=font)
+                    first_width = bbox_first[2] - bbox_first[0]
+                    x = 30
+                    
+                    # Šešėlis
+                    draw.text((x + 1, y + 1), first_word, fill=(0, 0, 0, 50), font=font)
+                    # Tekstas
+                    draw.text((x, y), first_word, fill=(50, 50, 50, 255), font=font)
+                    # Pabraukimas
+                    underline_y = y + bbox_first[3] + 2
+                    draw.line([(x, underline_y), (x + first_width, underline_y)], fill=(50, 50, 50, 255), width=2)
+                    
+                    # Likęs tekstas
+                    if rest:
+                        draw.text((x + first_width, y), rest, fill=(50, 50, 50, 255), font=font)
+                else:
+                    x = 30
+                    # Subtilus šešėlis
+                    draw.text((x + 1, y + 1), line, fill=(0, 0, 0, 50), font=font)
+                    # Tekstas
+                    draw.text((x, y), line, fill=(50, 50, 50, 255), font=font)
+                
+                y += line_height
+            
+            # Dešinys stulpelis
+            y = 30  # Top padding
+            x_right = 30 + column_width + column_gap
+            
+            for line in right_lines:
+                # Subtilus šešėlis
+                draw.text((x_right + 1, y + 1), line, fill=(0, 0, 0, 50), font=font)
+                # Tekstas
+                draw.text((x_right, y), line, fill=(50, 50, 50, 255), font=font)
+                y += line_height
+        else:
+            # ĮPRASTAS CENTRUOTAS LAYOUT
+            total_height = len(lines) * (actual_font_size + 20)
+            y_start = (height - total_height) // 2
 
-        for i, line in enumerate(lines):
-            bbox = draw.textbbox((0, 0), line, font=font)
-            text_width = bbox[2] - bbox[0]
-            x = (width - text_width) // 2
-            y = y_start + i * (actual_font_size + 20)
+            for i, line in enumerate(lines):
+                # Patikriname ar tai pirma eilutė ir ar reikia pabraukti pirmą žodį
+                if i == 0 and underline_first_word and line.strip():
+                    words = line.split(maxsplit=1)
+                    first_word = words[0]
+                    rest = " " + words[1] if len(words) > 1 else ""
+                    
+                    # Skaičiuojame centravimą visai eilutei
+                    bbox_full = draw.textbbox((0, 0), line, font=font)
+                    full_width = bbox_full[2] - bbox_full[0]
+                    x_start = (width - full_width) // 2
+                    y = y_start + i * (actual_font_size + 20)
+                    
+                    # Pirmą žodį su pabraukimu
+                    bbox_first = draw.textbbox((0, 0), first_word, font=font)
+                    first_width = bbox_first[2] - bbox_first[0]
+                    
+                    # Šešėlis
+                    draw.text((x_start + 1, y + 1), first_word, fill=(0, 0, 0, 50), font=font)
+                    # Tekstas
+                    draw.text((x_start, y), first_word, fill=(50, 50, 50, 255), font=font)
+                    # Pabraukimas
+                    underline_y = y + bbox_first[3] + 2
+                    draw.line([(x_start, underline_y), (x_start + first_width, underline_y)], fill=(50, 50, 50, 255), width=2)
+                    
+                    # Likęs tekstas
+                    if rest:
+                        draw.text((x_start + first_width, y), rest, fill=(50, 50, 50, 255), font=font)
+                else:
+                    bbox = draw.textbbox((0, 0), line, font=font)
+                    text_width = bbox[2] - bbox[0]
+                    x = (width - text_width) // 2
+                    y = y_start + i * (actual_font_size + 20)
 
-            # Subtilus šešėlis
-            draw.text((x + 1, y + 1), line, fill=(0, 0, 0, 50), font=font)
-            # Tekstas
-            draw.text((x, y), line, fill=(50, 50, 50, 255), font=font)
+                    # Subtilus šešėlis
+                    draw.text((x + 1, y + 1), line, fill=(0, 0, 0, 50), font=font)
+                    # Tekstas
+                    draw.text((x, y), line, fill=(50, 50, 50, 255), font=font)
 
     return text_box
 
@@ -1900,6 +2000,16 @@ if files_to_process:
         # NAUJAS: Teksto turinys (VISADA ĮJUNGTAS dabar, nes tekstas = dalis layout'o)
         st.markdown("---")
         st.markdown("#### ✍️ Teksto kvadrato turinys")
+        
+        # Teksto formatavimo opcijos
+        col_fmt1, col_fmt2 = st.columns(2)
+        with col_fmt1:
+            text_columns = st.radio("📰 Layout:", ["1 stulpelis", "2 stulpeliai (laikraštinis)"], index=0, help="Tekstas vienu stulpeliu arba dviem kaip laikraštyje")
+        with col_fmt2:
+            underline_first = st.checkbox("✏️ Pabraukti pirmą žodį", value=False, help="Pabraukia pirmą žodį tekste (akcentas)")
+        
+        # Konvertuojame UI pasirinkimą į skaičių
+        text_columns_num = 2 if "2 stulpeliai" in text_columns else 1
 
         # Jei 2 nuotraukos Grid 2x2 - rodyti 2 tekstus
         if len(files_to_process) == 2 and collage_layout == "Grid 2x2 (2 nuotraukos + 2 teksto kvadratai)":
@@ -2062,7 +2172,9 @@ if files_to_process:
                             text_content=text_content,
                             phone_number=default_phone if show_phone_number else None,
                             background=collage if use_themed_bg else None,  # AI fonas jei pasirinktas
-                            logo_path="assets/logo.png"
+                            logo_path="assets/logo.png",
+                            text_columns=text_columns_num,
+                            underline_first_word=underline_first
                         )
                         collage = collage.convert("RGBA")
 
@@ -2146,6 +2258,8 @@ if files_to_process:
                                     text_to_use,
                                     style=collage_style,
                                     font_size=font_size_to_use,
+                                    columns=text_columns_num,
+                                    underline_first_word=underline_first
                                 )
                                 # Pridedame tuos pačius efektus tekstui
                                 text_with_effects = add_photo_effects(
@@ -2189,6 +2303,8 @@ if files_to_process:
                             text_content,
                             style=collage_style,
                             font_size=text_font_size,
+                            columns=text_columns_num,
+                            underline_first_word=underline_first
                         )
                         shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
                         collage.paste(shadowed_text, (padding + cell_width + gap, padding), shadowed_text)
@@ -2250,6 +2366,8 @@ if files_to_process:
                                 text_content,
                                 style=collage_style,
                                 font_size=text_font_size,
+                                columns=text_columns_num,
+                                underline_first_word=underline_first
                             )
                             shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
                             collage.paste(
@@ -2300,6 +2418,8 @@ if files_to_process:
                                 text_content,
                                 style=collage_style,
                                 font_size=text_font_size,
+                                columns=text_columns_num,
+                                underline_first_word=underline_first
                             )
                             shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
                             collage.paste(
@@ -2347,6 +2467,8 @@ if files_to_process:
                             text_content,
                             style=collage_style,
                             font_size=text_font_size - 10,
+                            columns=text_columns_num,
+                            underline_first_word=underline_first
                         )
                         shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
                         collage.paste(shadowed_text, (padding, padding + half_height + gap), shadowed_text)
@@ -2390,7 +2512,8 @@ if files_to_process:
                         text_width = content_width - big_size - gap
                         text_height = content_height - small_size - gap * 2
                         text_box = create_text_box(
-                            text_width, text_height, text_content, style=collage_style, font_size=text_font_size
+                            text_width, text_height, text_content, style=collage_style, font_size=text_font_size,
+                            columns=text_columns_num, underline_first_word=underline_first
                         )
                         shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
                         collage.paste(
@@ -2448,7 +2571,8 @@ if files_to_process:
                         text_width = content_width - 100
                         text_height = 140
                         text_box = create_text_box(
-                            text_width, text_height, text_content, style=collage_style, font_size=text_font_size + 10
+                            text_width, text_height, text_content, style=collage_style, font_size=text_font_size + 10,
+                            columns=text_columns_num, underline_first_word=underline_first
                         )
                         shadowed_text = add_modern_shadow(text_box, shadow_strength=50, shadow_offset=10)
                         text_y = content_start_y + photo_height + 50
