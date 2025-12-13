@@ -1042,128 +1042,168 @@ def add_text_overlay_modern(img, text, position="bottom", font_size=60, bg_opaci
     return Image.alpha_composite(img, overlay)
 
 
-def create_modern_landing_layout(product_image, logo_path="assets/logo.png"):
+def create_modern_landing_layout(product_image, text_content="", phone_number="+370 (606) 50 414", background=None, logo_path="assets/logo.png"):
     """
-    Sukuria modernų landing page stilių su produkto nuotrauka ir informacija.
-    Layout: Nuotrauka kairėje (40%), informacija dešinėje (60%)
+    Modernus landing page layout su:
+    - Produkto nuotrauka kairėje
+    - Tekstu dešinėje (su rounded corners)
+    - Telefono numeriu apačioje centre
+    - Baltu fonu (arba custom AI fonu)
     """
     # Canvas dydis
     canvas_width = 1920
     canvas_height = 1080
     
-    # Spalvų paletė
-    bg_gradient_start = (240, 244, 248)  # Šviesi pilka-mėlyna
-    bg_gradient_end = (255, 255, 255)     # Balta
-    accent_color = (30, 64, 175)          # Tamsiai mėlyna
-    text_color = (30, 41, 59)             # Tamsiai pilka
+    # Spalvų paletė - šviesus stilius
+    accent_color = (30, 64, 175)   # Tamsiai mėlyna
+    text_dark = (30, 41, 59)       # Tamsiai pilka tekstui
+    text_gray = (100, 116, 139)    # Šviesesnė pilka
     
-    # Sukuriame canvas su gradientu
-    canvas = Image.new("RGB", (canvas_width, canvas_height), bg_gradient_start)
-    draw = ImageDraw.Draw(canvas)
+    # Sukuriame canvas su baltu fonu arba custom fonu
+    if background is not None:
+        # Naudojame custom foną (AI generated)
+        canvas = background.copy()
+        if canvas.size != (canvas_width, canvas_height):
+            canvas = canvas.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+    else:
+        # Baltas gradientas (subtilus)
+        canvas = Image.new("RGB", (canvas_width, canvas_height), (255, 255, 255))
+        draw = ImageDraw.Draw(canvas)
+        
+        # Subtilus vertikalus gradientas (balta → šviesi pilka)
+        for y in range(canvas_height):
+            ratio = y / canvas_height
+            gray_value = int(255 - (ratio * 10))  # 255 → 245
+            draw.line([(0, y), (canvas_width, y)], fill=(gray_value, gray_value, gray_value))
     
-    # Vertikalus gradientas
-    for y in range(canvas_height):
-        ratio = y / canvas_height
-        r = int(bg_gradient_start[0] + (bg_gradient_end[0] - bg_gradient_start[0]) * ratio)
-        g = int(bg_gradient_start[1] + (bg_gradient_end[1] - bg_gradient_start[1]) * ratio)
-        b = int(bg_gradient_start[2] + (bg_gradient_end[2] - bg_gradient_start[2]) * ratio)
-        draw.line([(0, y), (canvas_width, y)], fill=(r, g, b))
+    # === KAIRĖ PUSĖ: FLOATING CARD SU PRODUKTO NUOTRAUKA ===
+    left_width = int(canvas_width * 0.45)
     
-    # === KAIRĖ PUSĖ: PRODUKTO NUOTRAUKA ===
-    left_width = int(canvas_width * 0.4)
+    # Card parametrai
+    card_padding = 40
+    card_width = left_width - 160
+    card_height = canvas_height - 200
+    card_x = 80
+    card_y = 100
     
-    # Resize produkto nuotrauką
+    # Sukuriame RGBA card su rounded corners
+    card = Image.new("RGBA", (card_width, card_height), (0, 0, 0, 0))
+    card_draw = ImageDraw.Draw(card)
+    
+    # Rounded rectangle (card background)
+    corner_radius = 30
+    # Naudojame rounded_rectangle jei PIL palaiko, kitaip - paprastas rectangle
+    try:
+        card_draw.rounded_rectangle(
+            [0, 0, card_width, card_height],
+            radius=corner_radius,
+            fill=(255, 255, 255, 15)  # Labai permatoma balta (glassmorphism)
+        )
+    except:
+        card_draw.rectangle([0, 0, card_width, card_height], fill=(255, 255, 255, 15))
+    
+    # Blur efektas (glassmorphism)
+    card = card.filter(ImageFilter.GaussianBlur(radius=2))
+    
+    # Produkto nuotrauka į card
     product_img = product_image.copy()
-    if product_img.mode != "RGB":
-        product_img = product_img.convert("RGB")
+    if product_img.mode != "RGBA":
+        product_img = product_img.convert("RGBA")
     
-    # Proporcingas resize kad tilptų į kairę pusę su padding
-    max_img_height = canvas_height - 100
-    max_img_width = left_width - 100
-    
+    # Resize su padding
+    max_img_width = card_width - card_padding * 2
+    max_img_height = card_height - card_padding * 2
     product_img.thumbnail((max_img_width, max_img_height), Image.Resampling.LANCZOS)
     
-    # Centruojame nuotrauką kairėje pusėje
-    img_x = (left_width - product_img.width) // 2
-    img_y = (canvas_height - product_img.height) // 2
+    # Rounded corners nuotraukai
+    mask = Image.new("L", product_img.size, 0)
+    mask_draw = ImageDraw.Draw(mask)
+    try:
+        mask_draw.rounded_rectangle([0, 0, product_img.width, product_img.height], radius=20, fill=255)
+    except:
+        mask_draw.rectangle([0, 0, product_img.width, product_img.height], fill=255)
     
-    # Pridedame subtilų šešėlį po nuotrauka
-    shadow = Image.new("RGBA", (product_img.width + 20, product_img.height + 20), (0, 0, 0, 0))
+    product_img.putalpha(mask)
+    
+    # Centruojame nuotrauką card'e
+    img_x_in_card = (card_width - product_img.width) // 2
+    img_y_in_card = (card_height - product_img.height) // 2
+    card.paste(product_img, (img_x_in_card, img_y_in_card), product_img)
+    
+    # Pridedame DIDELĮ drop shadow po card
+    shadow_size = 60
+    shadow = Image.new("RGBA", (card_width + shadow_size * 2, card_height + shadow_size * 2), (0, 0, 0, 0))
     shadow_draw = ImageDraw.Draw(shadow)
-    shadow_draw.rectangle([10, 10, product_img.width + 10, product_img.height + 10], 
-                          fill=(0, 0, 0, 40))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=15))
-    canvas.paste(shadow, (img_x - 10, img_y - 10), shadow)
+    try:
+        shadow_draw.rounded_rectangle(
+            [shadow_size, shadow_size, card_width + shadow_size, card_height + shadow_size],
+            radius=corner_radius,
+            fill=(0, 0, 0, 100)
+        )
+    except:
+        shadow_draw.rectangle(
+            [shadow_size, shadow_size, card_width + shadow_size, card_height + shadow_size],
+            fill=(0, 0, 0, 100)
+        )
+    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=40))
     
-    # Įklijuojame produkto nuotrauką
-    canvas.paste(product_img, (img_x, img_y))
+    # Paste shadow ir card
+    canvas_rgba = canvas.convert("RGBA")
+    canvas_rgba.paste(shadow, (card_x - shadow_size, card_y - shadow_size), shadow)
+    canvas_rgba.paste(card, (card_x, card_y), card)
+    canvas = canvas_rgba.convert("RGB")
     
-    # === DEŠINĖ PUSĖ: INFORMACIJA ===
+    # === DEŠINĖ PUSĖ: TEKSTO KVADRATAS ===
     right_x_start = left_width + 80
-    content_width = canvas_width - right_x_start - 100
+    content_width = canvas_width - right_x_start - 80
     
-    # Įkeliame logo
-    try:
-        logo = Image.open(logo_path)
-        logo.thumbnail((200, 100), Image.Resampling.LANCZOS)
-        logo_x = canvas_width - logo.width - 80
-        logo_y = 60
+    # Atnaujintas draw po RGB konversijos
+    draw = ImageDraw.Draw(canvas)
+    
+    # === TEKSTO KVADRATAS (KAIP KITUOSE LAYOUT'UOSE) ===
+    text_box_width = content_width - 40
+    text_box_height = 620
+    text_box_x = right_x_start + 20
+    text_box_y = 180
+    
+    # Naudojame tą pačią create_text_box funkciją kaip ir kituose layout'uose
+    if text_content and text_content.strip():
+        text_box = create_text_box(
+            text_box_width,
+            text_box_height,
+            text_content,
+            style="clean",  # Švarus stilius baltam fonui
+            font_size=70
+        )
         
-        if logo.mode == "RGBA":
-            canvas.paste(logo, (logo_x, logo_y), logo)
-        else:
-            canvas.paste(logo, (logo_x, logo_y))
-    except:
-        pass  # Jei logo nepavyksta įkelti, praleisti
+        # Paste teksto kvadratą
+        canvas_rgba = canvas.convert("RGBA")
+        canvas_rgba.paste(text_box, (text_box_x, text_box_y), text_box)
+        canvas = canvas_rgba.convert("RGB")
     
-    # Fontai
-    try:
-        font_title = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 72)
-        font_phone = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 56)
-        font_heading = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 48)
-        font_bullet = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 36)
-        font_tagline = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 42)
-    except:
-        font_title = ImageFont.load_default()
-        font_phone = font_title
-        font_heading = font_title
-        font_bullet = font_title
-        font_tagline = font_title
-    
-    current_y = 180
-    
-    # Telefono numeris su CTA
-    phone_text = "Užsakymai tel.:"
-    draw.text((right_x_start, current_y), phone_text, fill=text_color, font=font_phone)
-    current_y += 70
-    
-    phone_number = "+370 (606) 50 414"
-    draw.text((right_x_start, current_y), phone_number, fill=accent_color, font=font_phone)
-    current_y += 120
-    
-    # Pagrindinė antraštė
-    heading = "Kodėl verta rinktis plisuotas\nžaliuzes?"
-    draw.text((right_x_start, current_y), heading, fill=text_color, font=font_heading)
-    current_y += 180
-    
-    # Bullet points
-    bullets = [
-        "• tinka visų formų langams;",
-        "• patogus valdymo būdas;",
-        "• lengva priežiūra;",
-        "• drėgmei atsparus audiniai;",
-        "• didelis spalvų pasirinkimas;"
-    ]
-    
-    for bullet in bullets:
-        # Bullet point su hover efektu (vizualiai)
-        draw.text((right_x_start, current_y), bullet, fill=text_color, font=font_bullet)
-        current_y += 55
-    
-    # Tagline apačioje
-    current_y += 60
-    tagline = "Gražu, praktiška, modernu!"
-    draw.text((right_x_start, current_y), tagline, fill=accent_color, font=font_tagline)
+    # === TELEFONO NUMERIS APAČIOJE PER VIDURĮ (JEI ĮJUNGTAS) ===
+    if phone_number:
+        draw = ImageDraw.Draw(canvas)
+        
+        # Telefono numerio fontas
+        try:
+            font_phone = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 54)
+        except:
+            font_phone = ImageFont.load_default()
+        
+        # Apskaičiuojame telefono numerio dydį
+        phone_bbox = draw.textbbox((0, 0), phone_number, font=font_phone)
+        phone_width = phone_bbox[2] - phone_bbox[0]
+        
+        # Centruojame telefono numerį
+        phone_x = (canvas_width - phone_width) // 2
+        phone_y = canvas_height - 120  # 120px nuo apačios
+        
+        # Piešiame telefono numerį su subtiliu šešėliu
+        # Šešėlis
+        draw.text((phone_x + 2, phone_y + 2), phone_number, fill=(0, 0, 0, 100), font=font_phone)
+        # Tekstas
+        draw.text((phone_x, phone_y), phone_number, fill=accent_color, font=font_phone)
     
     return canvas
 
@@ -1933,6 +1973,10 @@ if files_to_process:
                 if enable_shadow_effect
                 else 0
             )
+        
+        # Telefono numerio pasirinkimas (tik Modern Landing layout'ui)
+        show_phone_number = st.checkbox("📞 Rodyti telefono numerį", value=True, help="Telefono numeris apačioje centre (Modern Landing layout'ui)")
+        default_phone = "+370 (606) 50 414"
 
         st.markdown("---")
 
@@ -2012,7 +2056,14 @@ if files_to_process:
                     if "Modern Landing" in collage_layout:
                         # Naudojame pirmą nuotrauką kaip produkto nuotrauką
                         product_img = edited_images[0]
-                        collage = create_modern_landing_layout(product_img, logo_path="assets/logo.png")
+                        
+                        collage = create_modern_landing_layout(
+                            product_img, 
+                            text_content=text_content,
+                            phone_number=default_phone if show_phone_number else None,
+                            background=collage if use_themed_bg else None,  # AI fonas jei pasirinktas
+                            logo_path="assets/logo.png"
+                        )
                         collage = collage.convert("RGBA")
 
                     # ============ GRID 2x2 LAYOUTS ============
@@ -2453,7 +2504,7 @@ if files_to_process:
             # Full size - centered with max width
             col1, col2, col3 = st.columns([1, 4, 1])
             with col2:
-                st.image(st.session_state.collage_result, caption="Pilnas dydis", use_column_width=True)
+                st.image(st.session_state.collage_result, caption="Pilnas dydis", use_container_width=True)
         else:
             # Thumbnail preview - limited width
             col1, col2, col3 = st.columns([1, 2, 1])
@@ -2461,7 +2512,7 @@ if files_to_process:
                 st.image(
                     st.session_state.collage_result,
                     caption="Peržiūra (spauskite mygtuką pilnam dydžiui)",
-                    use_column_width=True,
+                    use_container_width=True,
                 )
 
         col1, col2 = st.columns(2)
@@ -2475,22 +2526,6 @@ if files_to_process:
                 use_container_width=True,
                 key="download_collage_persistent",
             )
-
-        with col2:
-            if enable_discord and discord_webhook_url:
-                if st.button("📤 Siųsti į Discord", type="secondary", use_container_width=True):
-                    with st.spinner("Siunčiama į Discord..."):
-                        success, message = send_to_discord(
-                            discord_webhook_url,
-                            st.session_state.collage_result,
-                            f"🌿 Naujas {season} kolekcijos collage!",
-                        )
-                        if success:
-                            st.success(message)
-                        else:
-                            st.error(message)
-            elif enable_discord and not discord_webhook_url:
-                st.warning("⚠️ Įveskite Discord Webhook URL sidebar'e")
 
     # AI TURINIO GENERAVIMAS
     st.markdown("---")
