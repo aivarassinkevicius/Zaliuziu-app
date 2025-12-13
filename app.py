@@ -1195,15 +1195,15 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
     if phone_number:
         draw = ImageDraw.Draw(canvas)
         
-        # Telefono numerio fontas - 40px - keletas fallback
+        # Telefono numerio fontas - Times New Roman 40px - keletas fallback
         font_phone = None
         font_paths = [
-            "C:/Windows/Fonts/arialbd.ttf",  # Windows
-            "C:/Windows/Fonts/arial.ttf",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Linux
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/System/Library/Fonts/Helvetica.ttc",  # macOS
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+            "C:/Windows/Fonts/timesbd.ttf",  # Times New Roman Bold
+            "C:/Windows/Fonts/times.ttf",  # Times New Roman Regular
+            "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",  # Linux
+            "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+            "/System/Library/Fonts/Times New Roman.ttf",  # macOS
+            "C:/Windows/Fonts/arial.ttf",  # Arial fallback
         ]
         
         for font_path in font_paths:
@@ -2703,15 +2703,15 @@ if files_to_process:
                         collage = collage.convert("RGB")
                         draw = ImageDraw.Draw(collage)
                         
-                        # Telefono numerio fontas - 40px - keletas fallback
+                        # Telefono numerio fontas - Times New Roman 40px - keletas fallback
                         font_phone = None
                         font_paths = [
-                            "C:/Windows/Fonts/arialbd.ttf",  # Windows
-                            "C:/Windows/Fonts/arial.ttf",
-                            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Linux
-                            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                            "/System/Library/Fonts/Helvetica.ttc",  # macOS
-                            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                            "C:/Windows/Fonts/timesbd.ttf",  # Times New Roman Bold
+                            "C:/Windows/Fonts/times.ttf",  # Times New Roman Regular
+                            "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",  # Linux
+                            "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+                            "/System/Library/Fonts/Times New Roman.ttf",  # macOS
+                            "C:/Windows/Fonts/arial.ttf",  # Arial fallback
                         ]
                         
                         for font_path in font_paths:
