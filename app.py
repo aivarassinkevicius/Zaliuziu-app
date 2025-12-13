@@ -53,7 +53,7 @@ client = OpenAI(api_key=api_key)
 
 st.set_page_config(
     page_title="Žaliuzių turinio kūrėjas", 
-    page_icon="assets/logo.png",
+    page_icon="🌿",  # Emoji veikia ir Cloud, ir lokaliai
     layout="wide"
 )
 
