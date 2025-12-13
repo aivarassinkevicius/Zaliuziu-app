@@ -1195,7 +1195,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
     if phone_number:
         draw = ImageDraw.Draw(canvas)
         
-        # Telefono numerio fontas - 80px - keletas fallback
+        # Telefono numerio fontas - 40px - keletas fallback
         font_phone = None
         font_paths = [
             "C:/Windows/Fonts/arialbd.ttf",  # Windows
@@ -1208,7 +1208,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
         
         for font_path in font_paths:
             try:
-                font_phone = ImageFont.truetype(font_path, 80)
+                font_phone = ImageFont.truetype(font_path, 40)
                 break
             except:
                 continue
@@ -1216,7 +1216,7 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
         # Jei joks fontas nerastas
         if font_phone is None:
             try:
-                font_phone = ImageFont.truetype("arial.ttf", 80)
+                font_phone = ImageFont.truetype("arial.ttf", 40)
             except:
                 font_phone = ImageFont.load_default()
         
@@ -2704,7 +2704,7 @@ if files_to_process:
                         collage = collage.convert("RGB")
                         draw = ImageDraw.Draw(collage)
                         
-                        # Telefono numerio fontas - 80px - keletas fallback
+                        # Telefono numerio fontas - 40px - keletas fallback
                         font_phone = None
                         font_paths = [
                             "C:/Windows/Fonts/arialbd.ttf",  # Windows
@@ -2717,7 +2717,7 @@ if files_to_process:
                         
                         for font_path in font_paths:
                             try:
-                                font_phone = ImageFont.truetype(font_path, 80)
+                                font_phone = ImageFont.truetype(font_path, 40)
                                 break
                             except:
                                 continue
@@ -2725,7 +2725,7 @@ if files_to_process:
                         # Jei joks fontas nerastas
                         if font_phone is None:
                             try:
-                                font_phone = ImageFont.truetype("arial.ttf", 80)
+                                font_phone = ImageFont.truetype("arial.ttf", 40)
                             except:
                                 font_phone = ImageFont.load_default()
                         
