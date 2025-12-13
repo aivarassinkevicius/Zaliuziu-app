@@ -1385,6 +1385,9 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
     - columns: 1 (įprastas) arba 2 (stulpelinis layout kaip laikraštyje)
     - underline_first_word: True pabrauks pirmą žodį
     """
+    
+    # DEBUG - IŠSPAUSDINSIME PARAMETRUS
+    print(f"🔍 create_text_box DEBUG: style='{style}', columns={columns}, underline_first_word={underline_first_word}")
 
     # SVARBU: Išsaugome font_size į lokalų kintamąjį
     actual_font_size = int(font_size)  # Užtikrina kad tai skaičius
