@@ -1339,30 +1339,42 @@ def add_collage_text_overlay(img, text, position="bottom", style="glassmorphism"
 
 
 def wrap_text(text, font, max_width):
-    """Automatiškai lūžo tekstą į eilutes pagal plotį"""
-    words = text.split()
-    lines = []
-    current_line = []
-
-    for word in words:
-        test_line = " ".join(current_line + [word])
-        bbox = font.getbbox(test_line)
-        text_width = bbox[2] - bbox[0]
-
-        if text_width <= max_width:
-            current_line.append(word)
-        else:
-            if current_line:
-                lines.append(" ".join(current_line))
-                current_line = [word]
+    """
+    Automatiškai lūžo tekstą į eilutes pagal plotį.
+    Palaiko \n (Enter) simbolius - naujos eilutės išlaikomos.
+    """
+    # Pirmiausia padalijame pagal \n (vartotojo įvestas Enter)
+    manual_lines = text.split('\n')
+    wrapped_lines = []
+    
+    # Kiekvieną eilutę wrap'iname pagal plotį
+    for manual_line in manual_lines:
+        if not manual_line.strip():  # Tuščia eilutė
+            wrapped_lines.append("")
+            continue
+            
+        words = manual_line.split()
+        current_line = []
+        
+        for word in words:
+            test_line = " ".join(current_line + [word])
+            bbox = font.getbbox(test_line)
+            text_width = bbox[2] - bbox[0]
+            
+            if text_width <= max_width:
+                current_line.append(word)
             else:
-                # Žodis per ilgas - pridedame tokį kokis yra
-                lines.append(word)
-
-    if current_line:
-        lines.append(" ".join(current_line))
-
-    return lines
+                if current_line:
+                    wrapped_lines.append(" ".join(current_line))
+                    current_line = [word]
+                else:
+                    # Žodis per ilgas - pridedame tokį kokis yra
+                    wrapped_lines.append(word)
+        
+        if current_line:
+            wrapped_lines.append(" ".join(current_line))
+    
+    return wrapped_lines
 
 
 def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg_color=(255, 255, 255), columns=1, underline_first_word=False):
