@@ -1188,9 +1188,9 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
     if phone_number:
         draw = ImageDraw.Draw(canvas)
         
-        # Telefono numerio fontas - DIDELIS (CTA elementas)
+        # Telefono numerio fontas - LABAI DIDELIS (CTA elementas)
         try:
-            font_phone = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 80)  # Padidintas iš 54px į 80px
+            font_phone = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 100)  # Padidintas iki 100px
         except:
             font_phone = ImageFont.load_default()
         
@@ -1200,13 +1200,13 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
         
         # Centruojame telefono numerį
         phone_x = (canvas_width - phone_width) // 2
-        phone_y = canvas_height - 140  # 140px nuo apačios (daugiau vietos dėl didesnio šrifto)
+        phone_y = canvas_height - 160  # 160px nuo apačios (daugiau vietos dėl didesnio šrifto)
         
         # Piešiame telefono numerį su RYŠKESNIU šešėliu
         # Šešėlis (didesnis offset ir tamsesnis)
-        draw.text((phone_x + 3, phone_y + 3), phone_number, fill=(0, 0, 0, 150), font=font_phone)
-        # Tekstas (accent spalva - mėlyna)
-        draw.text((phone_x, phone_y), phone_number, fill=accent_color, font=font_phone)
+        draw.text((phone_x + 4, phone_y + 4), phone_number, fill=(0, 0, 0, 180), font=font_phone)
+        # Tekstas (tamsiai pilkas - geras kontrastas su baltu fonu)
+        draw.text((phone_x, phone_y), phone_number, fill=(30, 41, 59), font=font_phone)
     
     return canvas
 
@@ -1421,24 +1421,56 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
         draw = ImageDraw.Draw(text_box)
 
         # Automatinis teksto lūžimas
-        max_text_width = width - 40  # 20px padding iš kiekvienos pusės
+        if columns == 2:
+            # STULPELINIS LAYOUT
+            column_gap = 30
+            column_width = (width - 60 - column_gap) // 2
+            max_text_width = column_width
+        else:
+            # ĮPRASTAS LAYOUT
+            max_text_width = width - 40  # 20px padding
+        
         lines = wrap_text(text, font, max_text_width)
 
-        # Centruojame tekstą
-        total_height = len(lines) * (actual_font_size + 20)
-        y_start = (height - total_height) // 2
+        if columns == 2:
+            # 2 STULPELIAI
+            mid_point = (len(lines) + 1) // 2
+            left_lines = lines[:mid_point]
+            right_lines = lines[mid_point:]
+            
+            line_height = actual_font_size + 20
+            y = 30
+            
+            # Kairys stulpelis
+            for line in left_lines:
+                x = 30
+                draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
+                draw.text((x, y), line, fill=(40, 40, 40, 255), font=font)
+                y += line_height
+            
+            # Dešinys stulpelis
+            y = 30
+            x_right = 30 + column_width + column_gap
+            for line in right_lines:
+                draw.text((x_right + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
+                draw.text((x_right, y), line, fill=(40, 40, 40, 255), font=font)
+                y += line_height
+        else:
+            # 1 STULPELIS (CENTRUOTAS)
+            total_height = len(lines) * (actual_font_size + 20)
+            y_start = (height - total_height) // 2
 
-        for i, line in enumerate(lines):
-            bbox = draw.textbbox((0, 0), line, font=font)
-            text_width = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
-            x = (width - text_width) // 2
-            y = y_start + i * (actual_font_size + 20)
+            for i, line in enumerate(lines):
+                bbox = draw.textbbox((0, 0), line, font=font)
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+                x = (width - text_width) // 2
+                y = y_start + i * (actual_font_size + 20)
 
-            # Šešėlis
-            draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
-            # Tekstas
-            draw.text((x, y), line, fill=(40, 40, 40, 255), font=font)
+                # Šešėlis
+                draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
+                # Tekstas
+                draw.text((x, y), line, fill=(40, 40, 40, 255), font=font)
 
     elif "Neo-Brutalism" in style:
         # Ryškus geltonas fonas su juodu rėmeliu
