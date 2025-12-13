@@ -1386,9 +1386,6 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
     - underline_first_word: True pabrauks pirmą žodį
     """
     
-    # DEBUG - IŠSPAUSDINSIME PARAMETRUS
-    print(f"🔍 create_text_box DEBUG: style='{style}', columns={columns}, underline_first_word={underline_first_word}")
-
     # SVARBU: Išsaugome font_size į lokalų kintamąjį
     actual_font_size = int(font_size)  # Užtikrina kad tai skaičius
 
@@ -2057,9 +2054,6 @@ if files_to_process:
         
         # Konvertuojame UI pasirinkimą į skaičių
         text_columns_num = 2 if "2 stulpeliai" in text_columns else 1
-        
-        # DEBUG INFO
-        st.info(f"🔍 DEBUG: text_columns='{text_columns}', text_columns_num={text_columns_num}, underline_first={underline_first}")
 
         # Jei 2 nuotraukos Grid 2x2 - rodyti 2 tekstus
         if len(files_to_process) == 2 and collage_layout == "Grid 2x2 (2 nuotraukos + 2 teksto kvadratai)":
