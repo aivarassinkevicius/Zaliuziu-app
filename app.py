@@ -1169,10 +1169,6 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
     
     # Naudojame tą pačią create_text_box funkciją kaip ir kituose layout'uose
     if text_content and text_content.strip():
-        # DEBUG: Patikriname parametrus prieš perduodant į create_text_box
-        import streamlit as st
-        st.warning(f"🔍 VIDUJE create_modern_landing_layout: text_columns={text_columns}, underline_first_word={underline_first_word}, style='{style}'", icon="🔎")
-        
         text_box = create_text_box(
             text_box_width,
             text_box_height,
@@ -1182,8 +1178,6 @@ def create_modern_landing_layout(product_image, text_content="", phone_number="+
             columns=text_columns,  # text_columns parametras iš funkcijos
             underline_first_word=underline_first_word
         )
-        
-        st.success(f"✅ create_text_box baigtas! text_box.size={text_box.size}", icon="📦")
         
         # Paste teksto kvadratą
         canvas_rgba = canvas.convert("RGBA")
@@ -1392,10 +1386,6 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
     - underline_first_word: True pabrauks pirmą žodį
     """
     
-    # DEBUG: Parodome GAUNAMUS parametrus
-    import streamlit as st
-    st.warning(f"🔍 VIDUJE create_text_box: columns={columns} (type={type(columns)}), underline_first_word={underline_first_word} (type={type(underline_first_word)}), style='{style}'", icon="🔬")
-    
     # SVARBU: Išsaugome font_size į lokalų kintamąjį
     actual_font_size = int(font_size)  # Užtikrina kad tai skaičius
 
@@ -1464,10 +1454,35 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
             y = 30
             
             # Kairys stulpelis
-            for line in left_lines:
+            for i, line in enumerate(left_lines):
                 x = 30
-                draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
-                draw.text((x, y), line, fill=(40, 40, 40, 255), font=font)
+                
+                # Patikriname ar tai pirma eilutė ir ar reikia pabraukti pirmą žodį
+                if i == 0 and underline_first_word and line.strip():
+                    words = line.split(maxsplit=1)
+                    first_word = words[0]
+                    rest = " " + words[1] if len(words) > 1 else ""
+                    
+                    # Pirmą žodį su pabraukimu
+                    bbox_first = draw.textbbox((0, 0), first_word, font=font)
+                    first_width = bbox_first[2] - bbox_first[0]
+                    
+                    # Šešėlis
+                    draw.text((x + 2, y + 2), first_word, fill=(0, 0, 0, 80), font=font)
+                    # Tekstas
+                    draw.text((x, y), first_word, fill=(40, 40, 40, 255), font=font)
+                    # Pabraukimas
+                    underline_y = y + bbox_first[3] + 2
+                    draw.line([(x, underline_y), (x + first_width, underline_y)], fill=(40, 40, 40, 255), width=2)
+                    
+                    # Likęs tekstas
+                    if rest:
+                        draw.text((x + first_width + 2, y + 2), rest, fill=(0, 0, 0, 80), font=font)
+                        draw.text((x + first_width, y), rest, fill=(40, 40, 40, 255), font=font)
+                else:
+                    draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
+                    draw.text((x, y), line, fill=(40, 40, 40, 255), font=font)
+                
                 y += line_height
             
             # Dešinys stulpelis
@@ -1483,16 +1498,45 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
             y_start = (height - total_height) // 2
 
             for i, line in enumerate(lines):
-                bbox = draw.textbbox((0, 0), line, font=font)
-                text_width = bbox[2] - bbox[0]
-                text_height = bbox[3] - bbox[1]
-                x = (width - text_width) // 2
-                y = y_start + i * (actual_font_size + 20)
+                # Patikriname ar tai pirma eilutė ir ar reikia pabraukti pirmą žodį
+                if i == 0 and underline_first_word and line.strip():
+                    words = line.split(maxsplit=1)
+                    first_word = words[0]
+                    rest = " " + words[1] if len(words) > 1 else ""
+                    
+                    # Skaičiuojame centravimą visai eilutei
+                    bbox_full = draw.textbbox((0, 0), line, font=font)
+                    full_width = bbox_full[2] - bbox_full[0]
+                    x_start = (width - full_width) // 2
+                    y = y_start + i * (actual_font_size + 20)
+                    
+                    # Pirmą žodį su pabraukimu
+                    bbox_first = draw.textbbox((0, 0), first_word, font=font)
+                    first_width = bbox_first[2] - bbox_first[0]
+                    
+                    # Šešėlis
+                    draw.text((x_start + 2, y + 2), first_word, fill=(0, 0, 0, 80), font=font)
+                    # Tekstas
+                    draw.text((x_start, y), first_word, fill=(40, 40, 40, 255), font=font)
+                    # Pabraukimas
+                    underline_y = y + bbox_first[3] + 2
+                    draw.line([(x_start, underline_y), (x_start + first_width, underline_y)], fill=(40, 40, 40, 255), width=2)
+                    
+                    # Likęs tekstas
+                    if rest:
+                        draw.text((x_start + first_width + 2, y + 2), rest, fill=(0, 0, 0, 80), font=font)
+                        draw.text((x_start + first_width, y), rest, fill=(40, 40, 40, 255), font=font)
+                else:
+                    bbox = draw.textbbox((0, 0), line, font=font)
+                    text_width = bbox[2] - bbox[0]
+                    text_height = bbox[3] - bbox[1]
+                    x = (width - text_width) // 2
+                    y = y_start + i * (actual_font_size + 20)
 
-                # Šešėlis
-                draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
-                # Tekstas
-                draw.text((x, y), line, fill=(40, 40, 40, 255), font=font)
+                    # Šešėlis
+                    draw.text((x + 2, y + 2), line, fill=(0, 0, 0, 80), font=font)
+                    # Tekstas
+                    draw.text((x, y), line, fill=(40, 40, 40, 255), font=font)
 
     elif "Neo-Brutalism" in style:
         # Ryškus geltonas fonas su juodu rėmeliu
@@ -1525,18 +1569,13 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
         # Švarus baltas fonas
         draw.rectangle([0, 0, width, height], fill=(255, 255, 255, 250))
 
-        # DEBUG: Patikriname columns reikšmę PRIEŠ if sąlygą
-        st.warning(f"🔍 MINIMALIST STYLE: columns={columns}, columns==2 yra {columns == 2}, type(columns)={type(columns)}", icon="🎨")
-
         # Automatinis teksto lūžimas
         if columns == 2:
-            st.success("✅ ĮĖJOME Į columns==2 BLOKĄ!", icon="📰")
             # STULPELINIS LAYOUT (kaip laikraštyje)
             column_gap = 30  # Tarpas tarp stulpelių
             column_width = (width - 60 - column_gap) // 2  # 30px padding iš kiekvienos pusės + gap
             max_text_width = column_width
         else:
-            st.error(f"❌ NEĮĖJOME į columns==2 bloką! columns={columns}", icon="⚠️")
             # ĮPRASTAS LAYOUT
             max_text_width = width - 40  # 20px padding
         
@@ -2226,25 +2265,16 @@ if files_to_process:
                         # Naudojame pirmą nuotrauką kaip produkto nuotrauką
                         product_img = edited_images[0]
                         
-                        # DEBUG PRIEŠ KURIANT
-                        st.warning(f"🔍 PRIEŠ create_modern_landing_layout: text_columns={text_columns_num}, underline_first={underline_first}, style='{collage_style}'", icon="⚠️")
-                        
-                        try:
-                            collage = create_modern_landing_layout(
-                                product_img, 
-                                text_content=text_content,
-                                phone_number=default_phone if show_phone_number else None,
-                                background=collage if use_themed_bg else None,  # AI fonas jei pasirinktas
-                                logo_path="assets/logo.png",
-                                text_columns=text_columns_num,
-                                underline_first_word=underline_first,
-                                style=collage_style  # Perduodame pasirinktą stilių
-                            )
-                            st.success(f"✅ PO create_modern_landing_layout: collage sukurtas sėkmingai!", icon="✅")
-                        except Exception as e:
-                            st.error(f"❌ KLAIDA create_modern_landing_layout: {str(e)}", icon="🚨")
-                            raise
-                        
+                        collage = create_modern_landing_layout(
+                            product_img, 
+                            text_content=text_content,
+                            phone_number=default_phone if show_phone_number else None,
+                            background=collage if use_themed_bg else None,  # AI fonas jei pasirinktas
+                            logo_path="assets/logo.png",
+                            text_columns=text_columns_num,
+                            underline_first_word=underline_first,
+                            style=collage_style  # Perduodame pasirinktą stilių
+                        )
                         collage = collage.convert("RGBA")
 
                     # ============ GRID 2x2 LAYOUTS ============
