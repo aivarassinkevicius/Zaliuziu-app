@@ -51,9 +51,16 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
+# Užkrauname logo kaip PIL Image (veikia ir Cloud, ir lokaliai)
+try:
+    from PIL import Image as PILImage
+    logo_favicon = PILImage.open("assets/logo.png")
+except:
+    logo_favicon = "🌿"
+
 st.set_page_config(
     page_title="Žaliuzių turinio kūrėjas", 
-    page_icon="🌿",  # Emoji veikia ir Cloud, ir lokaliai
+    page_icon=logo_favicon,
     layout="wide"
 )
 
