@@ -1818,7 +1818,16 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
                 logo_bg.paste(logo, (10, 10), logo)
                 canvas.paste(logo_bg, (30, 22), logo_bg)
             else:
-                # Permatomas - alpha composite kad tikrai veiktų permatomumas
+                # Permatomas - pašaliname baltą foną jei yra
+                logo_data = logo.getdata()
+                new_data = []
+                for item in logo_data:
+                    # Jei pikselis beveik baltas (RGB > 240) - darome permatomą
+                    if item[0] > 240 and item[1] > 240 and item[2] > 240:
+                        new_data.append((255, 255, 255, 0))  # Permatomas
+                    else:
+                        new_data.append(item)
+                logo.putdata(new_data)
                 canvas.paste(logo, (40, 32), logo)
         except Exception as e:
             # Fallback
@@ -1902,7 +1911,7 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
         x += dash_length + gap_length
     
     # === BULLET LIST (4 punktai) ===
-    # Šriftas bullet tekstui - 24px su Linux fallback
+    # Šriftas bullet tekstui - 32px su Linux fallback
     font_bullet = None
     bullet_fonts = [
         "C:/Windows/Fonts/georgia.ttf",  # Windows Serif
@@ -1913,7 +1922,7 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     ]
     for font_path in bullet_fonts:
         try:
-            font_bullet = ImageFont.truetype(font_path, 24)
+            font_bullet = ImageFont.truetype(font_path, 32)
             break
         except:
             continue
