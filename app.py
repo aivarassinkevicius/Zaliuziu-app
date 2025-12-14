@@ -1780,7 +1780,7 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
     return text_box
 
 
-def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_number=None, logo_path="assets/logo.png", logo_with_white_bg=False):
+def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_number=None, logo_path="assets/logo.png", logo_with_white_bg=False, enable_white_border=True, enable_rounded_corners=True, enable_shadow_effect=True, shadow_strength=50):
     """
     Magazine Style Layout pagal pixel-perfect specifikaciją:
     - 2 nuotraukos kairėje (3:4 ratio)
@@ -1837,11 +1837,29 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     # Nuotraukų viršus ties punktyrine linija (Y = 188)
     # Photo 1 - kairė
     photo1_resized = photo1.resize((340, 460), Image.Resampling.LANCZOS)
-    canvas.paste(photo1_resized, (40, 188))
+    photo1_with_effects = add_photo_effects(
+        photo1_resized,
+        enable_border=enable_white_border,
+        border_width=12,
+        enable_rounded=enable_rounded_corners,
+        corner_radius=20,
+        enable_shadow=enable_shadow_effect,
+        shadow_strength=shadow_strength
+    )
+    canvas.paste(photo1_with_effects, (40, 188), photo1_with_effects if photo1_with_effects.mode == 'RGBA' else None)
     
     # Photo 2 - dešinė
     photo2_resized = photo2.resize((340, 460), Image.Resampling.LANCZOS)
-    canvas.paste(photo2_resized, (400, 188))
+    photo2_with_effects = add_photo_effects(
+        photo2_resized,
+        enable_border=enable_white_border,
+        border_width=12,
+        enable_rounded=enable_rounded_corners,
+        corner_radius=20,
+        enable_shadow=enable_shadow_effect,
+        shadow_strength=shadow_strength
+    )
+    canvas.paste(photo2_with_effects, (400, 188), photo2_with_effects if photo2_with_effects.mode == 'RGBA' else None)
     
     # === TELEFONO NUMERIS (po nuotraukomis, be rėmelio) ===
     if phone_number:
@@ -2830,7 +2848,7 @@ if files_to_process:
                     
                     # ============ MAGAZINE STYLE LAYOUT ============
                     elif "Magazine Style" in collage_layout:
-                        # 2 nuotraukos + antraštė (56px) + bullet list (24px)
+                        # 2 nuotraukos + antraštė (56px) + bullet list (32px)
                         photo1 = edited_images[0]
                         photo2 = edited_images[1]
                         
@@ -2841,7 +2859,11 @@ if files_to_process:
                             bullet_points=magazine_bullets,
                             phone_number=default_phone if show_phone_number else None,
                             logo_path="assets/logo.png" if show_logo else None,
-                            logo_with_white_bg=logo_white_bg
+                            logo_with_white_bg=logo_white_bg,
+                            enable_white_border=enable_white_border,
+                            enable_rounded_corners=enable_rounded_corners,
+                            enable_shadow_effect=enable_shadow_effect,
+                            shadow_strength=shadow_strength
                         )
                         collage = collage.convert("RGBA")
 
