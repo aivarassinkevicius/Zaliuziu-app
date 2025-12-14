@@ -2384,6 +2384,15 @@ if files_to_process:
         with col_fmt2:
             underline_first = st.checkbox("✏️ Pabraukti pirmą žodį", value=False, help="Pabraukia pirmą žodį tekste (akcentas)")
         
+        # 🎨 HTML rendering pasirinkimas (tik Modern Landing)
+        use_html_rendering = False
+        if collage_layout == "🎯 Modern Landing (produktas + info)":
+            use_html_rendering = st.checkbox(
+                "🎨 Fancy HTML dizainas (eksperimentinis)", 
+                value=False,
+                help="Naudoja HTML/CSS rendering'ą - modernesnis dizainas su gradientais ir fancy efektais! Gali užtrukti ~5-10s"
+            )
+        
         # Konvertuojame UI pasirinkimą į skaičių
         text_columns_num = 2 if "2 stulpeliai" in text_columns else 1
 
@@ -2540,26 +2549,19 @@ if files_to_process:
 
                     # ============ MODERN LANDING LAYOUT ============
                     if "Modern Landing" in collage_layout:
-                        # 🎨 HTML rendering pasirinkimas
-                        use_html_rendering = st.checkbox(
-                            "🎨 Fancy HTML dizainas (eksperimentinis)", 
-                            value=False,
-                            help="Naudoja HTML/CSS rendering'ą vietoj PIL - modernesnis dizainas su gradientais ir fancy efektais!"
-                        )
-                        
                         # Naudojame pirmą nuotrauką kaip produkto nuotrauką
                         product_img = edited_images[0]
                         
                         if use_html_rendering:
                             # HTML versija - FANCY!
-                            st.info("🎨 Naudojamas HTML rendering... Gali užtrukti ~5-10s")
-                            collage = create_modern_landing_html(
-                                product_img,
-                                text_content=text_content,
-                                phone_number=default_phone if show_phone_number else None,
-                                logo_path="assets/logo.png",
-                                style=collage_style
-                            )
+                            with st.spinner("🎨 HTML rendering... Gali užtrukti ~5-10s"):
+                                collage = create_modern_landing_html(
+                                    product_img,
+                                    text_content=text_content,
+                                    phone_number=default_phone if show_phone_number else None,
+                                    logo_path="assets/logo.png",
+                                    style=collage_style
+                                )
                         else:
                             # PIL versija - klasikinė
                             collage = create_modern_landing_layout(
