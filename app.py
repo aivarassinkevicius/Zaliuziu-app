@@ -6,6 +6,14 @@ from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
 from supabase import create_client, Client
 
+# HTML rendering imports
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+import tempfile
+import time
+
 # Import our new image processing module
 try:
     from lib.image_processing import process_blinds_photo
@@ -792,6 +800,65 @@ def image_to_base64(image_file):
     """Konvertuoja įkeltą failą į base64 be kompresijos"""
     image_file.seek(0)
     return base64.b64encode(image_file.read()).decode()
+
+
+def pil_image_to_base64(pil_image):
+    """Konvertuoja PIL Image į base64 string (HTML embedding)"""
+    buffered = io.BytesIO()
+    pil_image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    return img_str
+
+
+def html_to_image(html_string, width=1920, height=1080):
+    """
+    Renderina HTML/CSS į PIL Image objektą naudojant Selenium
+    
+    Args:
+        html_string: HTML kodas su CSS
+        width: Canvas plotis
+        height: Canvas aukštis
+    
+    Returns:
+        PIL Image objektas
+    """
+    # Chrome options (headless mode)
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument(f"--window-size={width},{height}")
+    chrome_options.add_argument("--hide-scrollbars")
+    
+    # Sukuriam laikinį HTML failą
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
+        f.write(html_string)
+        temp_html_path = f.name
+    
+    try:
+        # Inicializuojam WebDriver
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        
+        # Atidarom HTML failą
+        driver.get(f"file:///{temp_html_path.replace(os.sep, '/')}")
+        
+        # Palaukiam kad puslapio elementai užsikrautų
+        time.sleep(1)
+        
+        # Darom screenshot
+        screenshot_bytes = driver.get_screenshot_as_png()
+        
+        # Konvertuojam į PIL Image
+        pil_image = Image.open(io.BytesIO(screenshot_bytes))
+        
+        driver.quit()
+        
+        return pil_image
+        
+    finally:
+        # Ištrinam laikinį failą
+        if os.path.exists(temp_html_path):
+            os.unlink(temp_html_path)
 
 
 def generate_themed_background(season, canvas_width, canvas_height, custom_prompt=""):
@@ -1702,6 +1769,195 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
     return text_box
 
 
+def create_modern_landing_html(product_image, text_content="", phone_number="+370 (606) 50 414", logo_path="assets/logo.png", style="Minimalist"):
+    """
+    HTML/CSS versija Modern Landing layout'ui - FANCY dizainas!
+    
+    Args:
+        product_image: PIL Image objektas (produkto nuotrauka)
+        text_content: Tekstas dešinėje
+        phone_number: Telefono numeris apačioje
+        logo_path: Kelias iki logo
+        style: Stilius (Minimalist/Glassmorphism/Neo-Brutalism)
+    
+    Returns:
+        PIL Image objektas (rendered HTML)
+    """
+    # Konvertuojam nuotraukas į base64
+    product_base64 = pil_image_to_base64(product_image)
+    
+    # Logo
+    logo_base64 = ""
+    if logo_path and os.path.exists(logo_path):
+        try:
+            logo_img = Image.open(logo_path)
+            logo_base64 = pil_image_to_base64(logo_img)
+        except:
+            pass
+    
+    # Stilių CSS
+    if "Glassmorphism" in style:
+        card_style = """
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        """
+        text_bg = """
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        """
+        gradient = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+    elif "Neo-Brutalism" in style:
+        card_style = """
+            background: #FFDC32;
+            border: 8px solid #000;
+            box-shadow: 10px 10px 0 #000;
+        """
+        text_bg = """
+            background: #FFF;
+            border: 4px solid #000;
+            box-shadow: 6px 6px 0 #000;
+        """
+        gradient = "#FFE066"
+    else:  # Minimalist
+        card_style = """
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        """
+        text_bg = """
+            background: white;
+            border: 1px solid #f3f4f6;
+        """
+        gradient = "linear-gradient(180deg, #ffffff 0%, #f9fafb 100%)"
+    
+    # HTML šablonas
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+        <style>
+            * {{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }}
+            body {{
+                width: 1920px;
+                height: 1080px;
+                background: {gradient};
+                font-family: 'Montserrat', sans-serif;
+                overflow: hidden;
+            }}
+            .container {{
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: space-around;
+                padding: 80px;
+            }}
+            .product-card {{
+                {card_style}
+                border-radius: 30px;
+                padding: 30px;
+                width: 45%;
+                height: 880px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                transition: transform 0.3s ease;
+            }}
+            .product-card img {{
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+                border-radius: 20px;
+            }}
+            .text-section {{
+                width: 48%;
+                display: flex;
+                flex-direction: column;
+                gap: 40px;
+            }}
+            .text-box {{
+                {text_bg}
+                border-radius: 25px;
+                padding: 50px;
+                min-height: 300px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }}
+            .text-box p {{
+                font-size: 48px;
+                line-height: 1.6;
+                color: #1e293b;
+                font-weight: 600;
+                text-align: center;
+                white-space: pre-wrap;
+            }}
+            .phone-section {{
+                {text_bg}
+                border-radius: 25px;
+                padding: 40px;
+                text-align: center;
+            }}
+            .phone-section h2 {{
+                font-size: 50px;
+                color: #1e293b;
+                font-family: 'Times New Roman', serif;
+                font-weight: bold;
+            }}
+            .logo {{
+                position: absolute;
+                top: 40px;
+                left: 40px;
+                width: 120px;
+                height: auto;
+                z-index: 10;
+            }}
+        </style>
+    </head>
+    <body>
+        {"<img class='logo' src='data:image/png;base64," + logo_base64 + "'>" if logo_base64 else ""}
+        
+        <div class="container">
+            <div class="product-card">
+                <img src="data:image/png;base64,{product_base64}">
+            </div>
+            
+            <div class="text-section">
+                <div class="text-box">
+                    <p>{text_content.replace(chr(10), '<br>')}</p>
+                </div>
+                
+                {f"<div class='phone-section'><h2>{phone_number}</h2></div>" if phone_number else ""}
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Renderuojam HTML → PIL Image
+    try:
+        result_image = html_to_image(html, width=1920, height=1080)
+        return result_image
+    except Exception as e:
+        st.error(f"❌ HTML rendering klaida: {e}")
+        # Fallback - grąžinam baltą canvas su error pranešimu
+        fallback = Image.new('RGB', (1920, 1080), 'white')
+        draw = ImageDraw.Draw(fallback)
+        draw.text((960, 540), f"HTML Rendering Error: {e}", fill='red', anchor='mm')
+        return fallback
+
+
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
 
@@ -2284,19 +2540,39 @@ if files_to_process:
 
                     # ============ MODERN LANDING LAYOUT ============
                     if "Modern Landing" in collage_layout:
+                        # 🎨 HTML rendering pasirinkimas
+                        use_html_rendering = st.checkbox(
+                            "🎨 Fancy HTML dizainas (eksperimentinis)", 
+                            value=False,
+                            help="Naudoja HTML/CSS rendering'ą vietoj PIL - modernesnis dizainas su gradientais ir fancy efektais!"
+                        )
+                        
                         # Naudojame pirmą nuotrauką kaip produkto nuotrauką
                         product_img = edited_images[0]
                         
-                        collage = create_modern_landing_layout(
-                            product_img, 
-                            text_content=text_content,
-                            phone_number=default_phone if show_phone_number else None,
-                            background=collage if use_themed_bg else None,  # AI fonas jei pasirinktas
-                            logo_path="assets/logo.png",
-                            text_columns=text_columns_num,
-                            underline_first_word=underline_first,
-                            style=collage_style  # Perduodame pasirinktą stilių
-                        )
+                        if use_html_rendering:
+                            # HTML versija - FANCY!
+                            st.info("🎨 Naudojamas HTML rendering... Gali užtrukti ~5-10s")
+                            collage = create_modern_landing_html(
+                                product_img,
+                                text_content=text_content,
+                                phone_number=default_phone if show_phone_number else None,
+                                logo_path="assets/logo.png",
+                                style=collage_style
+                            )
+                        else:
+                            # PIL versija - klasikinė
+                            collage = create_modern_landing_layout(
+                                product_img, 
+                                text_content=text_content,
+                                phone_number=default_phone if show_phone_number else None,
+                                background=collage if use_themed_bg else None,  # AI fonas jei pasirinktas
+                                logo_path="assets/logo.png",
+                                text_columns=text_columns_num,
+                                underline_first_word=underline_first,
+                                style=collage_style  # Perduodame pasirinktą stilių
+                            )
+                        
                         collage = collage.convert("RGBA")
 
                     # ============ GRID 2x2 LAYOUTS ============
