@@ -1845,7 +1845,7 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
         ]
         for font_path in phone_fonts:
             try:
-                font_phone = ImageFont.truetype(font_path, 14)
+                font_phone = ImageFont.truetype(font_path, 24)
                 break
             except:
                 continue
