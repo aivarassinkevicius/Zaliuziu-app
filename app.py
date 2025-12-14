@@ -1780,7 +1780,7 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
     return text_box
 
 
-def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_number=None, logo_path="assets/logo.png", logo_with_white_bg=False, enable_white_border=True, enable_rounded_corners=True, enable_shadow_effect=True, shadow_strength=50):
+def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_number=None, logo_path="assets/logo.png", logo_with_white_bg=False, enable_white_border=True, enable_rounded_corners=True, enable_shadow_effect=True, shadow_strength=50, background=None):
     """
     Magazine Style Layout pagal pixel-perfect specifikaciją:
     - 2 nuotraukos kairėje (3:4 ratio)
@@ -1799,8 +1799,16 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     Returns:
         PIL Image (1327x768)
     """
-    # Canvas - RGBA kad logo alpha kanalas veiktų
-    canvas = Image.new('RGBA', (1327, 768), color=(250, 246, 239, 255))  # #FAF6EF
+    # Canvas - jei yra AI background, naudojame jį, kitaip default spalvą
+    if background is not None:
+        # AI fonas - resize į 1327x768
+        canvas = background.resize((1327, 768), Image.Resampling.LANCZOS)
+        if canvas.mode != 'RGBA':
+            canvas = canvas.convert('RGBA')
+    else:
+        # Default smėlio spalva
+        canvas = Image.new('RGBA', (1327, 768), color=(250, 246, 239, 255))  # #FAF6EF
+    
     draw = ImageDraw.Draw(canvas)
     
     # Spalvos
@@ -2864,7 +2872,8 @@ if files_to_process:
                             enable_white_border=enable_white_border,
                             enable_rounded_corners=enable_rounded_corners,
                             enable_shadow_effect=enable_shadow_effect,
-                            shadow_strength=shadow_strength
+                            shadow_strength=shadow_strength,
+                            background=collage if use_themed_bg else None  # AI fonas
                         )
                         collage = collage.convert("RGBA")
 
