@@ -24,14 +24,14 @@ def cv2_to_pil(cv2_image):
     return Image.fromarray(rgb_image)
 
 
-def smart_auto_crop(cv2_image, margin_percent=0.03):
+def smart_auto_crop(cv2_image, margin_percent=0.01):
     """
     Detect blinds area and crop out walls/background
     Uses multiple methods: edge detection + color clustering
     
     Args:
         cv2_image: OpenCV image (BGR)
-        margin_percent: Safety margin around detected area (0.03 = 3%)
+        margin_percent: Safety margin around detected area (0.01 = 1%)
     
     Returns:
         Cropped OpenCV image
