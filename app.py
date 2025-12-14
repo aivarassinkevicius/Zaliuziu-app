@@ -2600,13 +2600,6 @@ if files_to_process:
             st.markdown("---")
             st.markdown("#### 📰 Magazine Style nustatymai")
             
-            # Logo fonas
-            logo_white_bg = st.checkbox(
-                "🎨 Logo su baltu fonu",
-                value=False,
-                help="True = baltas fonas po logo, False = permatomas"
-            )
-            
             # Antraštė
             magazine_header = st.text_input(
                 "📌 Antraštė (didelis šriftas 56px):",
@@ -2696,6 +2689,14 @@ if files_to_process:
                 st.slider("Šešėlio stiprumas:", 0, 100, 50, 5, help="0 = nematomas, 100 = juodas")
                 if enable_shadow_effect
                 else 0
+            )
+        
+        # Logo fonas (tik Magazine Style)
+        if "Magazine Style" in collage_layout:
+            logo_white_bg = st.checkbox(
+                "🎨 Logo su baltu fonu",
+                value=False,
+                help="Baltas fonas po logo (Magazine Style)"
             )
         
         # Telefono numerio pasirinkimas (visiems layout'ams)
