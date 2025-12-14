@@ -1858,8 +1858,8 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
         phone_width = bbox[2] - bbox[0]
         
         # Pozicija: centre po nuotraukomis (nuotraukos baigiasi Y=188+460=648)
-        phone_x = 370 - phone_width // 2  # Centras tarp photo1 ir photo2 (40+340+400)/2 = 370
-        phone_y = 670  # ~22px po nuotraukomis
+        phone_x = (1327 - phone_width) // 2  # Centras per viso canvas viduriuką (1327px plotis)
+        phone_y = 694  # 46px po nuotraukomis (648 + 46)
         
         # Tiesiog tekstas, be fono/rėmelio
         draw.text((phone_x, phone_y), phone_text, fill=text_color, font=font_phone)
