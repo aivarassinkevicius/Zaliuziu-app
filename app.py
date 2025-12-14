@@ -1799,8 +1799,8 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     Returns:
         PIL Image (1327x768)
     """
-    # Canvas
-    canvas = Image.new('RGB', (1327, 768), color=(250, 246, 239))  # #FAF6EF
+    # Canvas - RGBA kad logo alpha kanalas veiktų
+    canvas = Image.new('RGBA', (1327, 768), color=(250, 246, 239, 255))  # #FAF6EF
     draw = ImageDraw.Draw(canvas)
     
     # Spalvos
@@ -1818,7 +1818,7 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
                 logo_bg.paste(logo, (10, 10), logo)
                 canvas.paste(logo_bg, (30, 22), logo_bg)
             else:
-                # Permatomas - tiesiog įklijuojam
+                # Permatomas - alpha composite kad tikrai veiktų permatomumas
                 canvas.paste(logo, (40, 32), logo)
         except Exception as e:
             # Fallback
