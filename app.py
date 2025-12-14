@@ -2683,6 +2683,11 @@ if files_to_process:
         with col_fx1:
             enable_white_border = st.checkbox("⬜ Baltas rėmelis", value=True, help="Baltas rėmelis aplink nuotraukas")
             enable_rounded_corners = st.checkbox("⭕ Užapvalinti kampai", value=True, help="Apvalūs nuotraukų kampai")
+            
+            # Logo parinktys (tik Magazine Style)
+            if "Magazine Style" in collage_layout:
+                logo_with_white = st.checkbox("⬜ Logo su baltu fonu", value=False, help="Logo su baltu fonu aplink")
+                logo_transparent = st.checkbox("🔲 Logo su skaidriu fonu", value=False, help="Logo su permatomu fonu")
 
         with col_fx2:
             enable_shadow_effect = st.checkbox("🌑 Šešėlio efektas", value=True, help="3D šešėlis (drop shadow)")
@@ -2692,21 +2697,11 @@ if files_to_process:
                 else 0
             )
         
-        # Logo pasirinkimai (tik Magazine Style)
+        # Nustatome logo rodymo logiką
         logo_white_bg = False
         show_logo = False
         
         if "Magazine Style" in collage_layout:
-            st.markdown("**🖼️ Logo parinktys:**")
-            col_logo1, col_logo2 = st.columns(2)
-            
-            with col_logo1:
-                logo_with_white = st.checkbox("⬜ Logo su baltu fonu", value=False, help="Logo su baltu fonu aplink")
-            
-            with col_logo2:
-                logo_transparent = st.checkbox("🔲 Logo su skaidriu fonu", value=False, help="Logo su permatomu fonu")
-            
-            # Nustatome ar rodyti logo ir su kokiu fonu
             if logo_with_white:
                 show_logo = True
                 logo_white_bg = True
