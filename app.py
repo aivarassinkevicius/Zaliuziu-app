@@ -2656,19 +2656,24 @@ if files_to_process:
                     "Šrifto dydis tekstui 2:", 30, 120, 60, 10, key="font_size_2", help="Teksto dydis antrame kvadrate"
                 )
         else:
-            # Vienas tekstas visiem kitiems layoutams
-            col1, col2 = st.columns([2, 1])
+            # Vienas tekstas visiem kitiems layoutams (NE Magazine Style)
+            if "Magazine Style" not in collage_layout:
+                col1, col2 = st.columns([2, 1])
 
-            with col1:
-                text_content = st.text_area(
-                    "Tekstas teksto kvadrate:",
-                    value=f"{season} kolekcija 2025 🌿",
-                    height=100,
-                    help="Šis tekstas bus atskirame kvadrate collage (ne overlay!)",
-                )
+                with col1:
+                    text_content = st.text_area(
+                        "Tekstas teksto kvadrate:",
+                        value=f"{season} kolekcija 2025 🌿",
+                        height=100,
+                        help="Šis tekstas bus atskirame kvadrate collage (ne overlay!)",
+                    )
 
-            with col2:
-                text_font_size = st.slider("Šrifto dydis:", 30, 120, 60, 10, help="Teksto dydis teksto kvadrate")
+                with col2:
+                    text_font_size = st.slider("Šrifto dydis:", 30, 120, 60, 10, help="Teksto dydis teksto kvadrate")
+            else:
+                # Magazine Style - default values
+                text_content = ""
+                text_font_size = 60
 
             text_content_2 = None  # Nėra antro teksto
             text_font_size_2 = text_font_size  # Naudojame tą patį dydį
