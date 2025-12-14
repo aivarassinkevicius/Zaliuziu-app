@@ -1825,15 +1825,16 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
             pass
     
     # === NUOTRAUKOS ===
+    # Nuotraukų viršus ties punktyrine linija (Y = 188)
     # Photo 1 - kairė
     photo1_resized = photo1.resize((340, 460), Image.Resampling.LANCZOS)
-    canvas.paste(photo1_resized, (40, 140))
+    canvas.paste(photo1_resized, (40, 188))
     
     # Photo 2 - dešinė
     photo2_resized = photo2.resize((340, 460), Image.Resampling.LANCZOS)
-    canvas.paste(photo2_resized, (400, 140))
+    canvas.paste(photo2_resized, (400, 188))
     
-    # === TELEFONO MYGTUKAS (su rėmeliu) ===
+    # === TELEFONO NUMERIS (po nuotraukomis, be rėmelio) ===
     if phone_number:
         # Font loading su Linux fallback
         font_phone = None
@@ -1855,34 +1856,13 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
         phone_text = phone_number
         bbox = draw.textbbox((0, 0), phone_text, font=font_phone)
         phone_width = bbox[2] - bbox[0]
-        phone_height = bbox[3] - bbox[1]
         
-        # Centras po 2-a nuotrauka
-        button_center_x = 570  # Tarp nuotraukų ir teksto (400 + 340 + 30)
-        button_y = 620
+        # Pozicija: centre po nuotraukomis (nuotraukos baigiasi Y=188+460=648)
+        phone_x = 370 - phone_width // 2  # Centras tarp photo1 ir photo2 (40+340+400)/2 = 370
+        phone_y = 670  # ~22px po nuotraukomis
         
-        # Padding
-        padding_x = 12
-        padding_y = 8
-        
-        # Button box
-        button_x1 = button_center_x - phone_width // 2 - padding_x
-        button_y1 = button_y - padding_y
-        button_x2 = button_center_x + phone_width // 2 + padding_x
-        button_y2 = button_y + phone_height + padding_y
-        
-        # Baltas fonas
-        draw.rounded_rectangle(
-            [button_x1, button_y1, button_x2, button_y2],
-            radius=6,
-            fill=(255, 255, 255, 255),
-            outline=text_color,
-            width=2
-        )
-        
-        # Tekstas centre
-        text_x = button_center_x - phone_width // 2
-        draw.text((text_x, button_y), phone_text, fill=text_color, font=font_phone)
+        # Tiesiog tekstas, be fono/rėmelio
+        draw.text((phone_x, phone_y), phone_text, fill=text_color, font=font_phone)
     
     # === TEKSTO BLOKAS ===
     # Antraštė - 56px Serif font
@@ -1959,21 +1939,19 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     for i, bullet_text in enumerate(bullets):
         y = bullet_y_start + i * bullet_spacing
         
-        # Apskritimas (tuščias, 22px diameter)
+        # Apskritimas (pilnaviduris, 24px diameter)
         circle_center_x = bullet_x
         circle_center_y = y + 12  # Vertikalus centravimas
-        circle_radius = 11  # 22/2 = 11
+        circle_radius = 12  # 24/2 = 12
         
         draw.ellipse(
             [circle_center_x - circle_radius, circle_center_y - circle_radius,
              circle_center_x + circle_radius, circle_center_y + circle_radius],
-            outline=text_color,
-            width=2,
-            fill=None
+            fill=text_color  # Pilnaviduris juodas
         )
         
         # Tekstas (16px nuo apskritimo krašto)
-        text_x = bullet_x + 22 + 16
+        text_x = bullet_x + 24 + 16  # 24px apskritimas + 16px tarpas
         draw.text((text_x, y), bullet_text, fill=text_color, font=font_bullet)
     
     return canvas
@@ -2631,6 +2609,13 @@ if files_to_process:
                 value="Tekstas\nTekstas\nTekstas\nTekstas",
                 height=120,
                 help="Kiekviena eilutė = 1 punktas. Bus rodomi 4 punktai su apskritimais."
+            )
+            
+            # Logo pasirinkimas
+            logo_white_bg = st.checkbox(
+                "⬜ Logo su baltu fonu",
+                value=False,
+                help="Pažymėti - baltas fonas po logo. Nepažymėti - permatomas fonas."
             )
         
         # Konvertuojame UI pasirinkimą į skaičių
