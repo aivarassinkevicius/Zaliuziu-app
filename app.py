@@ -1780,7 +1780,7 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
     return text_box
 
 
-def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_number=None, logo_path="assets/logo.png"):
+def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_number=None, logo_path="assets/logo.png", logo_with_white_bg=False):
     """
     Magazine Style Layout pagal pixel-perfect specifikaciją:
     - 2 nuotraukos kairėje (3:4 ratio)
@@ -1790,10 +1790,11 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     Args:
         photo1: PIL Image (kairė nuotrauka)
         photo2: PIL Image (dešinė nuotrauka)
-        header_text: Antraštės tekstas
-        bullet_points: List of strings arba string su \n
+        header_text: Antraštės tekstas (56px)
+        bullet_points: List of strings arba string su \n (4 punktai, 24px)
         phone_number: Telefono numeris (optional)
         logo_path: Kelias iki logo (optional)
+        logo_with_white_bg: True = baltas fonas, False = permatomas
     
     Returns:
         PIL Image (1327x768)
@@ -1805,20 +1806,23 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     # Spalvos
     text_color = (43, 43, 43)  # #2B2B2B
     
-    # === LOGO ===
-    try:
-        if logo_path and os.path.exists(logo_path):
-            logo = Image.open(logo_path)
-            # Logo 120x120 bet pozicionuojam pagal spec
-            logo = logo.resize((120, 120), Image.Resampling.LANCZOS)
-            canvas.paste(logo, (40, 32), logo if logo.mode == 'RGBA' else None)
-    except:
-        # Fallback - tekstinis logo
+    # === LOGO (VIETA: 40, 32) ===
+    if logo_path and os.path.exists(logo_path):
         try:
-            font_logo = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 28)
-        except:
-            font_logo = ImageFont.load_default()
-        draw.text((40, 32), "LOGO", fill=text_color, font=font_logo)
+            logo = Image.open(logo_path).convert("RGBA")
+            logo = logo.resize((120, 120), Image.Resampling.LANCZOS)
+            
+            if logo_with_white_bg:
+                # Baltas fonas po logo
+                logo_bg = Image.new('RGBA', (140, 140), (255, 255, 255, 255))
+                logo_bg.paste(logo, (10, 10), logo)
+                canvas.paste(logo_bg, (30, 22), logo_bg)
+            else:
+                # Permatomas - tiesiog įklijuojam
+                canvas.paste(logo, (40, 32), logo)
+        except Exception as e:
+            # Fallback
+            pass
     
     # === NUOTRAUKOS ===
     # Photo 1 - kairė
@@ -1829,19 +1833,45 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     photo2_resized = photo2.resize((340, 460), Image.Resampling.LANCZOS)
     canvas.paste(photo2_resized, (400, 140))
     
-    # === TELEFONO TEKSTAS ===
+    # === TELEFONO MYGTUKAS (su rėmeliu) ===
     if phone_number:
         try:
             font_phone = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 14)
         except:
             font_phone = ImageFont.load_default()
         
-        # Centruotas po 2-a nuotrauka
-        phone_text = f"TEL. NR. {phone_number}"
+        # Tekstas su emoji
+        phone_text = f"TEL. NR. 📞"
         bbox = draw.textbbox((0, 0), phone_text, font=font_phone)
         phone_width = bbox[2] - bbox[0]
-        phone_x = 400 + 170 - phone_width // 2  # Centras 2-os nuotraukos
-        draw.text((phone_x, 620), phone_text, fill=text_color, font=font_phone)
+        phone_height = bbox[3] - bbox[1]
+        
+        # Centras po 2-a nuotrauka
+        button_center_x = 570  # Tarp nuotraukų ir teksto (400 + 340 + 30)
+        button_y = 620
+        
+        # Padding
+        padding_x = 12
+        padding_y = 8
+        
+        # Button box
+        button_x1 = button_center_x - phone_width // 2 - padding_x
+        button_y1 = button_y - padding_y
+        button_x2 = button_center_x + phone_width // 2 + padding_x
+        button_y2 = button_y + phone_height + padding_y
+        
+        # Baltas fonas
+        draw.rounded_rectangle(
+            [button_x1, button_y1, button_x2, button_y2],
+            radius=6,
+            fill=(255, 255, 255, 255),
+            outline=text_color,
+            width=2
+        )
+        
+        # Tekstas centre
+        text_x = button_center_x - phone_width // 2
+        draw.text((text_x, button_y), phone_text, fill=text_color, font=font_phone)
     
     # === TEKSTO BLOKAS ===
     # Antraštė
@@ -1868,22 +1898,22 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     draw.text((860, 120), header_text, fill=text_color, font=font_header)
     
     # === PUNKTYRINĖ LINIJA ===
-    # Po antrašte (Y: 120 + 56 + 12 = ~188)
+    # Tiksliai pagal spec: po antrašte, Y = 120 + 56 + 12 = 188
     line_y = 188
     line_x_start = 860
-    line_x_end = 860 + 360
+    line_x_end = 1220  # 860 + 360
     
-    # Brėžiam punktyrinę liniją
-    dash_length = 8
-    gap_length = 6
+    # Brėžiam punktyrinę liniją (dotted)
+    dash_length = 6
+    gap_length = 4
     x = line_x_start
     while x < line_x_end:
         end_x = min(x + dash_length, line_x_end)
         draw.line([(x, line_y), (end_x, line_y)], fill=text_color, width=2)
         x += dash_length + gap_length
     
-    # === BULLET LIST ===
-    # Šriftas bullet tekstui
+    # === BULLET LIST (4 punktai) ===
+    # Šriftas bullet tekstui - 24px
     try:
         font_bullet = ImageFont.truetype("C:/Windows/Fonts/georgia.ttf", 24)
     except:
@@ -1898,29 +1928,34 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     else:
         bullets = bullet_points
     
-    # Ribojam iki 4 punktų
-    bullets = bullets[:4]
+    # VISADA 4 punktai - jei mažiau, papildom su "Tekstas"
+    while len(bullets) < 4:
+        bullets.append("Tekstas")
+    bullets = bullets[:4]  # Max 4
     
-    # Braižymas
+    # Tikslios pozicijos pagal spec
     bullet_x = 910
     bullet_y_start = 320
-    bullet_spacing = 64  # 22px tarpas + ~42px bullet height
+    bullet_spacing = 64  # Tarpas tarp punktų (22 + aukštis)
     
     for i, bullet_text in enumerate(bullets):
         y = bullet_y_start + i * bullet_spacing
         
-        # Apskritimas (tuščias)
-        circle_center = (bullet_x, y + 12)  # +12 vertikaliam centravimui
-        circle_radius = 11  # 22px diameter
+        # Apskritimas (tuščias, 22px diameter)
+        circle_center_x = bullet_x
+        circle_center_y = y + 12  # Vertikalus centravimas
+        circle_radius = 11  # 22/2 = 11
+        
         draw.ellipse(
-            [circle_center[0] - circle_radius, circle_center[1] - circle_radius,
-             circle_center[0] + circle_radius, circle_center[1] + circle_radius],
+            [circle_center_x - circle_radius, circle_center_y - circle_radius,
+             circle_center_x + circle_radius, circle_center_y + circle_radius],
             outline=text_color,
-            width=2
+            width=2,
+            fill=None
         )
         
-        # Tekstas
-        text_x = bullet_x + 22 + 16  # 22px circle + 16px gap
+        # Tekstas (16px nuo apskritimo krašto)
+        text_x = bullet_x + 22 + 16
         draw.text((text_x, y), bullet_text, fill=text_color, font=font_bullet)
     
     return canvas
@@ -2551,6 +2586,37 @@ if files_to_process:
                 help="Naudoja HTML/CSS rendering'ą - modernesnis dizainas su gradientais ir fancy efektais! Gali užtrukti ~5-10s"
             )
         
+        # 📰 Magazine Style nustatymai
+        magazine_header = ""
+        magazine_bullets = ""
+        logo_white_bg = False
+        
+        if "Magazine Style" in collage_layout:
+            st.markdown("---")
+            st.markdown("#### 📰 Magazine Style nustatymai")
+            
+            # Logo fonas
+            logo_white_bg = st.checkbox(
+                "🎨 Logo su baltu fonu",
+                value=False,
+                help="True = baltas fonas po logo, False = permatomas"
+            )
+            
+            # Antraštė
+            magazine_header = st.text_input(
+                "📌 Antraštė (didelis šriftas 56px):",
+                value="Tekstas",
+                help="Antraštė viršuje dešinėje, dideliu šriftu"
+            )
+            
+            # Bullet points
+            magazine_bullets = st.text_area(
+                "🔘 Bullet punktai (4 vnt, 24px šriftas):",
+                value="Tekstas\nTekstas\nTekstas\nTekstas",
+                height=120,
+                help="Kiekviena eilutė = 1 punktas. Bus rodomi 4 punktai su apskritimais."
+            )
+        
         # Konvertuojame UI pasirinkimą į skaičių
         text_columns_num = 2 if "2 stulpeliai" in text_columns else 1
 
@@ -2737,23 +2803,18 @@ if files_to_process:
                     
                     # ============ MAGAZINE STYLE LAYOUT ============
                     elif "Magazine Style" in collage_layout:
-                        # 2 nuotraukos + antraštė + bullet list
+                        # 2 nuotraukos + antraštė (56px) + bullet list (24px)
                         photo1 = edited_images[0]
                         photo2 = edited_images[1]
-                        
-                        # Naudojam text_content kaip antraštę
-                        header = text_content.split('\n')[0] if text_content else "Tekstas"
-                        
-                        # Bullet points iš text_content arba default
-                        bullets_text = text_content if text_content else "Tekstas\nTekstas\nTekstas\nTekstas"
                         
                         collage = create_magazine_layout(
                             photo1=photo1,
                             photo2=photo2,
-                            header_text=header,
-                            bullet_points=bullets_text,
+                            header_text=magazine_header,
+                            bullet_points=magazine_bullets,
                             phone_number=default_phone if show_phone_number else None,
-                            logo_path="assets/logo.png"
+                            logo_path="assets/logo.png",
+                            logo_with_white_bg=logo_white_bg
                         )
                         collage = collage.convert("RGBA")
 
