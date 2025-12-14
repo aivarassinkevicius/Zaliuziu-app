@@ -2701,14 +2701,15 @@ if files_to_process:
                 if enable_shadow_effect
                 else 0
             )
-        
-        # AI Custom Fono generavimas
-        use_custom_background = st.checkbox(
-            "🎨 Naudoti Custom AI foną",
-            value=False,
-            help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą",
-        )
+            
+            # AI Custom Fono generavimas
+            use_custom_background = st.checkbox(
+                "🎨 Naudoti Custom AI foną",
+                value=False,
+                help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą",
+            )
 
+        # Custom prompt text area už stulpelių (kai pažymėta)
         custom_prompt = ""
         if use_custom_background:
             custom_prompt = st.text_area(
