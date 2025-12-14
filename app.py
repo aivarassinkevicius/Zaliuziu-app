@@ -1835,9 +1835,20 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     
     # === TELEFONO MYGTUKAS (su rėmeliu) ===
     if phone_number:
-        try:
-            font_phone = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 14)
-        except:
+        # Font loading su Linux fallback
+        font_phone = None
+        phone_fonts = [
+            "C:/Windows/Fonts/arial.ttf",  # Windows
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux/Cloud
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"  # Linux alt
+        ]
+        for font_path in phone_fonts:
+            try:
+                font_phone = ImageFont.truetype(font_path, 14)
+                break
+            except:
+                continue
+        if not font_phone:
             font_phone = ImageFont.load_default()
         
         # Tekstas - FAKTINIS telefono numeris
@@ -1874,24 +1885,22 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
         draw.text((text_x, button_y), phone_text, fill=text_color, font=font_phone)
     
     # === TEKSTO BLOKAS ===
-    # Antraštė
-    try:
-        # Bandome rasti Serif šriftą
-        font_header = None
-        serif_fonts = [
-            "C:/Windows/Fonts/georgia.ttf",
-            "C:/Windows/Fonts/times.ttf",
-            "C:/Windows/Fonts/timesbd.ttf"
-        ]
-        for font_path in serif_fonts:
-            try:
-                font_header = ImageFont.truetype(font_path, 56)
-                break
-            except:
-                continue
-        if not font_header:
-            font_header = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 56)
-    except:
+    # Antraštė - 56px Serif font
+    font_header = None
+    serif_fonts = [
+        "C:/Windows/Fonts/georgia.ttf",  # Windows
+        "C:/Windows/Fonts/times.ttf",  # Windows
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",  # Linux Serif
+        "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",  # Linux Serif alt
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"  # Linux fallback
+    ]
+    for font_path in serif_fonts:
+        try:
+            font_header = ImageFont.truetype(font_path, 56)
+            break
+        except:
+            continue
+    if not font_header:
         font_header = ImageFont.load_default()
     
     # Antraštės tekstas
@@ -1913,14 +1922,23 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
         x += dash_length + gap_length
     
     # === BULLET LIST (4 punktai) ===
-    # Šriftas bullet tekstui - 24px
-    try:
-        font_bullet = ImageFont.truetype("C:/Windows/Fonts/georgia.ttf", 24)
-    except:
+    # Šriftas bullet tekstui - 24px su Linux fallback
+    font_bullet = None
+    bullet_fonts = [
+        "C:/Windows/Fonts/georgia.ttf",  # Windows Serif
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",  # Linux Serif
+        "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",  # Linux Serif alt
+        "C:/Windows/Fonts/arial.ttf",  # Windows Sans
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"  # Linux Sans
+    ]
+    for font_path in bullet_fonts:
         try:
-            font_bullet = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 24)
+            font_bullet = ImageFont.truetype(font_path, 24)
+            break
         except:
-            font_bullet = ImageFont.load_default()
+            continue
+    if not font_bullet:
+        font_bullet = ImageFont.load_default()
     
     # Padalijam bullet points
     if isinstance(bullet_points, str):
