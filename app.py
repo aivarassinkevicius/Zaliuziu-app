@@ -826,8 +826,13 @@ def html_to_image(html_string, width=1920, height=1080):
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")  # Streamlit Cloud reikalavimas
+    chrome_options.add_argument("--disable-dev-shm-usage")  # Streamlit Cloud reikalavimas
     chrome_options.add_argument(f"--window-size={width},{height}")
     chrome_options.add_argument("--hide-scrollbars")
+    
+    # Chromium binary path (Streamlit Cloud naudoja chromium)
+    chrome_options.binary_location = "/usr/bin/chromium"
     
     # Sukuriam laikinį HTML failą
     with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
@@ -835,9 +840,15 @@ def html_to_image(html_string, width=1920, height=1080):
         temp_html_path = f.name
     
     try:
-        # Inicializuojam WebDriver
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=chrome_options)
+        # Inicializuojam WebDriver (bandome su chromium-driver)
+        try:
+            # Streamlit Cloud turi chromium-driver /usr/bin/chromedriver
+            service = Service(executable_path="/usr/bin/chromedriver")
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+        except:
+            # Fallback - local development (Windows/Mac)
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=chrome_options)
         
         # Atidarom HTML failą
         driver.get(f"file:///{temp_html_path.replace(os.sep, '/')}")
