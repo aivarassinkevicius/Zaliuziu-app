@@ -2231,7 +2231,7 @@ st.sidebar.markdown("### 🔬 Advanced Preprocessing (OpenCV)")
 
 if OPENCV_AVAILABLE:
     enable_opencv = st.sidebar.checkbox(
-        "🎯 Smart Photo Processing", value=False, help="AI photo enhancement: auto-crop, straighten, color correction"
+        "🎯 Smart Photo Processing", value=True, help="AI photo enhancement: auto-crop, straighten, color correction"
     )
 
     if enable_opencv:
@@ -2241,7 +2241,7 @@ if OPENCV_AVAILABLE:
             "✂️ Auto-Crop (detect blinds)", value=True, help="Automatically detect and crop blinds area"
         )
         enable_perspective = st.sidebar.checkbox(
-            "📐 Straighten (perspective fix)", value=True, help="Auto-straighten vertical lines"
+            "📐 Straighten (perspective fix)", value=False, help="Auto-straighten vertical lines"
         )
         enable_white_balance = st.sidebar.checkbox("🎨 White Balance", value=True, help="Remove yellow/blue tint")
         enable_opencv_clarity = st.sidebar.checkbox("✨ Clarity Boost", value=True, help="Enhance texture and detail")
