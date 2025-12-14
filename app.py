@@ -2567,28 +2567,6 @@ if files_to_process:
             "Pasirinkite išdėstymą:", layout_options, help="Layout su integruotu teksto kvadratu (ne overlay!)"
         )
 
-        # AI Custom Fono generavimas
-        use_custom_background = st.checkbox(
-            "🎨 Naudoti Custom AI foną",
-            value=False,
-            help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą",
-        )
-
-        custom_prompt = ""
-        if use_custom_background:
-            custom_prompt = st.text_area(
-                "Aprašykite norimą foną:",
-                value="",
-                placeholder="Pvz: medžiai rugiai pieva, kviečiai ir medžio tekstūra, jūra saulėlydis...",
-                help="AI (DALL-E 3) sugeneruos foną pagal šį aprašymą",
-                height=80,
-            )
-
-            if custom_prompt and custom_prompt.strip():
-                st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
-
-        use_themed_bg = use_custom_background
-
         # NAUJAS: Teksto turinys (TIKTAI jei NE Magazine Style)
         if "Magazine Style" not in collage_layout:
             st.markdown("---")
@@ -2723,6 +2701,28 @@ if files_to_process:
                 if enable_shadow_effect
                 else 0
             )
+        
+        # AI Custom Fono generavimas
+        use_custom_background = st.checkbox(
+            "🎨 Naudoti Custom AI foną",
+            value=False,
+            help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą",
+        )
+
+        custom_prompt = ""
+        if use_custom_background:
+            custom_prompt = st.text_area(
+                "Aprašykite norimą foną:",
+                value="",
+                placeholder="Pvz: medžiai rugiai pieva, kviečiai ir medžio tekstūra, jūra saulėlydis...",
+                help="AI (DALL-E 3) sugeneruos foną pagal šį aprašymą",
+                height=80,
+            )
+
+            if custom_prompt and custom_prompt.strip():
+                st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
+
+        use_themed_bg = use_custom_background
         
         # Nustatome logo rodymo logiką
         logo_white_bg = False
