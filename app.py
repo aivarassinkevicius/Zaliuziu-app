@@ -2696,13 +2696,8 @@ if files_to_process:
                 else 0
             )
         
-        # Logo fonas (tik Magazine Style)
-        if "Magazine Style" in collage_layout:
-            logo_white_bg = st.checkbox(
-                "🎨 Logo su baltu fonu",
-                value=False,
-                help="Baltas fonas po logo (Magazine Style)"
-            )
+        # Logo visada permatomas fonas (Magazine Style)
+        logo_white_bg = False
         
         # Telefono numerio pasirinkimas (visiems layout'ams)
         show_phone_number = st.checkbox("📞 Rodyti telefono numerį", value=True, help="Telefono numeris apačioje centre (120px šriftas, visiems layout'ams)")
