@@ -2280,9 +2280,36 @@ else:
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📅 Turinio temos (AI generavimui)")
 
+# Funkcija metų laikui nustatyti pagal datą
+def get_current_season():
+    """Grąžina metų laiką pagal dabartinę Lietuvos datą"""
+    today = datetime.now()
+    month = today.month
+    day = today.day
+    
+    # Lietuvos kalendorius:
+    # Pavasaris: kovo 1 - gegužės 31
+    # Vasara: birželio 1 - rugpjūčio 31
+    # Ruduo: rugsėjo 1 - lapkričio 30
+    # Žiema: gruodžio 1 - vasario 28/29
+    
+    if (month == 3) or (month == 4) or (month == 5):
+        return "Pavasaris"
+    elif (month == 6) or (month == 7) or (month == 8):
+        return "Vasara"
+    elif (month == 9) or (month == 10) or (month == 11):
+        return "Ruduo"
+    else:  # 12, 1, 2
+        return "Žiema"
+
+# Nustatome default metų laiką
+current_season = get_current_season()
+seasons_list = ["Pavasaris", "Vasara", "Ruduo", "Žiema"]
+default_season_index = seasons_list.index(current_season)
+
 # Metų laikas
 season = st.sidebar.selectbox(
-    "🌤️ Metų laikas", ["Pavasaris", "Vasara", "Ruduo", "Žiema"], index=1, help="AI turinio aprašymams ir fonui"
+    "🌤️ Metų laikas", seasons_list, index=default_season_index, help="AI turinio aprašymams ir fonui"
 )
 
 # Lietuviškos šventės
