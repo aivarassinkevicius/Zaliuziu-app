@@ -3263,10 +3263,11 @@ if files_to_process:
                         # Piešiame telefono numerį (be šešėlio)
                         draw.text((phone_x, phone_y), default_phone, fill=(30, 41, 59), font=font_phone)
                     
-                    # Pridedame logo (automatiškai iš assets/logo.png)
-                    collage = add_logo_to_image(
-                        collage, logo_path="assets/logo.png", logo_size=100, position="top-left"
-                    )
+                    # Pridedame logo (IŠSKYRUS Magazine Style - ten logo jau yra)
+                    if "Magazine Style" not in collage_layout:
+                        collage = add_logo_to_image(
+                            collage, logo_path="assets/logo.png", logo_size=100, position="top-left"
+                        )
 
                     # Konvertuojame į RGB (jei dar nekonvertuotas)
                     if collage.mode != "RGB":
