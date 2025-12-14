@@ -2610,13 +2610,6 @@ if files_to_process:
                 height=120,
                 help="Kiekviena eilutė = 1 punktas. Bus rodomi 4 punktai su apskritimais."
             )
-            
-            # Logo pasirinkimas
-            logo_white_bg = st.checkbox(
-                "⬜ Logo su baltu fonu",
-                value=False,
-                help="Pažymėti - baltas fonas po logo. Nepažymėti - permatomas fonas."
-            )
         
         # Konvertuojame UI pasirinkimą į skaičių
         text_columns_num = 2 if "2 stulpeliai" in text_columns else 1
@@ -2699,8 +2692,29 @@ if files_to_process:
                 else 0
             )
         
-        # Logo visada permatomas fonas (Magazine Style)
+        # Logo pasirinkimai (tik Magazine Style)
         logo_white_bg = False
+        show_logo = False
+        
+        if "Magazine Style" in collage_layout:
+            st.markdown("**🖼️ Logo parinktys:**")
+            col_logo1, col_logo2 = st.columns(2)
+            
+            with col_logo1:
+                logo_with_white = st.checkbox("⬜ Logo su baltu fonu", value=False, help="Logo su baltu fonu aplink")
+            
+            with col_logo2:
+                logo_transparent = st.checkbox("🔲 Logo su skaidriu fonu", value=False, help="Logo su permatomu fonu")
+            
+            # Nustatome ar rodyti logo ir su kokiu fonu
+            if logo_with_white:
+                show_logo = True
+                logo_white_bg = True
+            elif logo_transparent:
+                show_logo = True
+                logo_white_bg = False
+            else:
+                show_logo = False  # Jei nei vienas nepažymėtas - logo nerodo
         
         # Telefono numerio pasirinkimas (visiems layout'ams)
         show_phone_number = st.checkbox("📞 Rodyti telefono numerį", value=True, help="Telefono numeris apačioje centre (120px šriftas, visiems layout'ams)")
@@ -2822,7 +2836,7 @@ if files_to_process:
                             header_text=magazine_header,
                             bullet_points=magazine_bullets,
                             phone_number=default_phone if show_phone_number else None,
-                            logo_path="assets/logo.png",
+                            logo_path="assets/logo.png" if show_logo else None,
                             logo_with_white_bg=logo_white_bg
                         )
                         collage = collage.convert("RGBA")
