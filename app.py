@@ -2182,7 +2182,6 @@ def create_modern_landing_html(product_image, text_content="", phone_number="+37
 
 
 # ---------- Pagrindinis UI ----------
-st.sidebar.header("⚙️ Nustatymai")
 st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
 
 add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=True, help="Pridės jūsų tekstą ant nuotraukos")
@@ -2277,9 +2276,6 @@ else:
     enable_aspect_ratio = False
     target_aspect_ratio = "4:3"
     st.sidebar.warning("⚠️ OpenCV neprieinamas")
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotraukas su žaliuzėmis ar roletais.")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📅 Turinio temos (AI generavimui)")
