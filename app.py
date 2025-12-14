@@ -2247,7 +2247,7 @@ add_border = st.sidebar.checkbox("🖼️ Pridėti baltą rėmelį", value=False
 st.sidebar.markdown("---")
 st.sidebar.markdown("**🤖 Profesionalus Auto Pagerinimas**")
 auto_enhance = st.sidebar.checkbox(
-    "✨ PRO Auto Enhancement", value=True, help="Profesionalus nuotraukų pagerinimas - geriau nei Canva!"
+    "✨ PRO Auto Enhancement", value=False, help="Profesionalus nuotraukų pagerinimas - geriau nei Canva!"
 )
 
 if auto_enhance:
@@ -2256,9 +2256,9 @@ if auto_enhance:
     saturation = 1.3
 else:
     st.sidebar.markdown("**Rankinė spalvų korekcija:**")
-    brightness = st.sidebar.slider("☀️ Šviesumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 tamsiau, >1.0 šviesiau")
-    contrast = st.sidebar.slider("🎭 Kontrastas", 0.5, 1.5, 1.0, 0.05, help="<1.0 blankiau, >1.0 ryškiau")
-    saturation = st.sidebar.slider("🎨 Sodrumas", 0.5, 1.5, 1.0, 0.05, help="<1.0 pilkiau, >1.0 sodresni spalvos")
+    brightness = st.sidebar.slider("☀️ Šviesumas", 0.5, 1.5, 1.10, 0.05, help="<1.0 tamsiau, >1.0 šviesiau")
+    contrast = st.sidebar.slider("🎭 Kontrastas", 0.5, 1.5, 1.40, 0.05, help="<1.0 blankiau, >1.0 ryškiau")
+    saturation = st.sidebar.slider("🎨 Sodrumas", 0.5, 1.5, 1.40, 0.05, help="<1.0 pilkiau, >1.0 sodresni spalvos")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🔬 Advanced Preprocessing (OpenCV)")
