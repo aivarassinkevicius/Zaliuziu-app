@@ -2307,33 +2307,61 @@ current_season = get_current_season()
 seasons_list = ["Pavasaris", "Vasara", "Ruduo", "Žiema"]
 default_season_index = seasons_list.index(current_season)
 
+
 # Metų laikas
 season = st.sidebar.selectbox(
     "🌤️ Metų laikas", seasons_list, index=default_season_index, help="AI turinio aprašymams ir fonui"
 )
 
-# Lietuviškos šventės
-holiday = st.sidebar.selectbox(
-    "🎉 Lietuviškos šventės (pasirinktinai)",
-    [
+# Švenčių žemėlapis pagal sezoną
+season_holidays = {
+    "Žiema": [
         "Nėra",
         "Naujieji metai",
         "Šv. Valentino diena",
         "Vasario 16-oji",
         "Kovo 11-oji",
-        "Velykos",
-        "Gegužės 1-oji (Darbo diena)",
-        "Motinos diena",
-        "Tėvo diena",
-        "Joninės",
-        "Liepos 6-oji (Karaliaus Mindaugo diena)",
-        "Žolinė",
-        "Rugsėjo 1-oji",
         "Šv. Kalėdos",
         "Kūčios",
     ],
-    index=0,
+    "Pavasaris": [
+        "Nėra",
+        "Velykos",
+        "Melagio diena (balandžio 1)",
+        "Motinos diena",
+        "Gegužės 1-oji (Darbo diena)",
+        "Tėvo diena",
+        "Kovo 11-oji",
+    ],
+    "Vasara": [
+        "Nėra",
+        "Joninės",
+        "Liepos 6-oji (Karaliaus Mindaugo diena)",
+        "Žolinė",
+        "Tėvo diena",
+    ],
+    "Ruduo": [
+        "Nėra",
+        "Rugsėjo 1-oji",
+        "Vėlinių diena",
+    ],
+}
+
+# Pagal pasirinktą sezoną rodom tik atitinkamas šventes
+holidays_for_season = season_holidays.get(season, ["Nėra"])
+
+# Jei prieš tai pasirinkta šventė nebeegzistuoja šiame sezone, grąžinam į "Nėra"
+if 'holiday' in st.session_state and st.session_state.holiday in holidays_for_season:
+    default_holiday_index = holidays_for_season.index(st.session_state.holiday)
+else:
+    default_holiday_index = 0
+
+holiday = st.sidebar.selectbox(
+    "🎉 Lietuviškos šventės (pasirinktinai)",
+    holidays_for_season,
+    index=default_holiday_index,
     help="Papildoma tema turinio aprašymams ir fonui",
+    key="holiday"
 )
 
 # Failų įkėlimas
