@@ -2566,16 +2566,21 @@ if files_to_process:
 
         use_themed_bg = use_custom_background
 
-        # NAUJAS: Teksto turinys (VISADA ĮJUNGTAS dabar, nes tekstas = dalis layout'o)
-        st.markdown("---")
-        st.markdown("#### ✍️ Teksto kvadrato turinys")
-        
-        # Teksto formatavimo opcijos
-        col_fmt1, col_fmt2 = st.columns(2)
-        with col_fmt1:
-            text_columns = st.radio("📰 Layout:", ["1 stulpelis", "2 stulpeliai (laikraštinis)"], index=0, help="Tekstas vienu stulpeliu arba dviem kaip laikraštyje")
-        with col_fmt2:
-            underline_first = st.checkbox("✏️ Pabraukti pirmą žodį", value=False, help="Pabraukia pirmą žodį tekste (akcentas)")
+        # NAUJAS: Teksto turinys (TIKTAI jei NE Magazine Style)
+        if "Magazine Style" not in collage_layout:
+            st.markdown("---")
+            st.markdown("#### ✍️ Teksto kvadrato turinys")
+            
+            # Teksto formatavimo opcijos
+            col_fmt1, col_fmt2 = st.columns(2)
+            with col_fmt1:
+                text_columns = st.radio("📰 Layout:", ["1 stulpelis", "2 stulpeliai (laikraštinis)"], index=0, help="Tekstas vienu stulpeliu arba dviem kaip laikraštyje")
+            with col_fmt2:
+                underline_first = st.checkbox("✏️ Pabraukti pirmą žodį", value=False, help="Pabraukia pirmą žodį tekste (akcentas)")
+        else:
+            # Default values kai Magazine Style
+            text_columns = "1 stulpelis"
+            underline_first = False
         
         # 🎨 HTML rendering pasirinkimas (tik Modern Landing)
         use_html_rendering = False
