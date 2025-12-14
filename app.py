@@ -1840,8 +1840,8 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
         except:
             font_phone = ImageFont.load_default()
         
-        # Tekstas su emoji
-        phone_text = f"TEL. NR. 📞"
+        # Tekstas - FAKTINIS telefono numeris
+        phone_text = phone_number
         bbox = draw.textbbox((0, 0), phone_text, font=font_phone)
         phone_width = bbox[2] - bbox[0]
         phone_height = bbox[3] - bbox[1]
