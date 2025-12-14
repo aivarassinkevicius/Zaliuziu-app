@@ -1780,6 +1780,152 @@ def create_text_box(width, height, text, style="glassmorphism", font_size=60, bg
     return text_box
 
 
+def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_number=None, logo_path="assets/logo.png"):
+    """
+    Magazine Style Layout pagal pixel-perfect specifikaciją:
+    - 2 nuotraukos kairėje (3:4 ratio)
+    - Antraštė + punktyrinė linija + bullet list dešinėje
+    - Minimalistinis dizainas
+    
+    Args:
+        photo1: PIL Image (kairė nuotrauka)
+        photo2: PIL Image (dešinė nuotrauka)
+        header_text: Antraštės tekstas
+        bullet_points: List of strings arba string su \n
+        phone_number: Telefono numeris (optional)
+        logo_path: Kelias iki logo (optional)
+    
+    Returns:
+        PIL Image (1327x768)
+    """
+    # Canvas
+    canvas = Image.new('RGB', (1327, 768), color=(250, 246, 239))  # #FAF6EF
+    draw = ImageDraw.Draw(canvas)
+    
+    # Spalvos
+    text_color = (43, 43, 43)  # #2B2B2B
+    
+    # === LOGO ===
+    try:
+        if logo_path and os.path.exists(logo_path):
+            logo = Image.open(logo_path)
+            # Logo 120x120 bet pozicionuojam pagal spec
+            logo = logo.resize((120, 120), Image.Resampling.LANCZOS)
+            canvas.paste(logo, (40, 32), logo if logo.mode == 'RGBA' else None)
+    except:
+        # Fallback - tekstinis logo
+        try:
+            font_logo = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 28)
+        except:
+            font_logo = ImageFont.load_default()
+        draw.text((40, 32), "LOGO", fill=text_color, font=font_logo)
+    
+    # === NUOTRAUKOS ===
+    # Photo 1 - kairė
+    photo1_resized = photo1.resize((340, 460), Image.Resampling.LANCZOS)
+    canvas.paste(photo1_resized, (40, 140))
+    
+    # Photo 2 - dešinė
+    photo2_resized = photo2.resize((340, 460), Image.Resampling.LANCZOS)
+    canvas.paste(photo2_resized, (400, 140))
+    
+    # === TELEFONO TEKSTAS ===
+    if phone_number:
+        try:
+            font_phone = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 14)
+        except:
+            font_phone = ImageFont.load_default()
+        
+        # Centruotas po 2-a nuotrauka
+        phone_text = f"TEL. NR. {phone_number}"
+        bbox = draw.textbbox((0, 0), phone_text, font=font_phone)
+        phone_width = bbox[2] - bbox[0]
+        phone_x = 400 + 170 - phone_width // 2  # Centras 2-os nuotraukos
+        draw.text((phone_x, 620), phone_text, fill=text_color, font=font_phone)
+    
+    # === TEKSTO BLOKAS ===
+    # Antraštė
+    try:
+        # Bandome rasti Serif šriftą
+        font_header = None
+        serif_fonts = [
+            "C:/Windows/Fonts/georgia.ttf",
+            "C:/Windows/Fonts/times.ttf",
+            "C:/Windows/Fonts/timesbd.ttf"
+        ]
+        for font_path in serif_fonts:
+            try:
+                font_header = ImageFont.truetype(font_path, 56)
+                break
+            except:
+                continue
+        if not font_header:
+            font_header = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 56)
+    except:
+        font_header = ImageFont.load_default()
+    
+    # Antraštės tekstas
+    draw.text((860, 120), header_text, fill=text_color, font=font_header)
+    
+    # === PUNKTYRINĖ LINIJA ===
+    # Po antrašte (Y: 120 + 56 + 12 = ~188)
+    line_y = 188
+    line_x_start = 860
+    line_x_end = 860 + 360
+    
+    # Brėžiam punktyrinę liniją
+    dash_length = 8
+    gap_length = 6
+    x = line_x_start
+    while x < line_x_end:
+        end_x = min(x + dash_length, line_x_end)
+        draw.line([(x, line_y), (end_x, line_y)], fill=text_color, width=2)
+        x += dash_length + gap_length
+    
+    # === BULLET LIST ===
+    # Šriftas bullet tekstui
+    try:
+        font_bullet = ImageFont.truetype("C:/Windows/Fonts/georgia.ttf", 24)
+    except:
+        try:
+            font_bullet = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 24)
+        except:
+            font_bullet = ImageFont.load_default()
+    
+    # Padalijam bullet points
+    if isinstance(bullet_points, str):
+        bullets = [b.strip() for b in bullet_points.split('\n') if b.strip()]
+    else:
+        bullets = bullet_points
+    
+    # Ribojam iki 4 punktų
+    bullets = bullets[:4]
+    
+    # Braižymas
+    bullet_x = 910
+    bullet_y_start = 320
+    bullet_spacing = 64  # 22px tarpas + ~42px bullet height
+    
+    for i, bullet_text in enumerate(bullets):
+        y = bullet_y_start + i * bullet_spacing
+        
+        # Apskritimas (tuščias)
+        circle_center = (bullet_x, y + 12)  # +12 vertikaliam centravimui
+        circle_radius = 11  # 22px diameter
+        draw.ellipse(
+            [circle_center[0] - circle_radius, circle_center[1] - circle_radius,
+             circle_center[0] + circle_radius, circle_center[1] + circle_radius],
+            outline=text_color,
+            width=2
+        )
+        
+        # Tekstas
+        text_x = bullet_x + 22 + 16  # 22px circle + 16px gap
+        draw.text((text_x, y), bullet_text, fill=text_color, font=font_bullet)
+    
+    return canvas
+
+
 def create_modern_landing_html(product_image, text_content="", phone_number="+370 (606) 50 414", logo_path="assets/logo.png", style="Minimalist"):
     """
     HTML/CSS versija Modern Landing layout'ui - FANCY dizainas!
@@ -2338,6 +2484,7 @@ if files_to_process:
         elif num_photos == 2:
             layout_options = [
                 "🎯 Modern Landing (produktas + info)",
+                "📰 Magazine Style (2 nuotraukos + bullet list)",
                 "Grid 2x2 (2 nuotraukos + 2 teksto kvadratai)",
                 "Horizontal (2 nuotraukos + 1 tekstas viduryje)",
                 "Asymmetric (1 didelė + 1 maža + tekstas)",
@@ -2586,6 +2733,28 @@ if files_to_process:
                                 style=collage_style  # Perduodame pasirinktą stilių
                             )
                         
+                        collage = collage.convert("RGBA")
+                    
+                    # ============ MAGAZINE STYLE LAYOUT ============
+                    elif "Magazine Style" in collage_layout:
+                        # 2 nuotraukos + antraštė + bullet list
+                        photo1 = edited_images[0]
+                        photo2 = edited_images[1]
+                        
+                        # Naudojam text_content kaip antraštę
+                        header = text_content.split('\n')[0] if text_content else "Tekstas"
+                        
+                        # Bullet points iš text_content arba default
+                        bullets_text = text_content if text_content else "Tekstas\nTekstas\nTekstas\nTekstas"
+                        
+                        collage = create_magazine_layout(
+                            photo1=photo1,
+                            photo2=photo2,
+                            header_text=header,
+                            bullet_points=bullets_text,
+                            phone_number=default_phone if show_phone_number else None,
+                            logo_path="assets/logo.png"
+                        )
                         collage = collage.convert("RGBA")
 
                     # ============ GRID 2x2 LAYOUTS ============
