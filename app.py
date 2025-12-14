@@ -2183,39 +2183,6 @@ def create_modern_landing_html(product_image, text_content="", phone_number="+37
 
 # ---------- Pagrindinis UI ----------
 st.sidebar.header("⚙️ Nustatymai")
-
-# Metų laikas (visada pasirinktas)
-season = st.sidebar.selectbox(
-    "🌤️ Metų laikas", ["Pavasaris", "Vasara", "Ruduo", "Žiema"], index=1, help="AI turinio aprašymams ir fonui"
-)
-
-# Šventė (papildomas)
-holiday = st.sidebar.selectbox(
-    "🎉 Lietuviškos šventės (pasirinktinai)",
-    [
-        "Nėra",
-        "Naujieji metai",
-        "Šv. Valentino diena",
-        "Vasario 16-oji",
-        "Kovo 11-oji",
-        "Velykos",
-        "Gegužės 1-oji (Darbo diena)",
-        "Motinos diena",
-        "Tėvo diena",
-        "Joninės",
-        "Liepos 6-oji (Karaliaus Mindaugo diena)",
-        "Žolinė",
-        "Rugsėjo 1-oji",
-        "Šv. Kalėdos",
-        "Kūčios",
-    ],
-    index=0,
-    help="Papildoma tema turinio aprašymams ir fonui",
-)
-
-auto_process = st.sidebar.checkbox("🤖 Automatinis apdorojimas", value=True)
-
-st.sidebar.markdown("---")
 st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
 
 add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=True, help="Pridės jūsų tekstą ant nuotraukos")
@@ -2313,6 +2280,38 @@ else:
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("💡 **Patarimas:** Įkelkite ryškias, kokybiškas nuotraukas su žaliuzėmis ar roletais.")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📅 Turinio temos (AI generavimui)")
+
+# Metų laikas
+season = st.sidebar.selectbox(
+    "🌤️ Metų laikas", ["Pavasaris", "Vasara", "Ruduo", "Žiema"], index=1, help="AI turinio aprašymams ir fonui"
+)
+
+# Lietuviškos šventės
+holiday = st.sidebar.selectbox(
+    "🎉 Lietuviškos šventės (pasirinktinai)",
+    [
+        "Nėra",
+        "Naujieji metai",
+        "Šv. Valentino diena",
+        "Vasario 16-oji",
+        "Kovo 11-oji",
+        "Velykos",
+        "Gegužės 1-oji (Darbo diena)",
+        "Motinos diena",
+        "Tėvo diena",
+        "Joninės",
+        "Liepos 6-oji (Karaliaus Mindaugo diena)",
+        "Žolinė",
+        "Rugsėjo 1-oji",
+        "Šv. Kalėdos",
+        "Kūčios",
+    ],
+    index=0,
+    help="Papildoma tema turinio aprašymams ir fonui",
+)
 
 # Failų įkėlimas
 
