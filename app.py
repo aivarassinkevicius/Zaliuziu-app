@@ -2212,20 +2212,47 @@ if files_to_process:
             st.markdown("---")
             st.markdown("#### 📰 Magazine Style nustatymai")
             
-            # Antraštė
-            magazine_header = st.text_input(
-                "📌 Antraštė (didelis šriftas 56px):",
-                value="Tekstas",
-                help="Antraštė viršuje dešinėje, dideliu šriftu"
-            )
+            # Jei AI tekstai įjungti, generuojame automatiškai
+            if use_ai_text:
+                st.info("🤖 AI generuoja tekstus pagal nuotrauką...")
+                
+                # Naudojame pirmą redaguotą nuotrauką
+                if len(files_to_process) >= 1:
+                    # Paimame pirmą failą ir sukuriame PIL Image
+                    first_file = files_to_process[0]
+                    first_file.seek(0)
+                    temp_image = Image.open(first_file)
+                    
+                    # Generuojame tekstus
+                    ai_header, ai_bullets = generate_text_with_gemini(temp_image)
+                    
+                    if ai_header and ai_bullets:
+                        magazine_header = ai_header
+                        magazine_bullets = "\n".join(ai_bullets)
+                        
+                        # Rodom preview
+                        st.success(f"✅ **Antraštė:** {ai_header}")
+                        st.success(f"✅ **Bullet punktai:**\n" + "\n".join([f"• {b}" for b in ai_bullets]))
+                    else:
+                        st.warning("⚠️ AI nepavyko sugeneruoti tekstų. Įvesk rankiniu būdu:")
+                        use_ai_text = False  # Fallback į manual
             
-            # Bullet points
-            magazine_bullets = st.text_area(
-                "🔘 Bullet punktai (4 vnt, 24px šriftas):",
-                value="Tekstas\nTekstas\nTekstas\nTekstas",
-                height=120,
-                help="Kiekviena eilutė = 1 punktas. Bus rodomi 4 punktai su apskritimais."
-            )
+            # Manual input (jei AI neįjungtas arba nepavyko)
+            if not use_ai_text:
+                # Antraštė
+                magazine_header = st.text_input(
+                    "📌 Antraštė (didelis šriftas 56px):",
+                    value=magazine_header if magazine_header else "Tekstas",
+                    help="Antraštė viršuje dešinėje, dideliu šriftu"
+                )
+                
+                # Bullet points
+                magazine_bullets = st.text_area(
+                    "🔘 Bullet punktai (4 vnt, 24px šriftas):",
+                    value=magazine_bullets if magazine_bullets else "Tekstas\nTekstas\nTekstas\nTekstas",
+                    height=120,
+                    help="Kiekviena eilutė = 1 punktas. Bus rodomi 4 punktai su apskritimais."
+                )
 
         # Nuotraukų efektai
         st.markdown("---")
