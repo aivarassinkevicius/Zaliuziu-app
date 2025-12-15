@@ -1992,7 +1992,7 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     return canvas
 
 
-def create_hero_diagonal_split_layout(photo1, photo2, header_text, description_text):
+def create_hero_diagonal_split_layout(photo1, photo2, header_text, description_text, phone_number=None, logo_path=None):
     """
     Hero Diagonal Split Gallery Layout - analogiškas Magazine Style
     
@@ -2005,14 +2005,17 @@ def create_hero_diagonal_split_layout(photo1, photo2, header_text, description_t
     Args:
         photo1: PIL Image (viršutinė nuotrauka)
         photo2: PIL Image (apatinė nuotrauka)
-        header_text: Antraštė (42px Bold)
-        description_text: Aprašymas (16px Regular)
+        header_text: Antraštė (52px Bold)
+        description_text: Aprašymas (32px Regular)
+        phone_number: Telefono numeris (optional, rodomas apačioje)
+        logo_path: Kelias iki logo (optional, rodomas viršuje kairėje)
     
     Returns:
         PIL Image (1200x675)
     """
     from PIL import ImageDraw, ImageFont
     import numpy as np
+    import os
     
     # Canvas dydis
     canvas_width = 1200
@@ -2020,6 +2023,27 @@ def create_hero_diagonal_split_layout(photo1, photo2, header_text, description_t
     
     # Sukuriame baltą foną
     canvas = Image.new('RGB', (canvas_width, canvas_height), (255, 255, 255))
+    
+    # === LOGO (viršuje kairėje) ===
+    if logo_path and os.path.exists(logo_path):
+        try:
+            logo = Image.open(logo_path).convert("RGBA")
+            logo = logo.resize((100, 100), Image.Resampling.LANCZOS)
+            # Pašaliname baltą foną (jei yra)
+            logo_data = logo.getdata()
+            new_data = []
+            for item in logo_data:
+                # Jei pikselis beveik baltas (RGB > 240) - darome permatomą
+                if item[0] > 240 and item[1] > 240 and item[2] > 240:
+                    new_data.append((255, 255, 255, 0))  # Permatomas
+                else:
+                    new_data.append(item)
+            logo.putdata(new_data)
+            canvas = canvas.convert('RGBA')
+            canvas.paste(logo, (30, 30), logo)
+            canvas = canvas.convert('RGB')
+        except Exception as e:
+            pass  # Jei logo nepavyko - tiesiog praleisti
     
     # === KAIRĖ ZONA - NUOTRAUKOS (be pjaustymo!) ===
     # Nuotraukų parametrai - panašūs į Magazine Style
@@ -2085,18 +2109,18 @@ def create_hero_diagonal_split_layout(photo1, photo2, header_text, description_t
     
     # Šriftai su cross-platform fallback
     try:
-        font_header = ImageFont.truetype("arial.ttf", 42)
+        font_header = ImageFont.truetype("arial.ttf", 52)
     except:
         try:
-            font_header = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 42)
+            font_header = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 52)
         except:
             font_header = ImageFont.load_default()
     
     try:
-        font_desc = ImageFont.truetype("arial.ttf", 16)
+        font_desc = ImageFont.truetype("arial.ttf", 32)
     except:
         try:
-            font_desc = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+            font_desc = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 32)
         except:
             font_desc = ImageFont.load_default()
     
@@ -2104,12 +2128,12 @@ def create_hero_diagonal_split_layout(photo1, photo2, header_text, description_t
     header_color = (255, 255, 255)  # #FFFFFF
     draw.text((text_x, text_y), header_text, fill=header_color, font=font_header)
     
-    # Aprašymas (60px žemiau antraštės)
-    desc_y = text_y + 60
+    # Aprašymas (70px žemiau antraštės, nes didesnis header)
+    desc_y = text_y + 70
     desc_color = (230, 236, 243)  # #E6ECF3
     
-    # Text wrapping aprašymui (max 360px plotis)
-    max_width = 400
+    # Text wrapping aprašymui (max 450px plotis)
+    max_width = 450
     words = description_text.split()
     lines = []
     current_line = []
@@ -2127,10 +2151,44 @@ def create_hero_diagonal_split_layout(photo1, photo2, header_text, description_t
     if current_line:
         lines.append(' '.join(current_line))
     
-    # Braižome aprašymą (line-height: 1.6)
-    line_height = int(16 * 1.6)
+    # Braižome aprašymą (line-height: 1.5 dėl didesnio šrifto)
+    line_height = int(32 * 1.5)
     for i, line in enumerate(lines):
         draw.text((text_x, desc_y + i * line_height), line, fill=desc_color, font=font_desc)
+    
+    # === TELEFONO NUMERIS (apačioje centre) ===
+    if phone_number:
+        # Konvertuojame į RGBA telefono numeriui
+        if canvas.mode != 'RGBA':
+            canvas = canvas.convert('RGBA')
+        
+        draw = ImageDraw.Draw(canvas)
+        
+        # Font loading su cross-platform fallback
+        font_phone = None
+        phone_fonts = [
+            "C:/Windows/Fonts/arial.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+        ]
+        for font_path_phone in phone_fonts:
+            try:
+                font_phone = ImageFont.truetype(font_path_phone, 28)
+                break
+            except:
+                continue
+        if not font_phone:
+            font_phone = ImageFont.load_default()
+        
+        # Telefono numerio pozicija (centre apačioje)
+        phone_text = phone_number
+        bbox = draw.textbbox((0, 0), phone_text, font=font_phone)
+        phone_width = bbox[2] - bbox[0]
+        phone_x = (canvas_width - phone_width) // 2
+        phone_y = canvas_height - 60  # 60px nuo apačios
+        
+        # Tekstas baltas (ant gradiento)
+        draw.text((phone_x, phone_y), phone_text, fill=(255, 255, 255), font=font_phone)
     
     # Konvertuojame atgal į RGB
     canvas = canvas.convert('RGB')
@@ -2821,6 +2879,33 @@ if files_to_process:
                 help="Kiekviena eilutė = 1 punktas. Bus rodomi 4 punktai su apskritimais."
             )
         
+        # 🎬 Hero Diagonal nustatymai
+        hero_header = ""
+        hero_description = ""
+        hero_show_logo = False
+        
+        if "Hero Diagonal" in collage_layout:
+            st.markdown("---")
+            st.markdown("#### 🎬 Hero Diagonal nustatymai")
+            
+            # Antraštė
+            hero_header = st.text_input(
+                "📌 Antraštė (didelis šriftas 52px):",
+                value="Beautiful Moments",
+                help="Antraštė ant gradiento fono, dešinėje pusėje"
+            )
+            
+            # Aprašymas
+            hero_description = st.text_area(
+                "📝 Aprašymo tekstas (32px šriftas):",
+                value="Discover stunning photography that captures the essence of nature's beauty.",
+                height=100,
+                help="Aprašymo tekstas po antrašte (32px šriftas, automatinis text wrapping)"
+            )
+            
+            # Logo parinktis
+            hero_show_logo = st.checkbox("📷 Rodyti logo", value=True, help="Logo viršuje kairėje kampė")
+        
         # Konvertuojame UI pasirinkimą į skaičių
         text_columns_num = 2 if "2 stulpeliai" in text_columns else 1
 
@@ -3058,15 +3143,13 @@ if files_to_process:
                         photo1 = edited_images[0]
                         photo2 = edited_images[1]
                         
-                        # Antraštė ir aprašymas (default arba custom)
-                        header_text = "Beautiful Moments"
-                        description_text = "Discover stunning photography that captures the essence of nature's beauty."
-                        
                         collage = create_hero_diagonal_split_layout(
                             photo1=photo1,
                             photo2=photo2,
-                            header_text=header_text,
-                            description_text=description_text
+                            header_text=hero_header,
+                            description_text=hero_description,
+                            phone_number=default_phone if show_phone_number else None,
+                            logo_path="assets/logo.png" if hero_show_logo else None
                         )
                         collage = collage.convert("RGBA")
                     
