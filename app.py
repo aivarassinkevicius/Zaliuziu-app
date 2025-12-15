@@ -2202,13 +2202,6 @@ if files_to_process:
         collage_layout = st.selectbox(
             "Pasirinkite išdėstymą:", layout_options, help="Magazine Style - 2 nuotraukos + antraštė + bullet list"
         )
-        
-        # AI tekstų generavimas (prieš Magazine Style)
-        use_ai_text = st.checkbox(
-            "🤖 Naudoti AI tekstui",
-            value=False,
-            help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (Gemini Vision)",
-        )
 
         # 📰 Magazine Style nustatymai
         magazine_header = ""
@@ -2222,17 +2215,23 @@ if files_to_process:
             # Antraštė ir bullet punktai
             magazine_header = st.text_input(
                 "📌 Antraštė (didelis šriftas 56px):",
-                value="",
+                value=st.session_state.get('ai_header', ''),
                 help="Antraštė viršuje dešinėje, dideliu šriftu"
             )
             
             magazine_bullets = st.text_area(
                 "🔘 Bullet punktai (4 vnt, 24px šriftas):",
-                value="",
+                value=st.session_state.get('ai_bullets', ''),
                 placeholder="Tekstas\nTekstas\nTekstas\nTekstas",
                 height=120,
                 help="Kiekviena eilutė = 1 punktas. Bus rodomi 4 punktai su apskritimais."
             )
+            
+            # Debug info
+            if st.session_state.get('ai_header'):
+                with st.expander("🔍 DEBUG: AI Generated teksta"):
+                    st.write(f"**Antraštė:** {st.session_state.get('ai_header')}")
+                    st.write(f"**Bullets:** {st.session_state.get('ai_bullets')}")
             
             # Jei AI tekstai įjungti, generuojame automatiškai
             if use_ai_text and len(files_to_process) >= 1:
@@ -2249,11 +2248,8 @@ if files_to_process:
                         if ai_header and ai_bullets:
                             st.session_state['ai_header'] = ai_header
                             st.session_state['ai_bullets'] = "\n".join(ai_bullets)
-                            
-                            # Rodom preview
-                            st.success(f"✅ **Antraštė:** {ai_header}")
-                            st.success(f"✅ **Bullet punktai:**\n" + "\n".join([f"• {b}" for b in ai_bullets]))
-                            st.info("ℹ️ Nukopijuok tekstus į laukus arba redaguok pagal poreikį")
+                            st.success(f"✅ Tekstai sugeneruoti! Perkraunama...")
+                            st.rerun()  # Rerun kad atsinaujintų text_input values
                         else:
                             st.error("❌ AI nepavyko sugeneruoti tekstų. Bandyk dar kartą arba įvesk rankiniu būdu.")
 
@@ -2285,6 +2281,13 @@ if files_to_process:
                 "🎨 Naudoti Custom AI foną",
                 value=False,
                 help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą",
+            )
+            
+            # AI tekstų generavimas (po custom AI fono)
+            use_ai_text = st.checkbox(
+                "🤖 Naudoti AI tekstui",
+                value=False,
+                help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (Gemini Vision)",
             )
 
         # Custom prompt text area už stulpelių (kai pažymėta)
