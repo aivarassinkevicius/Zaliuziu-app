@@ -2207,10 +2207,17 @@ if files_to_process:
         magazine_header = ""
         magazine_bullets = ""
         logo_white_bg = False
-        use_ai_text = False  # Default - bus pakeista checkbox col_fx2 viduje
+        
+        # AI tekstų generavimas (po Nuotraukų efektų, prieš Magazine Style)
+        st.markdown("---")
+        use_ai_text = st.checkbox(
+            "🤖 Naudoti AI tekstui",
+            value=False,
+            help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (Gemini Vision)",
+            key="use_ai_text_checkbox"
+        )
         
         if "Magazine Style" in collage_layout:
-            st.markdown("---")
             st.markdown("#### 📰 Magazine Style nustatymai")
             
             # Antraštė ir bullet punktai
@@ -2282,13 +2289,6 @@ if files_to_process:
                 "🎨 Naudoti Custom AI foną",
                 value=False,
                 help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą",
-            )
-            
-            # AI tekstų generavimas (po custom AI fono)
-            use_ai_text = st.checkbox(
-                "🤖 Naudoti AI tekstui",
-                value=False,
-                help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (Gemini Vision)",
             )
 
         # Custom prompt text area už stulpelių (kai pažymėta)
