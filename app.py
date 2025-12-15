@@ -1992,6 +1992,145 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     return canvas
 
 
+def create_hero_diagonal_split_layout(photo1, photo2, header_text, description_text):
+    """
+    Hero Diagonal Split Gallery Layout - pixel-perfect implementacija
+    
+    Specifikacija:
+    - Canvas: 1200x675px (16:9)
+    - Kairė: 2 nuotraukos su įstrižu pjūviu (-12°)
+    - Dešinė: gradientas (#1E2F47 → #0F1E33) + tekstas
+    - Border radius: 16px
+    
+    Args:
+        photo1: PIL Image (viršutinė nuotrauka)
+        photo2: PIL Image (apatinė nuotrauka)
+        header_text: Antraštė (42px Bold)
+        description_text: Aprašymas (16px Regular)
+    
+    Returns:
+        PIL Image (1200x675)
+    """
+    from PIL import ImageDraw, ImageFont
+    import numpy as np
+    
+    # Canvas dydis
+    canvas_width = 1200
+    canvas_height = 675
+    
+    # Sukuriame canvas
+    canvas = Image.new('RGB', (canvas_width, canvas_height), (15, 30, 51))  # #0F1E33
+    
+    # === GRADIENTO FONAS (dešinė pusė) ===
+    gradient = Image.new('RGB', (canvas_width, canvas_height), (15, 30, 51))
+    gradient_draw = ImageDraw.Draw(gradient)
+    
+    # Gradientas nuo viršaus-kairės į apačią-dešinę
+    for y in range(canvas_height):
+        # Linear interpolation tarp #1E2F47 ir #0F1E33
+        ratio = y / canvas_height
+        r = int(30 * (1 - ratio) + 15 * ratio)
+        g = int(47 * (1 - ratio) + 30 * ratio)
+        b = int(71 * (1 - ratio) + 51 * ratio)
+        gradient_draw.line([(0, y), (canvas_width, y)], fill=(r, g, b))
+    
+    canvas = gradient
+    
+    # === KAIRĖ ZONA - NUOTRAUKOS SU ĮSTRIŽU PJŪVIU ===
+    # Nuotraukų parametrai
+    photo_width = 520
+    photo_height = 300
+    gap = 40
+    
+    # Paruošiame nuotraukas
+    img1 = photo1.copy().resize((photo_width, photo_height), Image.Resampling.LANCZOS)
+    img2 = photo2.copy().resize((photo_width, photo_height), Image.Resampling.LANCZOS)
+    
+    # Sukuriame mask su įstrižu pjūviu (trapecija)
+    # polygon(0 0, 100% 0, 85% 100%, 0 100%)
+    mask = Image.new('L', (photo_width, photo_height), 0)
+    mask_draw = ImageDraw.Draw(mask)
+    
+    # Trapecijos taškai
+    points = [
+        (0, 0),                          # viršus kairė
+        (photo_width, 0),                # viršus dešinė
+        (int(photo_width * 0.85), photo_height),  # apačia dešinė (85%)
+        (0, photo_height)                # apačia kairė
+    ]
+    mask_draw.polygon(points, fill=255)
+    
+    # Pritaikome mask abiem nuotraukoms
+    img1.putalpha(mask)
+    img2.putalpha(mask)
+    
+    # Įdedame nuotraukas į canvas
+    canvas.paste(img1, (0, 0), img1 if img1.mode == 'RGBA' else None)
+    canvas.paste(img2, (0, photo_height + gap), img2 if img2.mode == 'RGBA' else None)
+    
+    # === DEŠINĖ ZONA - TEKSTAS ===
+    draw = ImageDraw.Draw(canvas)
+    
+    # Tekstinio konteinerio pozicija
+    text_x = 660
+    text_y = 190
+    
+    # Šriftai
+    try:
+        font_header = ImageFont.truetype("arial.ttf", 42)
+        font_desc = ImageFont.truetype("arial.ttf", 16)
+    except:
+        font_header = ImageFont.load_default()
+        font_desc = ImageFont.load_default()
+    
+    # Antraštė
+    header_color = (255, 255, 255)  # #FFFFFF
+    draw.text((text_x, text_y), header_text, fill=header_color, font=font_header)
+    
+    # Aprašymas (18px žemiau antraštės)
+    desc_y = text_y + 60  # 42px + 18px margin
+    desc_color = (230, 236, 243)  # #E6ECF3
+    
+    # Text wrapping aprašymui (max 360px plotis)
+    max_width = 360
+    words = description_text.split()
+    lines = []
+    current_line = []
+    
+    for word in words:
+        test_line = ' '.join(current_line + [word])
+        bbox = draw.textbbox((0, 0), test_line, font=font_desc)
+        if bbox[2] - bbox[0] <= max_width:
+            current_line.append(word)
+        else:
+            if current_line:
+                lines.append(' '.join(current_line))
+            current_line = [word]
+    
+    if current_line:
+        lines.append(' '.join(current_line))
+    
+    # Braižome aprašymą (line-height: 1.6)
+    line_height = int(16 * 1.6)
+    for i, line in enumerate(lines):
+        draw.text((text_x, desc_y + i * line_height), line, fill=desc_color, font=font_desc)
+    
+    # === ROUNDED CORNERS ===
+    # Sukuriame rounded mask
+    rounded_mask = Image.new('L', (canvas_width, canvas_height), 0)
+    rounded_draw = ImageDraw.Draw(rounded_mask)
+    rounded_draw.rounded_rectangle([(0, 0), (canvas_width, canvas_height)], radius=16, fill=255)
+    
+    # Pritaikome rounded corners
+    canvas.putalpha(rounded_mask)
+    
+    # Grąžiname su baltu fonu (nes rounded corners = alpha)
+    final = Image.new('RGB', (canvas_width, canvas_height), (255, 255, 255))
+    final.paste(canvas, (0, 0), canvas if canvas.mode == 'RGBA' else None)
+    
+    return final
+
+
 def create_modern_landing_html(product_image, text_content="", phone_number="+370 (606) 50 414", logo_path="assets/logo.png", style="Minimalist"):
     """
     HTML/CSS versija Modern Landing layout'ui - FANCY dizainas!
@@ -2600,6 +2739,7 @@ if files_to_process:
         elif num_photos == 2:
             layout_options = [
                 "🎯 Modern Landing (produktas + info)",
+                "🎬 Hero Diagonal (įstrižas pjūvis + tekstas)",
                 "📰 Magazine Style (2 nuotraukos + bullet list)",
                 "Grid 2x2 (2 nuotraukos + 2 teksto kvadratai)",
                 "Horizontal (2 nuotraukos + 1 tekstas viduryje)",
@@ -2625,8 +2765,8 @@ if files_to_process:
             "Pasirinkite išdėstymą:", layout_options, help="Layout su integruotu teksto kvadratu (ne overlay!)"
         )
 
-        # NAUJAS: Teksto turinys (TIKTAI jei NE Magazine Style)
-        if "Magazine Style" not in collage_layout:
+        # NAUJAS: Teksto turinys (TIKTAI jei NE Magazine Style ir NE Hero Diagonal)
+        if "Magazine Style" not in collage_layout and "Hero Diagonal" not in collage_layout:
             st.markdown("---")
             st.markdown("#### ✍️ Teksto kvadrato turinys")
             
@@ -2903,6 +3043,24 @@ if files_to_process:
                                 style=collage_style  # Perduodame pasirinktą stilių
                             )
                         
+                        collage = collage.convert("RGBA")
+                    
+                    # ============ HERO DIAGONAL LAYOUT ============
+                    elif "Hero Diagonal" in collage_layout:
+                        # 2 nuotraukos + įstrižas pjūvis + tekstas
+                        photo1 = edited_images[0]
+                        photo2 = edited_images[1]
+                        
+                        # Naudojame AI sugeneruotą tekstą kaip aprašymą
+                        header_text = "Beautiful Moments"
+                        description_text = custom_text if custom_text else "Discover stunning photography that captures the essence of nature's beauty."
+                        
+                        collage = create_hero_diagonal_split_layout(
+                            photo1=photo1,
+                            photo2=photo2,
+                            header_text=header_text,
+                            description_text=description_text
+                        )
                         collage = collage.convert("RGBA")
                     
                     # ============ MAGAZINE STYLE LAYOUT ============
