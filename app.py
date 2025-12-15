@@ -3516,57 +3516,27 @@ if files_to_process:
                         
                         # Paruošiame visus variantus
                         cleaned_variants = [clean_variant(v) for v in variants]
-                        entry_id = entry['id']
                         
-                        # Generuojame HTML atskirai nuo JS
-                        radio_disabled_2 = "" if len(cleaned_variants) > 1 else "disabled"
-                        radio_disabled_3 = "" if len(cleaned_variants) > 2 else "disabled"
+                        # Streamlit radio - paprastas ir veikiantis
+                        selected = st.radio(
+                            "Pasirinkite:",
+                            ["💼 Marketinginis", "🏡 Draugiškas", "😄 Su humoru"][:len(cleaned_variants)],
+                            key=f"radio_{entry['id']}",
+                            label_visibility="collapsed"
+                        )
                         
-                        # Perduodame tekstus kaip data atributą
-                        import html as html_module
-                        texts_json = html_module.escape(json.dumps(cleaned_variants))
+                        # Randame indeksą
+                        variant_index = ["💼 Marketinginis", "🏡 Draugiškas", "😄 Su humoru"].index(selected)
+                        selected_text = cleaned_variants[variant_index]
                         
-                        html_code = f"""
-                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                            <div style="display: flex; gap: 10px;">
-                                <label style="cursor: pointer;">
-                                    <input type="radio" name="variant_{entry_id}" value="0" checked style="margin-right: 5px;">💼
-                                </label>
-                                <label style="cursor: pointer;">
-                                    <input type="radio" name="variant_{entry_id}" value="1" {radio_disabled_2} style="margin-right: 5px;">🏡
-                                </label>
-                                <label style="cursor: pointer;">
-                                    <input type="radio" name="variant_{entry_id}" value="2" {radio_disabled_3} style="margin-right: 5px;">😄
-                                </label>
-                            </div>
-                            <button id="btn_{entry_id}" data-texts="{texts_json}" style="background-color: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
-                                📋 Kopijuoti
-                            </button>
-                        </div>
-                        <script>
-                        (function() {{
-                            const btn = document.getElementById('btn_{entry_id}');
-                            btn.addEventListener('click', function() {{
-                                const texts = JSON.parse(this.getAttribute('data-texts'));
-                                const selected = document.querySelector('input[name="variant_{entry_id}"]:checked');
-                                const idx = parseInt(selected.value);
-                                const text = texts[idx];
-                                
-                                navigator.clipboard.writeText(text).then(() => {{
-                                    btn.innerHTML = '✅ Nukopijuota!';
-                                    btn.style.backgroundColor = '#28a745';
-                                    setTimeout(() => {{
-                                        btn.innerHTML = '📋 Kopijuoti';
-                                        btn.style.backgroundColor = '#0066cc';
-                                    }}, 1500);
-                                }}).catch(err => {{
-                                    alert('Klaida kopijuojant: ' + err);
-                                }});
-                            }});
-                        }})();
-                        </script>
-                        """
-                        st.markdown(html_code, unsafe_allow_html=True)
+                        # Text area su pasirinktu tekstu - galima Ctrl+C kopijuoti
+                        st.text_area(
+                            "Tekstas kopijavimui:",
+                            value=selected_text,
+                            height=150,
+                            key=f"text_{entry['id']}",
+                            label_visibility="collapsed"
+                        )
                     else:
                         # Jei nėra variantų - paprastas copy
                         copy_button_id = f"copy_btn_{entry['id']}"
