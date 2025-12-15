@@ -2262,8 +2262,8 @@ if files_to_process:
         col_fx1, col_fx2 = st.columns(2)
 
         with col_fx1:
-            enable_white_border = st.checkbox("⬜ Baltas rėmelis", value=True, help="Baltas rėmelis aplink nuotraukas")
-            enable_rounded_corners = st.checkbox("⭕ Užapvalinti kampai", value=True, help="Apvalūs nuotraukų kampai")
+            enable_white_border = st.checkbox("⬜ Baltas rėmelis", value=False, help="Baltas rėmelis aplink nuotraukas")
+            enable_rounded_corners = st.checkbox("⭕ Užapvalinti kampai", value=False, help="Apvalūs nuotraukų kampai")
             
             # Logo parinktys (tik Magazine Style)
             if "Magazine Style" in collage_layout:
@@ -2271,7 +2271,7 @@ if files_to_process:
                 logo_transparent = st.checkbox("🔲 Logo su skaidriu fonu", value=False, help="Logo su permatomu fonu")
 
         with col_fx2:
-            enable_shadow_effect = st.checkbox("🌑 Šešėlio efektas", value=True, help="3D šešėlis (drop shadow)")
+            enable_shadow_effect = st.checkbox("🌑 Šešėlio efektas", value=False, help="3D šešėlis (drop shadow)")
             shadow_strength = (
                 st.slider("Šešėlio stiprumas:", 0, 100, 50, 5, help="0 = nematomas, 100 = juodas")
                 if enable_shadow_effect
@@ -2343,7 +2343,7 @@ if files_to_process:
                 show_logo = False  # Jei nei vienas nepažymėtas - logo nerodo
         
         # Telefono numerio pasirinkimas (visiems layout'ams)
-        show_phone_number = st.checkbox("📞 Rodyti telefono numerį", value=True, help="Telefono numeris apačioje centre (120px šriftas, visiems layout'ams)")
+        show_phone_number = st.checkbox("📞 Rodyti telefono numerį", value=False, help="Telefono numeris apačioje centre (120px šriftas, visiems layout'ams)")
         default_phone = "+370 (606) 50 414"
 
         st.markdown("---")
