@@ -3518,29 +3518,28 @@ if files_to_process:
                         cleaned_variants = [clean_variant(v) for v in variants]
                         entry_id = entry['id']
                         
-                        # Base64 encoding - 100% saugus būdas
-                        import base64
+                        # Paprastas Streamlit button su session state
+                        copy_key = f"copy_variant_{entry_id}"
                         
-                        # Trys mygtukai - kiekvienam variantui
                         col_a, col_b, col_c = st.columns(3)
                         
                         with col_a:
-                            text_b64 = base64.b64encode(cleaned_variants[0].encode('utf-8')).decode('utf-8')
-                            st.markdown(f'''
-                            <button onclick="
-                                const text = atob('{text_b64}');
-                                navigator.clipboard.writeText(text).then(() => {{
-                                    this.innerHTML = '✅ OK';
-                                    this.style.backgroundColor = '#28a745';
-                                    setTimeout(() => {{
-                                        this.innerHTML = '💼 Kopijuoti';
-                                        this.style.backgroundColor = '#0066cc';
-                                    }}, 1500);
-                                }});
-                            " style="background:#0066cc;color:white;border:none;padding:8px;border-radius:5px;cursor:pointer;width:100%;">
-                            💼 Kopijuoti
-                            </button>
-                            ''', unsafe_allow_html=True)
+                            if st.button("💼 Kopijuoti", key=f"btn1_{entry_id}"):
+                                st.session_state[copy_key] = cleaned_variants[0]
+                        
+                        if len(cleaned_variants) > 1:
+                            with col_b:
+                                if st.button("🏡 Kopijuoti", key=f"btn2_{entry_id}"):
+                                    st.session_state[copy_key] = cleaned_variants[1]
+                        
+                        if len(cleaned_variants) > 2:
+                            with col_c:
+                                if st.button("😄 Kopijuoti", key=f"btn3_{entry_id}"):
+                                    st.session_state[copy_key] = cleaned_variants[2]
+                        
+                        # Jei paspaudė - rodo tekstą
+                        if copy_key in st.session_state:
+                            st.code(st.session_state[copy_key], language=None)
                         
                         if len(cleaned_variants) > 1:
                             with col_b:
