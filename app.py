@@ -3516,10 +3516,14 @@ if files_to_process:
                         
                         # Paruošiame visus variantus JavaScript
                         cleaned_variants = [clean_variant(v) for v in variants]
-                        js_variants = []
+                        
+                        # Sukuriame JavaScript array su visais variantais
+                        js_array_parts = []
                         for v in cleaned_variants:
                             js_text = v.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$').replace('\n', '\\n').replace('\r', '').replace('"', '\\"')
-                            js_variants.append(js_text)
+                            js_array_parts.append(f'"{js_text}"')
+                        
+                        js_array_string = ', '.join(js_array_parts)
                         
                         # HTML radio buttons + copy mygtukas
                         entry_id = entry['id']
@@ -3528,16 +3532,16 @@ if files_to_process:
                             <input type="radio" id="v1_{entry_id}" name="variant_{entry_id}" value="0" checked>
                             <label for="v1_{entry_id}">💼</label>
                             
-                            <input type="radio" id="v2_{entry_id}" name="variant_{entry_id}" value="1" {"" if len(js_variants) > 1 else "disabled"}>
+                            <input type="radio" id="v2_{entry_id}" name="variant_{entry_id}" value="1" {"" if len(cleaned_variants) > 1 else "disabled"}>
                             <label for="v2_{entry_id}">🏡</label>
                             
-                            <input type="radio" id="v3_{entry_id}" name="variant_{entry_id}" value="2" {"" if len(js_variants) > 2 else "disabled"}>
+                            <input type="radio" id="v3_{entry_id}" name="variant_{entry_id}" value="2" {"" if len(cleaned_variants) > 2 else "disabled"}>
                             <label for="v3_{entry_id}">😄</label>
                         </div>
                         <button id="copy_btn_{entry_id}" onclick="
                             var selectedRadio = document.querySelector('input[name=\\'variant_{entry_id}\\']:checked');
                             var variantIndex = parseInt(selectedRadio.value);
-                            var texts = ['{js_variants[0]}'{',' + repr(f"'{js_variants[1]}'") if len(js_variants) > 1 else ''}{',' + repr(f"'{js_variants[2]}'") if len(js_variants) > 2 else ''}];
+                            var texts = [{js_array_string}];
                             var textToCopy = texts[variantIndex];
                             
                             navigator.clipboard.writeText(textToCopy).then(function() {{
