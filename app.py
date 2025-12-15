@@ -3466,7 +3466,7 @@ if files_to_process:
             st.caption("Kiekviena sugeneruota versija automatiškai išsaugoma. Pasirinkite norimą versiją.")
 
             for entry in history[:5]:  # Rodome tik 5 naujausius
-                col1, col2, col3 = st.columns([4, 1, 1])
+                col1, col2, col3 = st.columns([3, 2, 1])
 
                 with col1:
                     # Statusas ir versija
@@ -3499,10 +3499,43 @@ if files_to_process:
                         st.text(preview)
 
                 with col2:
-                    if st.button("📋 Naudoti", key=f"use_history_{entry['id']}"):
-                        st.session_state.ai_content_result = entry["description"]
-                        st.success(f"✅ {version_text} užkrautas!")
-                        st.rerun()
+                    # Padalinome tekstą į variantus
+                    full_text = entry["description"]
+                    if "---" in full_text:
+                        variants = [v.strip() for v in full_text.split("---") if v.strip()]
+                        
+                        # Funkcija pašalinti antraštę
+                        def clean_variant(text):
+                            lines = text.split('\n')
+                            cleaned = []
+                            for line in lines:
+                                stripped = line.strip()
+                                if not (stripped.startswith("**VARIANTAS") or stripped.startswith("VARIANTAS")):
+                                    cleaned.append(line)
+                            return '\n'.join(cleaned).strip()
+                        
+                        # Radio buttons pasirinkti variantą
+                        selected = st.radio(
+                            "Pasirinkite:",
+                            ["💼", "🏡", "😄"][:len(variants)],
+                            horizontal=True,
+                            key=f"variant_select_{entry['id']}",
+                            label_visibility="collapsed"
+                        )
+                        
+                        # Randame indeksą
+                        variant_index = ["💼", "🏡", "😄"].index(selected)
+                        selected_text = clean_variant(variants[variant_index])
+                        
+                        # Kopijuoti mygtukas
+                        if st.button("📋 Kopijuoti", key=f"copy_history_{entry['id']}"):
+                            st.code(selected_text, language=None)
+                            st.info("👆 Nukopijuokite tekstą iš viršaus")
+                    else:
+                        # Jei nėra variantų - paprastas copy
+                        if st.button("📋 Kopijuoti", key=f"copy_history_{entry['id']}"):
+                            st.code(full_text, language=None)
+                            st.info("👆 Nukopijuokite tekstą iš viršaus")
                 
                 with col3:
                     if st.button("🗑️", key=f"delete_history_{entry['id']}", help="Ištrinti šią versiją"):
