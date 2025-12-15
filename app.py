@@ -3527,15 +3527,45 @@ if files_to_process:
                         variant_index = ["💼", "🏡", "😄"].index(selected)
                         selected_text = clean_variant(variants[variant_index])
                         
-                        # Kopijuoti mygtukas
-                        if st.button("📋 Kopijuoti", key=f"copy_history_{entry['id']}"):
-                            st.code(selected_text, language=None)
-                            st.info("👆 Nukopijuokite tekstą iš viršaus")
+                        # Automatinis kopijavimas su JavaScript
+                        copy_button_id = f"copy_btn_{entry['id']}"
+                        text_for_js = selected_text.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$').replace('\n', '\\n').replace('\r', '').replace('"', '\\"')
+                        
+                        copy_html = f"""
+                        <button id="{copy_button_id}" onclick="
+                            navigator.clipboard.writeText(`{text_for_js}`).then(function() {{
+                                document.getElementById('{copy_button_id}').innerHTML = '✅ Nukopijuota!';
+                                document.getElementById('{copy_button_id}').style.backgroundColor = '#28a745';
+                                setTimeout(function() {{
+                                    document.getElementById('{copy_button_id}').innerHTML = '📋 Kopijuoti';
+                                    document.getElementById('{copy_button_id}').style.backgroundColor = '#0066cc';
+                                }}, 1500);
+                            }});
+                        " style="background-color: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
+                            📋 Kopijuoti
+                        </button>
+                        """
+                        st.markdown(copy_html, unsafe_allow_html=True)
                     else:
                         # Jei nėra variantų - paprastas copy
-                        if st.button("📋 Kopijuoti", key=f"copy_history_{entry['id']}"):
-                            st.code(full_text, language=None)
-                            st.info("👆 Nukopijuokite tekstą iš viršaus")
+                        copy_button_id = f"copy_btn_{entry['id']}"
+                        text_for_js = full_text.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$').replace('\n', '\\n').replace('\r', '').replace('"', '\\"')
+                        
+                        copy_html = f"""
+                        <button id="{copy_button_id}" onclick="
+                            navigator.clipboard.writeText(`{text_for_js}`).then(function() {{
+                                document.getElementById('{copy_button_id}').innerHTML = '✅ Nukopijuota!';
+                                document.getElementById('{copy_button_id}').style.backgroundColor = '#28a745';
+                                setTimeout(function() {{
+                                    document.getElementById('{copy_button_id}').innerHTML = '📋 Kopijuoti';
+                                    document.getElementById('{copy_button_id}').style.backgroundColor = '#0066cc';
+                                }}, 1500);
+                            }});
+                        " style="background-color: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
+                            📋 Kopijuoti
+                        </button>
+                        """
+                        st.markdown(copy_html, unsafe_allow_html=True)
                 
                 with col3:
                     if st.button("🗑️", key=f"delete_history_{entry['id']}", help="Ištrinti šią versiją"):
