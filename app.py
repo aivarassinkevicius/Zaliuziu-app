@@ -2313,7 +2313,8 @@ if files_to_process:
                             st.error("❌ AI nepavyko sugeneruoti tekstų. Bandyk dar kartą arba įvesk rankiniu būdu.")
 
         # Custom prompt text area už stulpelių (kai pažymėta)
-        custom_prompt = ""
+        custom_prompt = st.session_state.get('last_bg_prompt', '')  # Išsaugom iš session_state
+        
         if use_custom_background:
             custom_prompt = st.text_area(
                 "Aprašykite norimą foną:",
@@ -2346,8 +2347,9 @@ if files_to_process:
                             del st.session_state['cached_custom_bg']
                             del st.session_state['last_bg_prompt']
                             st.rerun()
-
-        use_themed_bg = use_custom_background
+        
+        # Jei yra cached fonas bet varnelė atjungta - vis tiek naudojam cached foną
+        use_themed_bg = use_custom_background or (st.session_state.get('cached_custom_bg') is not None)
         
         # Nustatome logo rodymo logiką
         logo_white_bg = False
