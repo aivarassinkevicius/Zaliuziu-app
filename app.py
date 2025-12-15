@@ -2283,13 +2283,13 @@ if files_to_process:
                 value=False,
                 help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą",
             )
-            
-            # AI tekstų generavimas
-            use_ai_text = st.checkbox(
-                "🤖 Naudoti AI tekstui",
-                value=False,
-                help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (Gemini Vision)",
-            )
+
+        # AI tekstų generavimas (už stulpelių, kad būtų prieinamas visur)
+        use_ai_text = st.checkbox(
+            "🤖 Naudoti AI tekstui",
+            value=False,
+            help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (Gemini Vision)",
+        )
 
         # Custom prompt text area už stulpelių (kai pažymėta)
         custom_prompt = ""
