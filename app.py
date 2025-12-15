@@ -897,12 +897,7 @@ def generate_text_with_gemini(image):
         
         # Konfigūruojame Gemini
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # Konvertuojame PIL image į bytes
-        img_byte_arr = io.BytesIO()
-        image.save(img_byte_arr, format='JPEG')
-        img_byte_arr = img_byte_arr.getvalue()
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         
         # Prompt'as su tiksliais reikalavimais
         prompt = """Analizuok šią nuotrauką ir atpažink produktą (medinės žaliuzės, roletai, plisuotos žaliuzės, roletai diena-naktis, romanetės, arba kitas langų uždengimo produktas).
@@ -918,8 +913,8 @@ BULLET2: [tekstas]
 BULLET3: [tekstas]
 BULLET4: [tekstas]"""
         
-        # Siunčiame užklausą
-        response = model.generate_content([prompt, {"mime_type": "image/jpeg", "data": img_byte_arr}])
+        # Siunčiame užklausą (Gemini priima PIL Image tiesiogiai)
+        response = model.generate_content([prompt, image])
         
         # Parsimame atsakymą
         text = response.text.strip()
