@@ -2248,12 +2248,6 @@ if files_to_process:
                 height=120,
                 help="Kiekviena eilutė = 1 punktas. Bus rodomi 4 punktai su apskritimais."
             )
-            
-            # Debug info
-            if st.session_state.get('ai_header'):
-                with st.expander("🔍 DEBUG: AI Generated teksta"):
-                    st.write(f"**Antraštė:** {st.session_state.get('ai_header')}")
-                    st.write(f"**Bullets:** {st.session_state.get('ai_bullets')}")
 
         # Nuotraukų efektai
         st.markdown("---")
@@ -2414,12 +2408,14 @@ if files_to_process:
                         canvas_width, canvas_height = 1200, 630
 
                     # Sukuriame foną (AI arba gradientą)
+                    cached_bg = None  # Magazine Style naudos šį
+                    
                     if use_themed_bg:
                         # Patikriname, ar yra cached custom fonas
-                        if st.session_state.get('cached_custom_bg') and custom_prompt and custom_prompt.strip():
-                            themed_bg = st.session_state['cached_custom_bg']
+                        if st.session_state.get('cached_custom_bg'):
+                            cached_bg = st.session_state['cached_custom_bg']
                             # Resize į reikiamą dydį
-                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+                            collage = cached_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
                         else:
                             # Jei nėra cached arba naudojamas sezoninis fonas
                             themed_bg = generate_themed_background(season, canvas_width, canvas_height, custom_prompt)
@@ -2468,7 +2464,7 @@ if files_to_process:
                             enable_rounded_corners=enable_rounded_corners,
                             enable_shadow_effect=enable_shadow_effect,
                             shadow_strength=shadow_strength,
-                            background=collage if use_themed_bg else None  # AI fonas
+                            background=cached_bg  # Cached AI fonas (1327x768)
                         )
                         collage = collage.convert("RGBA")
 
