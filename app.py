@@ -2207,6 +2207,7 @@ if files_to_process:
         magazine_header = ""
         magazine_bullets = ""
         logo_white_bg = False
+        use_ai_text = False  # Default - bus pakeista checkbox col_fx2 viduje
         
         if "Magazine Style" in collage_layout:
             st.markdown("---")
