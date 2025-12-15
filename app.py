@@ -2650,7 +2650,7 @@ if files_to_process:
 
     # 🌐 TRENDING INFO
     trending_data = fetch_trending_hashtags(season)
-    with st.expander("🔥 Trending dabar Instagram'e", expanded=False):
+    with st.expander("🔥 Trending dabar (Instagram & Facebook)", expanded=False):
         st.markdown(f"**📊 Populiarūs hashtags ({season}):**")
         st.code(" ".join(trending_data["trending_hashtags"]))
         st.markdown(f"**🔥 Trending temos:** {trending_data['trending_topics']}")
