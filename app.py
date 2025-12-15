@@ -3791,9 +3791,16 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
 
     # Rodyti sugeneruotą turinį
     st.markdown("### 🎯 Paruošti tekstai:")
-    st.markdown("**Kopijuokite tekstą:**")
     
-    # Padalinti į variantus
+    # Rodome originalų tekstą
+    st.text_area(
+        "Kopijuokite tekstą:", 
+        value=st.session_state.ai_content_result, 
+        height=200, 
+        key="ai_content_persistent"
+    )
+    
+    # Padalinti į variantus kopijavimui
     text = st.session_state.ai_content_result
     if "---" in text:
         variants = [v.strip() for v in text.split("---") if v.strip()]
@@ -3812,17 +3819,6 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
     
     # Paruošiame visus variantus
     cleaned_variants = [clean_final_variant(v) for v in variants]
-    
-    # Rodome visus variantus su text_area
-    variant_labels = ["💼 Marketinginis", "🏡 Draugiškas", "😄 Su humoru"]
-    for i, variant_text in enumerate(cleaned_variants):
-        st.text_area(
-            variant_labels[i],
-            value=variant_text,
-            height=150,
-            key=f"final_variant_{i}",
-            disabled=True
-        )
     
     # HTML su components - kopijuoti mygtukai
     import streamlit.components.v1 as components
