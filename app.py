@@ -2213,15 +2213,7 @@ if files_to_process:
         magazine_header = ""
         magazine_bullets = ""
         logo_white_bg = False
-        
-        # AI tekstų generavimas (po Nuotraukų efektų, prieš Magazine Style)
-        st.markdown("---")
-        use_ai_text = st.checkbox(
-            "🤖 Naudoti AI tekstui",
-            value=False,
-            help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (GPT-4 Vision)",
-            key="use_ai_text_checkbox"
-        )
+        use_ai_text = False  # Default - bus pakeista checkbox col_fx2
         
         if "Magazine Style" in collage_layout:
             st.markdown("#### 📰 Magazine Style nustatymai")
@@ -2246,26 +2238,6 @@ if files_to_process:
                 with st.expander("🔍 DEBUG: AI Generated teksta"):
                     st.write(f"**Antraštė:** {st.session_state.get('ai_header')}")
                     st.write(f"**Bullets:** {st.session_state.get('ai_bullets')}")
-            
-            # Jei AI tekstai įjungti, generuojame automatiškai
-            if use_ai_text and len(files_to_process) >= 1:
-                if st.button("🤖 Generuoti tekstus su AI"):
-                    with st.spinner("AI generuoja tekstus pagal nuotrauką..."):
-                        # Paimame pirmą failą ir sukuriame PIL Image
-                        first_file = files_to_process[0]
-                        first_file.seek(0)
-                        temp_image = Image.open(first_file)
-                        
-                        # Generuojame tekstus
-                        ai_header, ai_bullets = generate_text_with_gemini(temp_image)
-                        
-                        if ai_header and ai_bullets:
-                            st.session_state['ai_header'] = ai_header
-                            st.session_state['ai_bullets'] = "\n".join(ai_bullets)
-                            st.success(f"✅ Tekstai sugeneruoti! Perkraunama...")
-                            st.rerun()  # Rerun kad atsinaujintų text_input values
-                        else:
-                            st.error("❌ AI nepavyko sugeneruoti tekstų. Bandyk dar kartą arba įvesk rankiniu būdu.")
 
         # Nuotraukų efektai
         st.markdown("---")
@@ -2296,6 +2268,33 @@ if files_to_process:
                 value=False,
                 help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą",
             )
+            
+            # AI tekstų generavimas (po custom AI fono)
+            use_ai_text = st.checkbox(
+                "🤖 Naudoti AI tekstui",
+                value=False,
+                help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (GPT-4 Vision)",
+            )
+            
+            # Generavimo mygtukas (jei pažymėta ir yra nuotraukų)
+            if use_ai_text and len(files_to_process) >= 1:
+                if st.button("🤖 Generuoti tekstus su AI"):
+                    with st.spinner("AI generuoja tekstus pagal nuotrauką..."):
+                        # Paimame pirmą failą ir sukuriame PIL Image
+                        first_file = files_to_process[0]
+                        first_file.seek(0)
+                        temp_image = Image.open(first_file)
+                        
+                        # Generuojame tekstus
+                        ai_header, ai_bullets = generate_text_with_gemini(temp_image)
+                        
+                        if ai_header and ai_bullets:
+                            st.session_state['ai_header'] = ai_header
+                            st.session_state['ai_bullets'] = "\n".join(ai_bullets)
+                            st.success(f"✅ Tekstai sugeneruoti! Perkraunama...")
+                            st.rerun()  # Rerun kad atsinaujintų text_input values
+                        else:
+                            st.error("❌ AI nepavyko sugeneruoti tekstų. Bandyk dar kartą arba įvesk rankiniu būdu.")
 
         # Custom prompt text area už stulpelių (kai pažymėta)
         custom_prompt = ""
