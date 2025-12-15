@@ -3514,51 +3514,25 @@ if files_to_process:
                                     cleaned.append(line)
                             return '\n'.join(cleaned).strip()
                         
-                        # Paruošiame visus variantus JavaScript
+                        # Paruošiame visus variantus
                         cleaned_variants = [clean_variant(v) for v in variants]
                         
-                        # Naudojame json.dumps - saugus ir teisingas būdas
-                        js_array_string = json.dumps(cleaned_variants)
+                        # Radio buttons pasirinkimui
+                        selected = st.radio(
+                            "Pasirinkite:",
+                            ["💼", "🏡", "😄"][:len(cleaned_variants)],
+                            horizontal=True,
+                            key=f"variant_select_{entry['id']}",
+                            label_visibility="collapsed"
+                        )
                         
-                        # HTML radio buttons + copy mygtukas
-                        entry_id = entry['id']
+                        # Randame indeksą
+                        variant_index = ["💼", "🏡", "😄"].index(selected)
+                        selected_text = cleaned_variants[variant_index]
                         
-                        # JavaScript funkcija
-                        js_function = f"""
-                        function copyText_{entry_id}() {{
-                            var selectedRadio = document.querySelector('input[name="variant_{entry_id}"]:checked');
-                            var variantIndex = parseInt(selectedRadio.value);
-                            var texts = {js_array_string};
-                            var textToCopy = texts[variantIndex];
-                            
-                            navigator.clipboard.writeText(textToCopy).then(function() {{
-                                document.getElementById('copy_btn_{entry_id}').innerHTML = '✅ Nukopijuota!';
-                                document.getElementById('copy_btn_{entry_id}').style.backgroundColor = '#28a745';
-                                setTimeout(function() {{
-                                    document.getElementById('copy_btn_{entry_id}').innerHTML = '📋 Kopijuoti';
-                                    document.getElementById('copy_btn_{entry_id}').style.backgroundColor = '#0066cc';
-                                }}, 1500);
-                            }});
-                        }}
-                        """
-                        
-                        radio_html = f"""
-                        <script>{js_function}</script>
-                        <div style="margin-bottom: 10px;">
-                            <input type="radio" id="v1_{entry_id}" name="variant_{entry_id}" value="0" checked>
-                            <label for="v1_{entry_id}">💼</label>
-                            
-                            <input type="radio" id="v2_{entry_id}" name="variant_{entry_id}" value="1" {'disabled' if len(cleaned_variants) < 2 else ''}>
-                            <label for="v2_{entry_id}">🏡</label>
-                            
-                            <input type="radio" id="v3_{entry_id}" name="variant_{entry_id}" value="2" {'disabled' if len(cleaned_variants) < 3 else ''}>
-                            <label for="v3_{entry_id}">😄</label>
-                        </div>
-                        <button id="copy_btn_{entry_id}" onclick="copyText_{entry_id}()" style="background-color: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
-                            📋 Kopijuoti
-                        </button>
-                        """
-                        st.markdown(radio_html, unsafe_allow_html=True)
+                        # Mygtukas rodyti tekstą
+                        if st.button("📋 Kopijuoti", key=f"copy_{entry['id']}"):
+                            st.code(selected_text, language=None)
                     else:
                         # Jei nėra variantų - paprastas copy
                         copy_button_id = f"copy_btn_{entry['id']}"
