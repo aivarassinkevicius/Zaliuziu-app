@@ -1061,22 +1061,6 @@ def add_photo_effects(
     return result
 
 
-def add_glassmorphism_effect(img, blur_amount=10, opacity=0.3):
-    """Prideda glassmorphism efektą (blurred background overlay)"""
-    # Sukuriame blur kopiją
-    blurred = img.filter(ImageFilter.GaussianBlur(blur_amount))
-
-    # Sumažiname opacity
-    if blurred.mode != "RGBA":
-        blurred = blurred.convert("RGBA")
-
-    # Pridedame baltą overlay su opacity
-    overlay = Image.new("RGBA", blurred.size, (255, 255, 255, int(255 * opacity)))
-    blurred = Image.alpha_composite(blurred, overlay)
-
-    return blurred
-
-
 def add_text_overlay_modern(img, text, position="bottom", font_size=60, bg_opacity=0.7):
     """Prideda modernų teksto overlay su blur fonu"""
     if img.mode != "RGBA":
@@ -2114,28 +2098,14 @@ if files_to_process:
     st.info(f"✨ Automatinė tema: **{auto_theme}** (pagal jūsų nustatymus kairėje)")
 
     if len(files_to_process) >= 2:
-        # NAUJAS: Social media formato pasirinkimas
-        col_format, col_style = st.columns([1, 1])
-
-        with col_format:
-            social_format = st.selectbox(
+        # Social media formato pasirinkimas
+        social_format = st.selectbox(
                 "📱 Socialinio tinklo formatas:",
                 ["Instagram kvadratas (1080x1080)", "Instagram Portrait (1080x1350)", "Facebook Post (1200x630)"],
                 help="Pasirinkite socialinio tinklo formatą",
             )
 
-        with col_style:
-            collage_style = st.selectbox(
-                "🎨 Dizaino stilius:",
-                [
-                    "💎 Glassmorphism - Modernus, skaidrus",
-                    "🎯 Neo-Brutalism - Ryškus, drąsus",
-                    "✨ Minimalist - Švarus, elegantiškas",
-                ],
-                help="Bendras collage dizaino stilius",
-            )
-
-        # NAUJAS: Išdėstymas su teksto kvadratu
+        # Išdėstymas
         st.markdown("---")
         st.markdown("#### 📐 Išdėstymas (nuotraukos + tekstas)")
 
