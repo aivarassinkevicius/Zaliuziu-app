@@ -2317,14 +2317,35 @@ if files_to_process:
         if use_custom_background:
             custom_prompt = st.text_area(
                 "Aprašykite norimą foną:",
-                value="",
+                value=st.session_state.get('last_bg_prompt', ''),
                 placeholder="Pvz: medžiai rugiai pieva, kviečiai ir medžio tekstūra, jūra saulėlydis...",
                 help="AI (DALL-E 3) sugeneruos foną pagal šį aprašymą",
                 height=80,
+                key="custom_bg_prompt_input"
             )
 
             if custom_prompt and custom_prompt.strip():
-                st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
+                col_gen1, col_gen2 = st.columns([3, 1])
+                with col_gen1:
+                    st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
+                with col_gen2:
+                    if st.button("🎨 Generuoti foną"):
+                        with st.spinner("Generuojama..."):
+                            bg = generate_themed_background(None, 1327, 768, custom_prompt)
+                            if bg:
+                                st.session_state['cached_custom_bg'] = bg
+                                st.session_state['last_bg_prompt'] = custom_prompt
+                                st.success("✅ Fonas sugeneruotas!")
+                                st.rerun()
+                
+                # Rodyti cached foną
+                if st.session_state.get('cached_custom_bg'):
+                    if st.session_state.get('last_bg_prompt') == custom_prompt:
+                        st.success("✅ Naudojamas išsaugotas fonas (nesikeis keičiant kitus nustatymus)")
+                        if st.button("🗑️ Išvalyti foną"):
+                            del st.session_state['cached_custom_bg']
+                            del st.session_state['last_bg_prompt']
+                            st.rerun()
 
         use_themed_bg = use_custom_background
         
@@ -2392,14 +2413,21 @@ if files_to_process:
 
                     # Sukuriame foną (AI arba gradientą)
                     if use_themed_bg:
-                        themed_bg = generate_themed_background(season, canvas_width, canvas_height, custom_prompt)
-                        if themed_bg:
-                            collage = themed_bg
+                        # Patikriname, ar yra cached custom fonas
+                        if st.session_state.get('cached_custom_bg') and custom_prompt and custom_prompt.strip():
+                            themed_bg = st.session_state['cached_custom_bg']
+                            # Resize į reikiamą dydį
+                            collage = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
                         else:
-                            # Fallback į gradientą
-                            collage = create_gradient_background(
-                                canvas_width, canvas_height, (240, 245, 250), (250, 250, 255)
-                            )
+                            # Jei nėra cached arba naudojamas sezoninis fonas
+                            themed_bg = generate_themed_background(season, canvas_width, canvas_height, custom_prompt)
+                            if themed_bg:
+                                collage = themed_bg
+                            else:
+                                # Fallback į gradientą
+                                collage = create_gradient_background(
+                                    canvas_width, canvas_height, (240, 245, 250), (250, 250, 255)
+                                )
                     else:
                         collage = create_gradient_background(
                             canvas_width, canvas_height, (245, 245, 245), (255, 255, 255)
