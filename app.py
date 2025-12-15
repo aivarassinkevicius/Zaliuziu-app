@@ -3051,9 +3051,9 @@ if files_to_process:
                         photo1 = edited_images[0]
                         photo2 = edited_images[1]
                         
-                        # Naudojame AI sugeneruotą tekstą kaip aprašymą
+                        # Antraštė ir aprašymas (default arba custom)
                         header_text = "Beautiful Moments"
-                        description_text = custom_text if custom_text else "Discover stunning photography that captures the essence of nature's beauty."
+                        description_text = "Discover stunning photography that captures the essence of nature's beauty."
                         
                         collage = create_hero_diagonal_split_layout(
                             photo1=photo1,
