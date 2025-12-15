@@ -3516,27 +3516,39 @@ if files_to_process:
                         
                         # Paruošiame visus variantus
                         cleaned_variants = [clean_variant(v) for v in variants]
+                        entry_id = entry['id']
                         
-                        # Streamlit radio - paprastas ir veikiantis
-                        selected = st.radio(
-                            "Pasirinkite:",
-                            ["💼 Marketinginis", "🏡 Draugiškas", "😄 Su humoru"][:len(cleaned_variants)],
-                            key=f"radio_{entry['id']}",
-                            label_visibility="collapsed"
-                        )
+                        # Trys mygtukai - kiekvienam variantui
+                        col_a, col_b, col_c = st.columns(3)
                         
-                        # Randame indeksą
-                        variant_index = ["💼 Marketinginis", "🏡 Draugiškas", "😄 Su humoru"].index(selected)
-                        selected_text = cleaned_variants[variant_index]
+                        with col_a:
+                            text_0 = cleaned_variants[0].replace("'", "\\'").replace('"', '\\"').replace('\n', '\\n')
+                            st.markdown(f'''
+                            <button onclick="navigator.clipboard.writeText('{text_0}').then(() => alert('✅ Nukopijuota!'))" 
+                            style="background:#0066cc;color:white;border:none;padding:8px;border-radius:5px;cursor:pointer;width:100%;">
+                            💼 Kopijuoti
+                            </button>
+                            ''', unsafe_allow_html=True)
                         
-                        # Text area su pasirinktu tekstu - galima Ctrl+C kopijuoti
-                        st.text_area(
-                            "Tekstas kopijavimui:",
-                            value=selected_text,
-                            height=150,
-                            key=f"text_{entry['id']}",
-                            label_visibility="collapsed"
-                        )
+                        if len(cleaned_variants) > 1:
+                            with col_b:
+                                text_1 = cleaned_variants[1].replace("'", "\\'").replace('"', '\\"').replace('\n', '\\n')
+                                st.markdown(f'''
+                                <button onclick="navigator.clipboard.writeText('{text_1}').then(() => alert('✅ Nukopijuota!'))" 
+                                style="background:#0066cc;color:white;border:none;padding:8px;border-radius:5px;cursor:pointer;width:100%;">
+                                🏡 Kopijuoti
+                                </button>
+                                ''', unsafe_allow_html=True)
+                        
+                        if len(cleaned_variants) > 2:
+                            with col_c:
+                                text_2 = cleaned_variants[2].replace("'", "\\'").replace('"', '\\"').replace('\n', '\\n')
+                                st.markdown(f'''
+                                <button onclick="navigator.clipboard.writeText('{text_2}').then(() => alert('✅ Nukopijuota!'))" 
+                                style="background:#0066cc;color:white;border:none;padding:8px;border-radius:5px;cursor:pointer;width:100%;">
+                                😄 Kopijuoti
+                                </button>
+                                ''', unsafe_allow_html=True)
                     else:
                         # Jei nėra variantų - paprastas copy
                         copy_button_id = f"copy_btn_{entry['id']}"
