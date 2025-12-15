@@ -1130,6 +1130,9 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     Returns:
         PIL Image (1327x768)
     """
+    from PIL import ImageDraw, ImageFont
+    import os
+    
     # Canvas - jei yra AI background, naudojame jį, kitaip default spalvą
     if background is not None:
         # AI fonas - resize į 1327x768
