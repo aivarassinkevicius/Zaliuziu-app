@@ -874,7 +874,7 @@ def html_to_image(html_string, width=1920, height=1080):
 
 def generate_text_with_gemini(image):
     """
-    Generuoja antraštę ir bullet punktus naudojant Google Gemini Vision API
+    Generuoja antraštę ir bullet punktus naudojant OpenAI Vision API (GPT-4 Vision)
     
     Args:
         image: PIL Image objektas
@@ -883,58 +883,63 @@ def generate_text_with_gemini(image):
         tuple: (header_text, bullets_list) arba (None, None) jei klaida
     """
     try:
-        import google.generativeai as genai
-        
-        # Gauname API key iš environment
-        api_key = os.getenv("GEMINI_API_KEY")
+        # Naudojame tą patį OpenAI client kaip custom background
         if not api_key:
-            # Bandome gauti iš Streamlit secrets
-            try:
-                api_key = st.secrets["GEMINI_API_KEY"]
-            except:
-                st.error("❌ GEMINI_API_KEY nerastas nei .env, nei Streamlit secrets")
-                return None, None
+            st.error("❌ OPENAI_API_KEY nerastas")
+            return None, None
         
-        # Konfigūruojame Gemini
-        genai.configure(api_key=api_key)
+        client = OpenAI(api_key=api_key)
         
-        # Bandome kelis modelius
-        try:
-            model = genai.GenerativeModel('gemini-1.5-pro')
-        except:
-            try:
-                model = genai.GenerativeModel('gemini-pro-vision')
-            except:
-                model = genai.GenerativeModel('gemini-pro')
+        # Konvertuojame PIL image į base64
+        buffered = io.BytesIO()
+        image.save(buffered, format="JPEG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
         
-        # Prompt'as su tiksliais reikalavimais
-        prompt = """Analyze this photo and identify the product (wooden blinds, roller blinds, pleated blinds, day-night blinds, roman blinds, or other window covering product).
+        # Prompt'as
+        prompt = """Analizuok šią nuotrauką ir atpažink produktą (medinės žaliuzės, roletai, plisuotos žaliuzės, roletai diena-naktis, romanetės, arba kitas langų uždengimo produktas).
 
-Generate IN LITHUANIAN language:
-1. HEADER: 1-2 words, MAX 25 characters (e.g., "Medinės Žaliuzės", "Roletai")
-2. 4 BULLET POINTS: each 1-3 words, MAX 20 characters each (e.g., "funkcionalus", "stilingas", "modernus", "kokybiskas")
+Sugeneruok LIETUVIŲ kalba:
+1. ANTRAŠTĖ: 1-2 žodžiai, MAX 25 raidės (pvz: "Medinės Žaliuzės", "Roletai")
+2. 4 BULLET PUNKTAI: kiekvienas 1-3 žodžiai, MAX 20 raidžių (pvz: "funkcionalus", "stilingas", "modernus", "kokybiškas")
 
-Answer ONLY in this format (no other words):
-ANTRASTE: [text]
-BULLET1: [text]
-BULLET2: [text]
-BULLET3: [text]
-BULLET4: [text]"""
+Atsakyk TIKTAI šiuo formatu (be jokių kitų žodžių):
+ANTRASTE: [tekstas]
+BULLET1: [tekstas]
+BULLET2: [tekstas]
+BULLET3: [tekstas]
+BULLET4: [tekstas]"""
         
-        # Siunčiame užklausą (Gemini priima PIL Image tiesiogiai)
-        response = model.generate_content([prompt, image])
+        # Siunčiame užklausą su GPT-4 Vision
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{img_base64}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=300
+        )
         
         # Parsimame atsakymą
-        text = response.text.strip()
-        st.info(f"🔍 Gemini atsakymas:\n{text}")  # Debug
+        text = response.choices[0].message.content.strip()
+        st.info(f"🔍 AI atsakymas:\n{text}")  # Debug
         lines = [line.strip() for line in text.split('\n') if line.strip()]
         
-        # Ištraukiame antraštę ir bullets (su ir be nosinės)
+        # Ištraukiame antraštę ir bullets
         header = None
         bullets = []
         
         for line in lines:
-            if line.startswith("ANTRASTE:") or line.startswith("ANTRAŠTĖ:") or line.startswith("HEADER:"):
+            if line.startswith("ANTRASTE:") or line.startswith("ANTRAŠTĖ:"):
                 header = line.split(":", 1)[1].strip() if ":" in line else ""
             elif line.startswith("BULLET"):
                 bullet_text = line.split(":", 1)[1].strip() if ":" in line else ""
@@ -943,16 +948,13 @@ BULLET4: [text]"""
         
         # Validacija
         if not header or len(bullets) != 4:
-            st.warning(f"⚠️ Gemini atsakymas netinkamas. Header: {header}, Bullets: {len(bullets)}")
+            st.warning(f"⚠️ AI atsakymas netinkamas. Header: {header}, Bullets: {len(bullets)}")
             return None, None
         
         return header, bullets
         
-    except ImportError:
-        st.error("❌ Įdiek google-generativeai: `pip install google-generativeai`")
-        return None, None
     except Exception as e:
-        st.error(f"❌ Gemini klaida: {str(e)}")
+        st.error(f"❌ OpenAI Vision klaida: {str(e)}")
         return None, None
 
 
@@ -2217,7 +2219,7 @@ if files_to_process:
         use_ai_text = st.checkbox(
             "🤖 Naudoti AI tekstui",
             value=False,
-            help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (Gemini Vision)",
+            help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (GPT-4 Vision)",
             key="use_ai_text_checkbox"
         )
         
