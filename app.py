@@ -3548,44 +3548,6 @@ if files_to_process:
                         """
                         
                         components.html(html_str, height=60)
-                        
-                        if len(cleaned_variants) > 1:
-                            with col_b:
-                                text_b64 = base64.b64encode(cleaned_variants[1].encode('utf-8')).decode('utf-8')
-                                st.markdown(f'''
-                                <button onclick="
-                                    const text = atob('{text_b64}');
-                                    navigator.clipboard.writeText(text).then(() => {{
-                                        this.innerHTML = '✅ OK';
-                                        this.style.backgroundColor = '#28a745';
-                                        setTimeout(() => {{
-                                            this.innerHTML = '🏡 Kopijuoti';
-                                            this.style.backgroundColor = '#0066cc';
-                                        }}, 1500);
-                                    }});
-                                " style="background:#0066cc;color:white;border:none;padding:8px;border-radius:5px;cursor:pointer;width:100%;">
-                                🏡 Kopijuoti
-                                </button>
-                                ''', unsafe_allow_html=True)
-                        
-                        if len(cleaned_variants) > 2:
-                            with col_c:
-                                text_b64 = base64.b64encode(cleaned_variants[2].encode('utf-8')).decode('utf-8')
-                                st.markdown(f'''
-                                <button onclick="
-                                    const text = atob('{text_b64}');
-                                    navigator.clipboard.writeText(text).then(() => {{
-                                        this.innerHTML = '✅ OK';
-                                        this.style.backgroundColor = '#28a745';
-                                        setTimeout(() => {{
-                                            this.innerHTML = '😄 Kopijuoti';
-                                            this.style.backgroundColor = '#0066cc';
-                                        }}, 1500);
-                                    }});
-                                " style="background:#0066cc;color:white;border:none;padding:8px;border-radius:5px;cursor:pointer;width:100%;">
-                                😄 Kopijuoti
-                                </button>
-                                ''', unsafe_allow_html=True)
                     else:
                         # Jei nėra variantų - paprastas copy
                         copy_button_id = f"copy_btn_{entry['id']}"
