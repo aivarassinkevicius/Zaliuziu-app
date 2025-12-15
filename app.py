@@ -1551,9 +1551,10 @@ def create_4photo_magazine_layout(photo1, photo2, photo3, photo4, header_text, b
     # === BULLET PUNKTAI PO NUOTRAUKOMIS ===
     font_bullet = None
     bullet_fonts = [
-        "C:/Windows/Fonts/arial.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+        "C:/Windows/Fonts/georgia.ttf",  # Windows Serif (kaip Magazine Style)
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",  # Linux Serif
+        "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",  # Linux Serif alt
+        "C:/Windows/Fonts/times.ttf",  # Windows Times New Roman
     ]
     for font_path in bullet_fonts:
         try:
