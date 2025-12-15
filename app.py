@@ -1231,8 +1231,24 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
     
     draw = ImageDraw.Draw(canvas)
     
-    # Spalvos
-    text_color = (43, 43, 43)  # #2B2B2B
+    # Automatinė teksto spalva pagal fono šviesumą
+    def get_text_color_for_background(canvas_image):
+        """Apskaičiuoja optimalią teksto spalvą pagal fono šviesumą"""
+        # Paimame sample iš dešinės pusės, kur bus tekstas (860-1220, 120-600)
+        text_area = canvas_image.crop((860, 120, 1220, 600))
+        # Konvertuojame į RGB
+        if text_area.mode != 'RGB':
+            text_area = text_area.convert('RGB')
+        # Apskaičiuojame average brightness
+        pixels = list(text_area.getdata())
+        avg_brightness = sum(r * 0.299 + g * 0.587 + b * 0.114 for r, g, b in pixels) / len(pixels)
+        # Jei fonas šviesus (>128) - tamsus tekstas, jei tamsus - baltas tekstas
+        if avg_brightness > 128:
+            return (43, 43, 43)  # Tamsus tekstas
+        else:
+            return (255, 255, 255)  # Baltas tekstas
+    
+    text_color = get_text_color_for_background(canvas)
     
     # === LOGO (VIETA: 40, 32) ===
     if logo_path and os.path.exists(logo_path):
