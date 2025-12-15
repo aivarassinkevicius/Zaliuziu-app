@@ -2248,6 +2248,12 @@ if files_to_process:
                 height=120,
                 help="Kiekviena eilutė = 1 punktas. Bus rodomi 4 punktai su apskritimais."
             )
+            
+            # Debug info
+            if st.session_state.get('ai_header'):
+                with st.expander("🔍 DEBUG: AI Generated teksta"):
+                    st.write(f"**Antraštė:** {st.session_state.get('ai_header')}")
+                    st.write(f"**Bullets:** {st.session_state.get('ai_bullets')}")
 
         # Nuotraukų efektai
         st.markdown("---")
@@ -2307,50 +2313,20 @@ if files_to_process:
                             st.error("❌ AI nepavyko sugeneruoti tekstų. Bandyk dar kartą arba įvesk rankiniu būdu.")
 
         # Custom prompt text area už stulpelių (kai pažymėta)
-        custom_prompt = st.session_state.get('last_bg_prompt', '')  # Išsaugom iš session_state
-        
+        custom_prompt = ""
         if use_custom_background:
             custom_prompt = st.text_area(
                 "Aprašykite norimą foną:",
-                value=st.session_state.get('last_bg_prompt', ''),
+                value="",
                 placeholder="Pvz: medžiai rugiai pieva, kviečiai ir medžio tekstūra, jūra saulėlydis...",
                 help="AI (DALL-E 3) sugeneruos foną pagal šį aprašymą",
                 height=80,
-                key="custom_bg_prompt_input"
             )
 
             if custom_prompt and custom_prompt.strip():
-                # Rodyti cached foną
-                if st.session_state.get('cached_custom_bg') and st.session_state.get('last_bg_prompt') == custom_prompt:
-                    st.success("✅ Naudojamas išsaugotas fonas (nesikeis keičiant kitus nustatymus)")
-                    col_clear1, col_clear2 = st.columns([3, 1])
-                    with col_clear2:
-                        if st.button("🗑️ Išvalyti"):
-                            del st.session_state['cached_custom_bg']
-                            del st.session_state['last_bg_prompt']
-                            st.rerun()
-                
-                # Generavimo mygtukas VISADA rodomas
-                col_gen1, col_gen2 = st.columns([3, 1])
-                with col_gen1:
-                    st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
-                with col_gen2:
-                    if st.button("🎨 Generuoti"):
-                        with st.spinner("Generuojama..."):
-                            try:
-                                bg = generate_themed_background(None, 1327, 768, custom_prompt)
-                                if bg:
-                                    st.session_state['cached_custom_bg'] = bg
-                                    st.session_state['last_bg_prompt'] = custom_prompt
-                                    st.success("✅ Fonas sugeneruotas!")
-                                    st.rerun()
-                                else:
-                                    st.error("❌ Nepavyko sugeneruoti fono. Patikrink API key.")
-                            except Exception as e:
-                                st.error(f"❌ Klaida: {str(e)}")
-        
-        # Jei yra cached fonas bet varnelė atjungta - vis tiek naudojam cached foną
-        use_themed_bg = use_custom_background or (st.session_state.get('cached_custom_bg') is not None)
+                st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
+
+        use_themed_bg = use_custom_background
         
         # Nustatome logo rodymo logiką
         logo_white_bg = False
@@ -2415,24 +2391,15 @@ if files_to_process:
                         canvas_width, canvas_height = 1200, 630
 
                     # Sukuriame foną (AI arba gradientą)
-                    cached_bg = None  # Magazine Style naudos šį
-                    
                     if use_themed_bg:
-                        # Patikriname, ar yra cached custom fonas
-                        if st.session_state.get('cached_custom_bg'):
-                            cached_bg = st.session_state['cached_custom_bg']
-                            # Resize į reikiamą dydį
-                            collage = cached_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
+                        themed_bg = generate_themed_background(season, canvas_width, canvas_height, custom_prompt)
+                        if themed_bg:
+                            collage = themed_bg
                         else:
-                            # Jei nėra cached arba naudojamas sezoninis fonas
-                            themed_bg = generate_themed_background(season, canvas_width, canvas_height, custom_prompt)
-                            if themed_bg:
-                                collage = themed_bg
-                            else:
-                                # Fallback į gradientą
-                                collage = create_gradient_background(
-                                    canvas_width, canvas_height, (240, 245, 250), (250, 250, 255)
-                                )
+                            # Fallback į gradientą
+                            collage = create_gradient_background(
+                                canvas_width, canvas_height, (240, 245, 250), (250, 250, 255)
+                            )
                     else:
                         collage = create_gradient_background(
                             canvas_width, canvas_height, (245, 245, 245), (255, 255, 255)
@@ -2459,12 +2426,6 @@ if files_to_process:
                         photo1 = edited_images[0]
                         photo2 = edited_images[1]
                         
-                        # Nustatome Magazine Style foną (1327x768)
-                        magazine_bg = None
-                        if use_themed_bg and st.session_state.get('cached_custom_bg'):
-                            # Naudojame cached custom foną
-                            magazine_bg = st.session_state['cached_custom_bg']
-                        
                         collage = create_magazine_layout(
                             photo1=photo1,
                             photo2=photo2,
@@ -2477,7 +2438,7 @@ if files_to_process:
                             enable_rounded_corners=enable_rounded_corners,
                             enable_shadow_effect=enable_shadow_effect,
                             shadow_strength=shadow_strength,
-                            background=magazine_bg  # Cached AI fonas (1327x768)
+                            background=collage if use_themed_bg else None  # AI fonas
                         )
                         collage = collage.convert("RGBA")
 
