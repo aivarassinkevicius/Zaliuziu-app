@@ -3477,10 +3477,26 @@ if files_to_process:
                     st.markdown(
                         f"{status_icon} **{version_text}** | {entry['timestamp']} | {entry['season']}{holiday_text}, {entry['num_photos']} nuotr."
                     )
-                    preview = (
-                        entry["description"][:150] + "..." if len(entry["description"]) > 150 else entry["description"]
-                    )
-                    st.text(preview)
+                    
+                    # Padalinti tekstą į variantus
+                    full_text = entry["description"]
+                    if "---" in full_text:
+                        variants = [v.strip() for v in full_text.split("---") if v.strip()]
+                        # Rodome trumpą preview kiekvieno varianto
+                        st.markdown("**💼 Marketinginis:**")
+                        st.text(variants[0][:100] + "..." if len(variants[0]) > 100 else variants[0])
+                        
+                        if len(variants) > 1:
+                            st.markdown("**🏡 Draugiškas:**")
+                            st.text(variants[1][:100] + "..." if len(variants[1]) > 100 else variants[1])
+                        
+                        if len(variants) > 2:
+                            st.markdown("**😄 Su humoru:**")
+                            st.text(variants[2][:100] + "..." if len(variants[2]) > 100 else variants[2])
+                    else:
+                        # Jei nėra variantų - rodome kaip anksčiau
+                        preview = full_text[:150] + "..." if len(full_text) > 150 else full_text
+                        st.text(preview)
 
                 with col2:
                     if st.button("📋 Naudoti", key=f"use_history_{entry['id']}"):
