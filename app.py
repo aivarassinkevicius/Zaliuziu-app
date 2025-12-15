@@ -2463,23 +2463,8 @@ if files_to_process:
 
     st.info(f"✨ Automatinė tema: **{auto_theme}** (pagal jūsų nustatymus kairėje)")
 
-    # Patikriname ar pakanka failų (priklauso nuo layout tipo)
-    layout_options = [
-        "📰 Magazine Style (2 nuotraukos + bullet list)",
-        "📸 Simple Style (4 nuotraukos + bullet list)",
-    ]
-    
-    # Leidžiame pasirinkti layout jau čia, kad žinotume minimum requirements
-    selected_layout_preview = st.selectbox(
-        "🔍 Preview layout'o (minimum nuotraukų):",
-        layout_options,
-        help="Pasirinkite layout'ą kad matytumėte kiek nuotraukų reikia",
-        key="layout_preview_selector"
-    )
-    
-    min_photos_required = 4 if "Simple Style" in selected_layout_preview else 2
-    
-    if len(files_to_process) >= min_photos_required:
+    # Patikriname ar yra bent 2 nuotraukos (minimum bet kokiam layout'ui)
+    if len(files_to_process) >= 2:
         # Social media formato pasirinkimas
         social_format = st.selectbox(
                 "📱 Socialinio tinklo formatas:",
@@ -2502,6 +2487,12 @@ if files_to_process:
         collage_layout = st.selectbox(
             "Pasirinkite išdėstymą:", layout_options, help="Pasirinkite layout'ą su 2 arba 4 nuotraukomis"
         )
+
+        # Patikriname ar užtenka nuotraukų pasirinktam layout'ui
+        min_photos_needed = 4 if "Simple Style" in collage_layout else 2
+        if len(files_to_process) < min_photos_needed:
+            st.error(f"⚠️ {collage_layout} reikia bent {min_photos_needed} nuotraukų! (Dabar įkelta: {len(files_to_process)})")
+            st.stop()
 
         # 📰 Magazine Style nustatymai (abu layoutai naudoja tuos pačius settings)
         magazine_header = ""
@@ -2768,11 +2759,7 @@ if files_to_process:
 
                     st.error(traceback.format_exc())
     else:
-        # Skirtingi minimum reikalavimai skirtingiems layoutams
-        if "Simple Style" in selected_layout_preview:
-            st.warning(f"⚠️ Simple Style layout reikia bent 4 nuotraukų! (Dabar įkelta: {len(files_to_process)})")
-        else:
-            st.warning(f"⚠️ Magazine Style layout reikia bent 2 nuotraukų! (Dabar įkelta: {len(files_to_process)})")
+        st.warning(f"⚠️ Įkelkite bent 2 nuotraukas kolažui sukurti! (Dabar įkelta: {len(files_to_process)})")
 
     # Rodyti collage rezultatą (jei sukurtas)
     if "collage_result" in st.session_state and st.session_state.collage_result:
