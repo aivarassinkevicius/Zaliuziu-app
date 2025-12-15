@@ -897,36 +897,45 @@ def generate_text_with_gemini(image):
         
         # Konfigūruojame Gemini
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        
+        # Bandome kelis modelius
+        try:
+            model = genai.GenerativeModel('gemini-1.5-pro')
+        except:
+            try:
+                model = genai.GenerativeModel('gemini-pro-vision')
+            except:
+                model = genai.GenerativeModel('gemini-pro')
         
         # Prompt'as su tiksliais reikalavimais
-        prompt = """Analizuok šią nuotrauką ir atpažink produktą (medinės žaliuzės, roletai, plisuotos žaliuzės, roletai diena-naktis, romanetės, arba kitas langų uždengimo produktas).
+        prompt = """Analyze this photo and identify the product (wooden blinds, roller blinds, pleated blinds, day-night blinds, roman blinds, or other window covering product).
 
-Sugeneruok:
-1. ANTRAŠTĖ: 1-2 žodžiai, MAX 25 raidės (pvz: "Roletai Diena-Naktis", "Medinės Žaliuzės")
-2. 4 BULLET PUNKTAI: kiekvienas 1-2 žodžiai, MAX 20 raidžių kiekvienam (pvz: "funkcionalūs", "sulaikantys šviesą", "stilingi", "modernus")
+Generate IN LITHUANIAN language:
+1. HEADER: 1-2 words, MAX 25 characters (e.g., "Medinės Žaliuzės", "Roletai")
+2. 4 BULLET POINTS: each 1-3 words, MAX 20 characters each (e.g., "funkcionalus", "stilingas", "modernus", "kokybiskas")
 
-Atsakyk TIKTAI šiuo formatu (be jokių kitų žodžių):
-ANTRAŠTĖ: [tekstas]
-BULLET1: [tekstas]
-BULLET2: [tekstas]
-BULLET3: [tekstas]
-BULLET4: [tekstas]"""
+Answer ONLY in this format (no other words):
+ANTRASTE: [text]
+BULLET1: [text]
+BULLET2: [text]
+BULLET3: [text]
+BULLET4: [text]"""
         
         # Siunčiame užklausą (Gemini priima PIL Image tiesiogiai)
         response = model.generate_content([prompt, image])
         
         # Parsimame atsakymą
         text = response.text.strip()
+        st.info(f"🔍 Gemini atsakymas:\n{text}")  # Debug
         lines = [line.strip() for line in text.split('\n') if line.strip()]
         
-        # Ištraukiame antraštę ir bullets
+        # Ištraukiame antraštę ir bullets (su ir be nosinės)
         header = None
         bullets = []
         
         for line in lines:
-            if line.startswith("ANTRAŠTĖ:"):
-                header = line.replace("ANTRAŠTĖ:", "").strip()
+            if line.startswith("ANTRASTE:") or line.startswith("ANTRAŠTĖ:") or line.startswith("HEADER:"):
+                header = line.split(":", 1)[1].strip() if ":" in line else ""
             elif line.startswith("BULLET"):
                 bullet_text = line.split(":", 1)[1].strip() if ":" in line else ""
                 if bullet_text:
