@@ -2180,6 +2180,9 @@ if files_to_process:
 
     st.info(f"✨ Automatinė tema: **{auto_theme}** (pagal jūsų nustatymus kairėje)")
 
+    # Default reikšmės (jei neapibrėžtos)
+    use_ai_text = False
+
     if len(files_to_process) >= 2:
         # Social media formato pasirinkimas
         social_format = st.selectbox(
