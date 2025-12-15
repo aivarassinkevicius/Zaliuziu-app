@@ -1994,13 +1994,13 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
 
 def create_hero_diagonal_split_layout(photo1, photo2, header_text, description_text):
     """
-    Hero Diagonal Split Gallery Layout - pixel-perfect implementacija
+    Hero Diagonal Split Gallery Layout - analogiškas Magazine Style
     
     Specifikacija:
     - Canvas: 1200x675px (16:9)
-    - Kairė: 2 nuotraukos su įstrižu pjūviu (-12°)
-    - Dešinė: gradientas (#1E2F47 → #0F1E33) + tekstas
-    - Border radius: 16px
+    - Kairė: 2 nuotraukos (originali proporcija, neperpjaunamos)
+    - Dešinė: gradientas (#1E2F47 → #0F1E33) su įstriža kairiąja puse + tekstas
+    - Fonas uždengia nuotraukas įstriža linija
     
     Args:
         photo1: PIL Image (viršutinė nuotrauka)
@@ -2018,81 +2018,98 @@ def create_hero_diagonal_split_layout(photo1, photo2, header_text, description_t
     canvas_width = 1200
     canvas_height = 675
     
-    # Sukuriame canvas
-    canvas = Image.new('RGB', (canvas_width, canvas_height), (15, 30, 51))  # #0F1E33
+    # Sukuriame baltą foną
+    canvas = Image.new('RGB', (canvas_width, canvas_height), (255, 255, 255))
     
-    # === GRADIENTO FONAS (dešinė pusė) ===
-    gradient = Image.new('RGB', (canvas_width, canvas_height), (15, 30, 51))
+    # === KAIRĖ ZONA - NUOTRAUKOS (be pjaustymo!) ===
+    # Nuotraukų parametrai - panašūs į Magazine Style
+    photo_width = 300
+    photo_height = 280
+    gap = 20
+    
+    # Paruošiame nuotraukas - RESIZE BE CROP, išsaugant proporcijas
+    img1 = photo1.copy()
+    img1.thumbnail((photo_width, photo_height), Image.Resampling.LANCZOS)
+    
+    img2 = photo2.copy()
+    img2.thumbnail((photo_width, photo_height), Image.Resampling.LANCZOS)
+    
+    # Įdedame nuotraukas į canvas (kairėje pusėje, su tarpais)
+    photo_x = 30
+    photo1_y = 50
+    photo2_y = photo1_y + photo_height + gap
+    
+    canvas.paste(img1, (photo_x, photo1_y))
+    canvas.paste(img2, (photo_x, photo2_y))
+    
+    # === DEŠINĖ ZONA - GRADIENTAS SU ĮSTRIŽA KAIRIĄJA PUSE ===
+    # Sukuriame gradiento sluoksnį
+    gradient = Image.new('RGBA', (canvas_width, canvas_height), (0, 0, 0, 0))
     gradient_draw = ImageDraw.Draw(gradient)
     
-    # Gradientas nuo viršaus-kairės į apačią-dešinę
+    # Gradientas nuo viršaus į apačią
     for y in range(canvas_height):
-        # Linear interpolation tarp #1E2F47 ir #0F1E33
         ratio = y / canvas_height
         r = int(30 * (1 - ratio) + 15 * ratio)
         g = int(47 * (1 - ratio) + 30 * ratio)
         b = int(71 * (1 - ratio) + 51 * ratio)
-        gradient_draw.line([(0, y), (canvas_width, y)], fill=(r, g, b))
+        gradient_draw.line([(0, y), (canvas_width, y)], fill=(r, g, b, 255))
     
-    canvas = gradient
-    
-    # === KAIRĖ ZONA - NUOTRAUKOS SU ĮSTRIŽU PJŪVIU ===
-    # Nuotraukų parametrai
-    photo_width = 520
-    photo_height = 300
-    gap = 40
-    
-    # Paruošiame nuotraukas
-    img1 = photo1.copy().resize((photo_width, photo_height), Image.Resampling.LANCZOS)
-    img2 = photo2.copy().resize((photo_width, photo_height), Image.Resampling.LANCZOS)
-    
-    # Sukuriame mask su įstrižu pjūviu (trapecija)
-    # polygon(0 0, 100% 0, 85% 100%, 0 100%)
-    mask = Image.new('L', (photo_width, photo_height), 0)
+    # Sukuriame mask su įstriža kairiąja puse (polygon)
+    # Įstriža linija eina nuo viršaus (apie 380px) į apačią (apie 280px)
+    mask = Image.new('L', (canvas_width, canvas_height), 0)
     mask_draw = ImageDraw.Draw(mask)
     
-    # Trapecijos taškai
-    points = [
-        (0, 0),                          # viršus kairė
-        (photo_width, 0),                # viršus dešinė
-        (int(photo_width * 0.85), photo_height),  # apačia dešinė (85%)
-        (0, photo_height)                # apačia kairė
+    # Polygon: prasideda viršuje dešinėje, eina žemyn įstrižai kairėn, tada aplink
+    diagonal_points = [
+        (380, 0),              # viršus (įstriža pradžia)
+        (canvas_width, 0),     # viršus dešinė
+        (canvas_width, canvas_height),  # apačia dešinė
+        (280, canvas_height),  # apačia (įstriža pabaiga)
     ]
-    mask_draw.polygon(points, fill=255)
+    mask_draw.polygon(diagonal_points, fill=255)
     
-    # Pritaikome mask abiem nuotraukoms
-    img1.putalpha(mask)
-    img2.putalpha(mask)
+    # Pritaikome mask gradientui
+    gradient.putalpha(mask)
     
-    # Įdedame nuotraukas į canvas
-    canvas.paste(img1, (0, 0), img1 if img1.mode == 'RGBA' else None)
-    canvas.paste(img2, (0, photo_height + gap), img2 if img2.mode == 'RGBA' else None)
+    # Užklijuojame gradientą ant canvas (uždengia dalį nuotraukų)
+    canvas = canvas.convert('RGBA')
+    canvas.paste(gradient, (0, 0), gradient)
     
-    # === DEŠINĖ ZONA - TEKSTAS ===
+    # === TEKSTAS (ant gradiento) ===
     draw = ImageDraw.Draw(canvas)
     
     # Tekstinio konteinerio pozicija
-    text_x = 660
-    text_y = 190
+    text_x = 480
+    text_y = 200
     
-    # Šriftai
+    # Šriftai su cross-platform fallback
     try:
         font_header = ImageFont.truetype("arial.ttf", 42)
+    except:
+        try:
+            font_header = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 42)
+        except:
+            font_header = ImageFont.load_default()
+    
+    try:
         font_desc = ImageFont.truetype("arial.ttf", 16)
     except:
-        font_header = ImageFont.load_default()
-        font_desc = ImageFont.load_default()
+        try:
+            font_desc = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+        except:
+            font_desc = ImageFont.load_default()
     
     # Antraštė
     header_color = (255, 255, 255)  # #FFFFFF
     draw.text((text_x, text_y), header_text, fill=header_color, font=font_header)
     
-    # Aprašymas (18px žemiau antraštės)
-    desc_y = text_y + 60  # 42px + 18px margin
+    # Aprašymas (60px žemiau antraštės)
+    desc_y = text_y + 60
     desc_color = (230, 236, 243)  # #E6ECF3
     
     # Text wrapping aprašymui (max 360px plotis)
-    max_width = 360
+    max_width = 400
     words = description_text.split()
     lines = []
     current_line = []
@@ -2115,20 +2132,10 @@ def create_hero_diagonal_split_layout(photo1, photo2, header_text, description_t
     for i, line in enumerate(lines):
         draw.text((text_x, desc_y + i * line_height), line, fill=desc_color, font=font_desc)
     
-    # === ROUNDED CORNERS ===
-    # Sukuriame rounded mask
-    rounded_mask = Image.new('L', (canvas_width, canvas_height), 0)
-    rounded_draw = ImageDraw.Draw(rounded_mask)
-    rounded_draw.rounded_rectangle([(0, 0), (canvas_width, canvas_height)], radius=16, fill=255)
+    # Konvertuojame atgal į RGB
+    canvas = canvas.convert('RGB')
     
-    # Pritaikome rounded corners
-    canvas.putalpha(rounded_mask)
-    
-    # Grąžiname su baltu fonu (nes rounded corners = alpha)
-    final = Image.new('RGB', (canvas_width, canvas_height), (255, 255, 255))
-    final.paste(canvas, (0, 0), canvas if canvas.mode == 'RGBA' else None)
-    
-    return final
+    return canvas
 
 
 def create_modern_landing_html(product_image, text_content="", phone_number="+370 (606) 50 414", logo_path="assets/logo.png", style="Minimalist"):
