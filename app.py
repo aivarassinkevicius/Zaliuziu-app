@@ -3518,12 +3518,13 @@ if files_to_process:
                         cleaned_variants = [clean_variant(v) for v in variants]
                         entry_id = entry['id']
                         
-                        # JSON su visais tekstais
-                        texts_json = json.dumps(cleaned_variants)
-                        
                         # Generuojame HTML atskirai nuo JS
                         radio_disabled_2 = "" if len(cleaned_variants) > 1 else "disabled"
                         radio_disabled_3 = "" if len(cleaned_variants) > 2 else "disabled"
+                        
+                        # Perduodame tekstus kaip data atributą
+                        import html as html_module
+                        texts_json = html_module.escape(json.dumps(cleaned_variants))
                         
                         html_code = f"""
                         <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -3538,26 +3539,31 @@ if files_to_process:
                                     <input type="radio" name="variant_{entry_id}" value="2" {radio_disabled_3} style="margin-right: 5px;">😄
                                 </label>
                             </div>
-                            <button id="btn_{entry_id}" style="background-color: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
+                            <button id="btn_{entry_id}" data-texts="{texts_json}" style="background-color: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
                                 📋 Kopijuoti
                             </button>
                         </div>
                         <script>
-                        document.getElementById('btn_{entry_id}').addEventListener('click', function() {{
-                            const texts = {texts_json};
-                            const selected = document.querySelector('input[name="variant_{entry_id}"]:checked');
-                            const idx = parseInt(selected.value);
-                            const text = texts[idx];
-                            navigator.clipboard.writeText(text).then(() => {{
-                                const btn = document.getElementById('btn_{entry_id}');
-                                btn.innerHTML = '✅ Nukopijuota!';
-                                btn.style.backgroundColor = '#28a745';
-                                setTimeout(() => {{
-                                    btn.innerHTML = '📋 Kopijuoti';
-                                    btn.style.backgroundColor = '#0066cc';
-                                }}, 1500);
+                        (function() {{
+                            const btn = document.getElementById('btn_{entry_id}');
+                            btn.addEventListener('click', function() {{
+                                const texts = JSON.parse(this.getAttribute('data-texts'));
+                                const selected = document.querySelector('input[name="variant_{entry_id}"]:checked');
+                                const idx = parseInt(selected.value);
+                                const text = texts[idx];
+                                
+                                navigator.clipboard.writeText(text).then(() => {{
+                                    btn.innerHTML = '✅ Nukopijuota!';
+                                    btn.style.backgroundColor = '#28a745';
+                                    setTimeout(() => {{
+                                        btn.innerHTML = '📋 Kopijuoti';
+                                        btn.style.backgroundColor = '#0066cc';
+                                    }}, 1500);
+                                }}).catch(err => {{
+                                    alert('Klaida kopijuojant: ' + err);
+                                }});
                             }});
-                        }});
+                        }})();
                         </script>
                         """
                         st.markdown(html_code, unsafe_allow_html=True)
