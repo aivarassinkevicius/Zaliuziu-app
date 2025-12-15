@@ -2462,7 +2462,7 @@ if files_to_process:
     # Patikriname ar pakanka failų (priklauso nuo layout tipo)
     layout_options = [
         "📰 Magazine Style (2 nuotraukos + bullet list)",
-        "📸 4 Photo Magazine (4 nuotraukos + bullet list)",
+        "📸 Simple Style (4 nuotraukos + bullet list)",
     ]
     
     # Leidžiame pasirinkti layout jau čia, kad žinotume minimum requirements
@@ -2473,7 +2473,7 @@ if files_to_process:
         key="layout_preview_selector"
     )
     
-    min_photos_required = 4 if "4 Photo" in selected_layout_preview else 2
+    min_photos_required = 4 if "Simple Style" in selected_layout_preview else 2
     
     if len(files_to_process) >= min_photos_required:
         # Social media formato pasirinkimas
