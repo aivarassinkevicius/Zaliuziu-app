@@ -3813,7 +3813,18 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
     # Paruošiame visus variantus
     cleaned_variants = [clean_final_variant(v) for v in variants]
     
-    # HTML su components
+    # Rodome visus variantus su text_area
+    variant_labels = ["💼 Marketinginis", "🏡 Draugiškas", "😄 Su humoru"]
+    for i, variant_text in enumerate(cleaned_variants):
+        st.text_area(
+            variant_labels[i],
+            value=variant_text,
+            height=150,
+            key=f"final_variant_{i}",
+            disabled=True
+        )
+    
+    # HTML su components - kopijuoti mygtukai
     import streamlit.components.v1 as components
     texts_json = json.dumps(cleaned_variants)
     
