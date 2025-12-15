@@ -3518,28 +3518,36 @@ if files_to_process:
                         cleaned_variants = [clean_variant(v) for v in variants]
                         entry_id = entry['id']
                         
-                        # Paprastas Streamlit button su session state
-                        copy_key = f"copy_variant_{entry_id}"
+                        # HTML su components - garantuotai veikiantis būdas
+                        import streamlit.components.v1 as components
                         
-                        col_a, col_b, col_c = st.columns(3)
+                        texts_json = json.dumps(cleaned_variants)
                         
-                        with col_a:
-                            if st.button("💼 Kopijuoti", key=f"btn1_{entry_id}"):
-                                st.session_state[copy_key] = cleaned_variants[0]
+                        html_str = f"""
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <button onclick="copyText{entry_id}(0)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;">
+                                💼 Kopijuoti
+                            </button>
+                            <button onclick="copyText{entry_id}(1)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;" {'disabled' if len(cleaned_variants) < 2 else ''}>
+                                🏡 Kopijuoti
+                            </button>
+                            <button onclick="copyText{entry_id}(2)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;" {'disabled' if len(cleaned_variants) < 3 else ''}>
+                                😄 Kopijuoti
+                            </button>
+                        </div>
+                        <script>
+                        const texts{entry_id} = {texts_json};
+                        function copyText{entry_id}(idx) {{
+                            navigator.clipboard.writeText(texts{entry_id}[idx]).then(() => {{
+                                alert('✅ Tekstas nukopijuotas!');
+                            }}).catch(err => {{
+                                alert('Klaida: ' + err);
+                            }});
+                        }}
+                        </script>
+                        """
                         
-                        if len(cleaned_variants) > 1:
-                            with col_b:
-                                if st.button("🏡 Kopijuoti", key=f"btn2_{entry_id}"):
-                                    st.session_state[copy_key] = cleaned_variants[1]
-                        
-                        if len(cleaned_variants) > 2:
-                            with col_c:
-                                if st.button("😄 Kopijuoti", key=f"btn3_{entry_id}"):
-                                    st.session_state[copy_key] = cleaned_variants[2]
-                        
-                        # Jei paspaudė - rodo tekstą
-                        if copy_key in st.session_state:
-                            st.code(st.session_state[copy_key], language=None)
+                        components.html(html_str, height=60)
                         
                         if len(cleaned_variants) > 1:
                             with col_b:
