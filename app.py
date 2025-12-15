@@ -3525,23 +3525,28 @@ if files_to_process:
                         
                         html_str = f"""
                         <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                            <button onclick="copyText{entry_id}(0)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;">
+                            <button id="btn{entry_id}_0" onclick="copyText{entry_id}(0)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;">
                                 💼 Kopijuoti
                             </button>
-                            <button onclick="copyText{entry_id}(1)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;" {'disabled' if len(cleaned_variants) < 2 else ''}>
+                            <button id="btn{entry_id}_1" onclick="copyText{entry_id}(1)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;" {'disabled' if len(cleaned_variants) < 2 else ''}>
                                 🏡 Kopijuoti
                             </button>
-                            <button onclick="copyText{entry_id}(2)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;" {'disabled' if len(cleaned_variants) < 3 else ''}>
+                            <button id="btn{entry_id}_2" onclick="copyText{entry_id}(2)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;" {'disabled' if len(cleaned_variants) < 3 else ''}>
                                 😄 Kopijuoti
                             </button>
                         </div>
                         <script>
                         const texts{entry_id} = {texts_json};
                         function copyText{entry_id}(idx) {{
+                            const btn = document.getElementById('btn{entry_id}_' + idx);
                             navigator.clipboard.writeText(texts{entry_id}[idx]).then(() => {{
-                                alert('✅ Tekstas nukopijuotas!');
-                            }}).catch(err => {{
-                                alert('Klaida: ' + err);
+                                btn.style.backgroundColor = '#28a745';
+                                btn.innerHTML = '✅ Nukopijuota!';
+                                setTimeout(() => {{
+                                    btn.style.backgroundColor = '#0066cc';
+                                    const labels = ['💼 Kopijuoti', '🏡 Kopijuoti', '😄 Kopijuoti'];
+                                    btn.innerHTML = labels[idx];
+                                }}, 1500);
                             }});
                         }}
                         </script>
