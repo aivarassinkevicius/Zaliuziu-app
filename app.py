@@ -872,6 +872,86 @@ def html_to_image(html_string, width=1920, height=1080):
             os.unlink(temp_html_path)
 
 
+def generate_text_with_gemini(image):
+    """
+    Generuoja antraštę ir bullet punktus naudojant Google Gemini Vision API
+    
+    Args:
+        image: PIL Image objektas
+        
+    Returns:
+        tuple: (header_text, bullets_list) arba (None, None) jei klaida
+    """
+    try:
+        import google.generativeai as genai
+        
+        # Gauname API key iš environment
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            # Bandome gauti iš Streamlit secrets
+            try:
+                api_key = st.secrets["GEMINI_API_KEY"]
+            except:
+                st.error("❌ GEMINI_API_KEY nerastas nei .env, nei Streamlit secrets")
+                return None, None
+        
+        # Konfigūruojame Gemini
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Konvertuojame PIL image į bytes
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format='JPEG')
+        img_byte_arr = img_byte_arr.getvalue()
+        
+        # Prompt'as su tiksliais reikalavimais
+        prompt = """Analizuok šią nuotrauką ir atpažink produktą (medinės žaliuzės, roletai, plisuotos žaliuzės, roletai diena-naktis, romanetės, arba kitas langų uždengimo produktas).
+
+Sugeneruok:
+1. ANTRAŠTĖ: 1-2 žodžiai, MAX 25 raidės (pvz: "Roletai Diena-Naktis", "Medinės Žaliuzės")
+2. 4 BULLET PUNKTAI: kiekvienas 1-2 žodžiai, MAX 20 raidžių kiekvienam (pvz: "funkcionalūs", "sulaikantys šviesą", "stilingi", "modernus")
+
+Atsakyk TIKTAI šiuo formatu (be jokių kitų žodžių):
+ANTRAŠTĖ: [tekstas]
+BULLET1: [tekstas]
+BULLET2: [tekstas]
+BULLET3: [tekstas]
+BULLET4: [tekstas]"""
+        
+        # Siunčiame užklausą
+        response = model.generate_content([prompt, {"mime_type": "image/jpeg", "data": img_byte_arr}])
+        
+        # Parsimame atsakymą
+        text = response.text.strip()
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        
+        # Ištraukiame antraštę ir bullets
+        header = None
+        bullets = []
+        
+        for line in lines:
+            if line.startswith("ANTRAŠTĖ:"):
+                header = line.replace("ANTRAŠTĖ:", "").strip()
+            elif line.startswith("BULLET"):
+                bullet_text = line.split(":", 1)[1].strip() if ":" in line else ""
+                if bullet_text:
+                    bullets.append(bullet_text)
+        
+        # Validacija
+        if not header or len(bullets) != 4:
+            st.warning(f"⚠️ Gemini atsakymas netinkamas. Header: {header}, Bullets: {len(bullets)}")
+            return None, None
+        
+        return header, bullets
+        
+    except ImportError:
+        st.error("❌ Įdiek google-generativeai: `pip install google-generativeai`")
+        return None, None
+    except Exception as e:
+        st.error(f"❌ Gemini klaida: {str(e)}")
+        return None, None
+
+
 def generate_themed_background(season, canvas_width, canvas_height, custom_prompt=""):
     """Generuoja tematinį foną pagal sezoną arba custom prompt naudojant AI (DALL-E)"""
     try:
