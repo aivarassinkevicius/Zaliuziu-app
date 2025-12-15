@@ -2202,6 +2202,13 @@ if files_to_process:
         collage_layout = st.selectbox(
             "Pasirinkite išdėstymą:", layout_options, help="Magazine Style - 2 nuotraukos + antraštė + bullet list"
         )
+        
+        # AI tekstų generavimas (prieš Magazine Style)
+        use_ai_text = st.checkbox(
+            "🤖 Naudoti AI tekstui",
+            value=False,
+            help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (Gemini Vision)",
+        )
 
         # 📰 Magazine Style nustatymai
         magazine_header = ""
@@ -2278,13 +2285,6 @@ if files_to_process:
                 "🎨 Naudoti Custom AI foną",
                 value=False,
                 help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą",
-            )
-            
-            # AI tekstų generavimas (po custom AI fono)
-            use_ai_text = st.checkbox(
-                "🤖 Naudoti AI tekstui",
-                value=False,
-                help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (Gemini Vision)",
             )
 
         # Custom prompt text area už stulpelių (kai pažymėta)
