@@ -3517,31 +3517,18 @@ if files_to_process:
                         # Paruošiame visus variantus JavaScript
                         cleaned_variants = [clean_variant(v) for v in variants]
                         
-                        # Sukuriame JavaScript array su visais variantais
-                        js_array_parts = []
-                        for v in cleaned_variants:
-                            js_text = v.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$').replace('\n', '\\n').replace('\r', '').replace('"', '\\"')
-                            js_array_parts.append(f'"{js_text}"')
-                        
-                        js_array_string = ', '.join(js_array_parts)
+                        # Naudojame json.dumps - saugus ir teisingas būdas
+                        js_array_string = json.dumps(cleaned_variants)
                         
                         # HTML radio buttons + copy mygtukas
                         entry_id = entry['id']
-                        radio_html = f"""
-                        <div style="margin-bottom: 10px;">
-                            <input type="radio" id="v1_{entry_id}" name="variant_{entry_id}" value="0" checked>
-                            <label for="v1_{entry_id}">💼</label>
-                            
-                            <input type="radio" id="v2_{entry_id}" name="variant_{entry_id}" value="1" {"" if len(cleaned_variants) > 1 else "disabled"}>
-                            <label for="v2_{entry_id}">🏡</label>
-                            
-                            <input type="radio" id="v3_{entry_id}" name="variant_{entry_id}" value="2" {"" if len(cleaned_variants) > 2 else "disabled"}>
-                            <label for="v3_{entry_id}">😄</label>
-                        </div>
-                        <button id="copy_btn_{entry_id}" onclick="
-                            var selectedRadio = document.querySelector('input[name=\\'variant_{entry_id}\\']:checked');
+                        
+                        # JavaScript funkcija
+                        js_function = f"""
+                        function copyText_{entry_id}() {{
+                            var selectedRadio = document.querySelector('input[name="variant_{entry_id}"]:checked');
                             var variantIndex = parseInt(selectedRadio.value);
-                            var texts = [{js_array_string}];
+                            var texts = {js_array_string};
                             var textToCopy = texts[variantIndex];
                             
                             navigator.clipboard.writeText(textToCopy).then(function() {{
@@ -3552,7 +3539,22 @@ if files_to_process:
                                     document.getElementById('copy_btn_{entry_id}').style.backgroundColor = '#0066cc';
                                 }}, 1500);
                             }});
-                        " style="background-color: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
+                        }}
+                        """
+                        
+                        radio_html = f"""
+                        <script>{js_function}</script>
+                        <div style="margin-bottom: 10px;">
+                            <input type="radio" id="v1_{entry_id}" name="variant_{entry_id}" value="0" checked>
+                            <label for="v1_{entry_id}">💼</label>
+                            
+                            <input type="radio" id="v2_{entry_id}" name="variant_{entry_id}" value="1" {'disabled' if len(cleaned_variants) < 2 else ''}>
+                            <label for="v2_{entry_id}">🏡</label>
+                            
+                            <input type="radio" id="v3_{entry_id}" name="variant_{entry_id}" value="2" {'disabled' if len(cleaned_variants) < 3 else ''}>
+                            <label for="v3_{entry_id}">😄</label>
+                        </div>
+                        <button id="copy_btn_{entry_id}" onclick="copyText_{entry_id}()" style="background-color: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
                             📋 Kopijuoti
                         </button>
                         """
