@@ -2320,11 +2320,22 @@ if files_to_process:
             )
 
             if custom_prompt and custom_prompt.strip():
+                # Rodyti cached foną
+                if st.session_state.get('cached_custom_bg') and st.session_state.get('last_bg_prompt') == custom_prompt:
+                    st.success("✅ Naudojamas išsaugotas fonas (nesikeis keičiant kitus nustatymus)")
+                    col_clear1, col_clear2 = st.columns([3, 1])
+                    with col_clear2:
+                        if st.button("🗑️ Išvalyti"):
+                            del st.session_state['cached_custom_bg']
+                            del st.session_state['last_bg_prompt']
+                            st.rerun()
+                
+                # Generavimo mygtukas VISADA rodomas
                 col_gen1, col_gen2 = st.columns([3, 1])
                 with col_gen1:
                     st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
                 with col_gen2:
-                    if st.button("🎨 Generuoti foną"):
+                    if st.button("🎨 Generuoti"):
                         with st.spinner("Generuojama..."):
                             try:
                                 bg = generate_themed_background(None, 1327, 768, custom_prompt)
@@ -2337,15 +2348,6 @@ if files_to_process:
                                     st.error("❌ Nepavyko sugeneruoti fono. Patikrink API key.")
                             except Exception as e:
                                 st.error(f"❌ Klaida: {str(e)}")
-                
-                # Rodyti cached foną
-                if st.session_state.get('cached_custom_bg'):
-                    if st.session_state.get('last_bg_prompt') == custom_prompt:
-                        st.success("✅ Naudojamas išsaugotas fonas (nesikeis keičiant kitus nustatymus)")
-                        if st.button("🗑️ Išvalyti foną"):
-                            del st.session_state['cached_custom_bg']
-                            del st.session_state['last_bg_prompt']
-                            st.rerun()
         
         # Jei yra cached fonas bet varnelė atjungta - vis tiek naudojam cached foną
         use_themed_bg = use_custom_background or (st.session_state.get('cached_custom_bg') is not None)
