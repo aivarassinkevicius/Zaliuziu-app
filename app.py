@@ -1412,18 +1412,22 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
         
         # Apskritimas (pilnaviduris, 24px diameter)
         circle_center_x = bullet_x
-        circle_center_y = y + 12  # Vertikalus centravimas
+        circle_center_y = y + 16  # Centras apskritimo (32px šrifto aukštis / 2)
         circle_radius = 12  # 24/2 = 12
         
         draw.ellipse(
             [circle_center_x - circle_radius, circle_center_y - circle_radius,
              circle_center_x + circle_radius, circle_center_y + circle_radius],
-            fill=text_color  # Pilnaviduris juodas
+            fill=text_color  # Pilnaviduris
         )
         
-        # Tekstas (16px nuo apskritimo krašto)
+        # Tekstas (16px nuo apskritimo krašto) - centruotas su apskritimu
         text_x = bullet_x + 24 + 16  # 24px apskritimas + 16px tarpas
-        draw.text((text_x, y), bullet_text, fill=text_color, font=font_bullet)
+        # Vertikalus centravimas: teksto baseline koreguojama pagal font metrikus
+        bbox = draw.textbbox((0, 0), bullet_text, font=font_bullet)
+        text_height = bbox[3] - bbox[1]
+        text_y = circle_center_y - text_height // 2
+        draw.text((text_x, text_y), bullet_text, fill=text_color, font=font_bullet)
     
     return canvas
 
