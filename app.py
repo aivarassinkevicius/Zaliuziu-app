@@ -1434,15 +1434,12 @@ def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_num
 
 def create_4photo_magazine_layout(photo1, photo2, photo3, photo4, header_text, bullet_points, phone_number=None, logo_path="assets/logo.png", logo_with_white_bg=False, enable_white_border=True, enable_rounded_corners=True, enable_shadow_effect=True, shadow_strength=50, background=None):
     """
-    4 Photo Magazine Style Layout - kopija Magazine Style, bet su 4 nuotraukomis
-    - 4 nuotraukos (išdėstymas bus aprašytas vėliau)
-    - Antraštė + punktyrinė linija + bullet list
-    - Minimalistinis dizainas
+    Simple Style Layout - 4 nuotraukos horizontaliai + antraštė viršuje per centrą + bullet'ai po kiekviena nuotrauka
     
     Args:
         photo1, photo2, photo3, photo4: PIL Images
-        header_text: Antraštės tekstas (56px)
-        bullet_points: List of strings arba string su \n (4 punktai, 24px)
+        header_text: Antraštės tekstas (56px, centruotas)
+        bullet_points: List of strings arba string su \n (4 punktai - po vieną po kiekviena nuotrauka)
         phone_number: Telefono numeris (optional)
         logo_path: Kelias iki logo (optional)
         logo_with_white_bg: True = baltas fonas, False = permatomas
@@ -1456,32 +1453,26 @@ def create_4photo_magazine_layout(photo1, photo2, photo3, photo4, header_text, b
     
     # Canvas - jei yra AI background, naudojame jį, kitaip default spalvą
     if background is not None:
-        # AI fonas - resize į 1327x768
         canvas = background.resize((1327, 768), Image.Resampling.LANCZOS)
         if canvas.mode != 'RGBA':
             canvas = canvas.convert('RGBA')
     else:
-        # Default smėlio spalva
-        canvas = Image.new('RGBA', (1327, 768), color=(250, 246, 239, 255))  # #FAF6EF
+        canvas = Image.new('RGBA', (1327, 768), color=(250, 246, 239, 255))
     
     draw = ImageDraw.Draw(canvas)
     
     # Automatinė teksto spalva pagal fono šviesumą
     def get_text_color_for_background(canvas_image):
-        """Apskaičiuoja optimalią teksto spalvą pagal fono šviesumą"""
-        # Paimame sample iš dešinės pusės, kur bus tekstas (860-1220, 120-600)
-        text_area = canvas_image.crop((860, 120, 1220, 600))
-        # Konvertuojame į RGB
+        # Sample iš viso canvas centro
+        text_area = canvas_image.crop((300, 100, 1000, 400))
         if text_area.mode != 'RGB':
             text_area = text_area.convert('RGB')
-        # Apskaičiuojame average brightness
         pixels = list(text_area.getdata())
         avg_brightness = sum(r * 0.299 + g * 0.587 + b * 0.114 for r, g, b in pixels) / len(pixels)
-        # Jei fonas šviesus (>128) - tamsus tekstas, jei tamsus - baltas tekstas
         if avg_brightness > 128:
-            return (43, 43, 43)  # Tamsus tekstas
+            return (43, 43, 43)
         else:
-            return (255, 255, 255)  # Baltas tekstas
+            return (255, 255, 255)
     
     text_color = get_text_color_for_background(canvas)
     
@@ -1489,122 +1480,32 @@ def create_4photo_magazine_layout(photo1, photo2, photo3, photo4, header_text, b
     if logo_path and os.path.exists(logo_path):
         try:
             logo = Image.open(logo_path).convert("RGBA")
-            logo = logo.resize((120, 120), Image.Resampling.LANCZOS)
+            logo = logo.resize((100, 100), Image.Resampling.LANCZOS)
             
             if logo_with_white_bg:
-                # Baltas fonas po logo
-                logo_bg = Image.new('RGBA', (140, 140), (255, 255, 255, 255))
+                logo_bg = Image.new('RGBA', (120, 120), (255, 255, 255, 255))
                 logo_bg.paste(logo, (10, 10), logo)
                 canvas.paste(logo_bg, (30, 22), logo_bg)
             else:
-                # Permatomas - pašaliname baltą foną jei yra
                 logo_data = logo.getdata()
                 new_data = []
                 for item in logo_data:
-                    # Jei pikselis beveik baltas (RGB > 240) - darome permatomą
                     if item[0] > 240 and item[1] > 240 and item[2] > 240:
-                        new_data.append((255, 255, 255, 0))  # Permatomas
+                        new_data.append((255, 255, 255, 0))
                     else:
                         new_data.append(item)
                 logo.putdata(new_data)
                 canvas.paste(logo, (40, 32), logo)
-        except Exception as e:
-            # Fallback
+        except:
             pass
     
-    # === NUOTRAUKOS (PLACEHOLDER - bus aprašytas tikslus išdėstymas) ===
-    # Kol kas tiesiog 4 nuotraukas patalpinsime grid'e 2x2 kairėje pusėje
-    # Photo 1 - viršus kairė
-    photo1_resized = photo1.resize((340, 230), Image.Resampling.LANCZOS)
-    photo1_with_effects = add_photo_effects(
-        photo1_resized,
-        enable_border=enable_white_border,
-        border_width=12,
-        enable_rounded=enable_rounded_corners,
-        corner_radius=20,
-        enable_shadow=enable_shadow_effect,
-        shadow_strength=shadow_strength
-    )
-    canvas.paste(photo1_with_effects, (40, 188), photo1_with_effects if photo1_with_effects.mode == 'RGBA' else None)
-    
-    # Photo 2 - viršus dešinė
-    photo2_resized = photo2.resize((340, 230), Image.Resampling.LANCZOS)
-    photo2_with_effects = add_photo_effects(
-        photo2_resized,
-        enable_border=enable_white_border,
-        border_width=12,
-        enable_rounded=enable_rounded_corners,
-        corner_radius=20,
-        enable_shadow=enable_shadow_effect,
-        shadow_strength=shadow_strength
-    )
-    canvas.paste(photo2_with_effects, (400, 188), photo2_with_effects if photo2_with_effects.mode == 'RGBA' else None)
-    
-    # Photo 3 - apačia kairė
-    photo3_resized = photo3.resize((340, 230), Image.Resampling.LANCZOS)
-    photo3_with_effects = add_photo_effects(
-        photo3_resized,
-        enable_border=enable_white_border,
-        border_width=12,
-        enable_rounded=enable_rounded_corners,
-        corner_radius=20,
-        enable_shadow=enable_shadow_effect,
-        shadow_strength=shadow_strength
-    )
-    canvas.paste(photo3_with_effects, (40, 438), photo3_with_effects if photo3_with_effects.mode == 'RGBA' else None)
-    
-    # Photo 4 - apačia dešinė
-    photo4_resized = photo4.resize((340, 230), Image.Resampling.LANCZOS)
-    photo4_with_effects = add_photo_effects(
-        photo4_resized,
-        enable_border=enable_white_border,
-        border_width=12,
-        enable_rounded=enable_rounded_corners,
-        corner_radius=20,
-        enable_shadow=enable_shadow_effect,
-        shadow_strength=shadow_strength
-    )
-    canvas.paste(photo4_with_effects, (400, 438), photo4_with_effects if photo4_with_effects.mode == 'RGBA' else None)
-    
-    # === TELEFONO NUMERIS (po nuotraukomis, be rėmelio) ===
-    if phone_number:
-        # Font loading su Linux fallback
-        font_phone = None
-        phone_fonts = [
-            "C:/Windows/Fonts/arial.ttf",  # Windows
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux/Cloud
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"  # Linux alt
-        ]
-        for font_path in phone_fonts:
-            try:
-                font_phone = ImageFont.truetype(font_path, 24)
-                break
-            except:
-                continue
-        if not font_phone:
-            font_phone = ImageFont.load_default()
-        
-        # Tekstas - FAKTINIS telefono numeris
-        phone_text = phone_number
-        bbox = draw.textbbox((0, 0), phone_text, font=font_phone)
-        phone_width = bbox[2] - bbox[0]
-        
-        # Pozicija: centre po nuotraukomis
-        phone_x = (1327 - phone_width) // 2
-        phone_y = 694
-        
-        # Tiesiog tekstas, be fono/rėmelio
-        draw.text((phone_x, phone_y), phone_text, fill=text_color, font=font_phone)
-    
-    # === TEKSTO BLOKAS ===
-    # Antraštė - 56px Serif font
+    # === ANTRAŠTĖ CENTRUOTA VIRŠUJE ===
     font_header = None
     serif_fonts = [
-        "C:/Windows/Fonts/georgia.ttf",  # Windows
-        "C:/Windows/Fonts/times.ttf",  # Windows
-        "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",  # Linux Serif
-        "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",  # Linux Serif alt
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"  # Linux fallback
+        "C:/Windows/Fonts/georgia.ttf",
+        "C:/Windows/Fonts/times.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
     ]
     for font_path in serif_fonts:
         try:
@@ -1615,37 +1516,48 @@ def create_4photo_magazine_layout(photo1, photo2, photo3, photo4, header_text, b
     if not font_header:
         font_header = ImageFont.load_default()
     
-    # Antraštės tekstas
-    draw.text((860, 120), header_text, fill=text_color, font=font_header)
+    # Centruojame antraštę
+    bbox = draw.textbbox((0, 0), header_text, font=font_header)
+    header_width = bbox[2] - bbox[0]
+    header_x = (1327 - header_width) // 2
+    draw.text((header_x, 60), header_text, fill=text_color, font=font_header)
     
-    # === PUNKTYRINĖ LINIJA ===
-    # Tiksliai pagal spec: po antrašte, Y = 120 + 56 + 12 = 188
-    line_y = 188
-    line_x_start = 860
-    line_x_end = 1220  # 860 + 360
+    # === 4 NUOTRAUKOS HORIZONTALIAI ===
+    # Skaičiavimai: 4 nuotraukos, padding 40px šonuose, tarpai 20px
+    # Plotis: (1327 - 80 - 60) / 4 = ~296px
+    # Aukštis: ~395px (3:4 ratio)
+    photo_width = 285
+    photo_height = 380
+    start_x = 40
+    gap = 20
+    photo_y = 180
     
-    # Brėžiam punktyrinę liniją (dotted)
-    dash_length = 6
-    gap_length = 4
-    x = line_x_start
-    while x < line_x_end:
-        end_x = min(x + dash_length, line_x_end)
-        draw.line([(x, line_y), (end_x, line_y)], fill=text_color, width=2)
-        x += dash_length + gap_length
+    photos = [photo1, photo2, photo3, photo4]
     
-    # === BULLET LIST (4 punktai) ===
-    # Šriftas bullet tekstui - 32px su Linux fallback
+    for i, photo in enumerate(photos):
+        x_pos = start_x + i * (photo_width + gap)
+        photo_resized = photo.resize((photo_width, photo_height), Image.Resampling.LANCZOS)
+        photo_with_effects = add_photo_effects(
+            photo_resized,
+            enable_border=enable_white_border,
+            border_width=12,
+            enable_rounded=enable_rounded_corners,
+            corner_radius=20,
+            enable_shadow=enable_shadow_effect,
+            shadow_strength=shadow_strength
+        )
+        canvas.paste(photo_with_effects, (x_pos, photo_y), photo_with_effects if photo_with_effects.mode == 'RGBA' else None)
+    
+    # === BULLET PUNKTAI PO NUOTRAUKOMIS ===
     font_bullet = None
     bullet_fonts = [
-        "C:/Windows/Fonts/georgia.ttf",  # Windows Serif
-        "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",  # Linux Serif
-        "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",  # Linux Serif alt
-        "C:/Windows/Fonts/arial.ttf",  # Windows Sans
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"  # Linux Sans
+        "C:/Windows/Fonts/arial.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
     ]
     for font_path in bullet_fonts:
         try:
-            font_bullet = ImageFont.truetype(font_path, 32)
+            font_bullet = ImageFont.truetype(font_path, 20)
             break
         except:
             continue
@@ -1658,33 +1570,54 @@ def create_4photo_magazine_layout(photo1, photo2, photo3, photo4, header_text, b
     else:
         bullets = bullet_points
     
-    # VISADA 4 punktai - jei mažiau, papildom su "Tekstas"
+    # Užtikriname 4 punktus
     while len(bullets) < 4:
         bullets.append("Tekstas")
-    bullets = bullets[:4]  # Max 4
+    bullets = bullets[:4]
     
-    # Tikslios pozicijos pagal spec
-    bullet_x = 910
-    bullet_y_start = 320
-    bullet_spacing = 64  # Tarpas tarp punktų (22 + aukštis)
+    # Bullet'ai po kiekviena nuotrauka
+    bullet_y = photo_y + photo_height + 25
     
     for i, bullet_text in enumerate(bullets):
-        y = bullet_y_start + i * bullet_spacing
+        x_pos = start_x + i * (photo_width + gap)
+        photo_center_x = x_pos + photo_width // 2
         
-        # Apskritimas (pilnaviduris, 24px diameter)
-        circle_center_x = bullet_x
-        circle_center_y = y + 16  # Centras apskritimo
-        circle_radius = 12  # 24/2 = 12
+        # Apskritimas
+        circle_radius = 8
+        circle_x = photo_center_x - 50
+        circle_y = bullet_y + 8
         
         draw.ellipse(
-            [circle_center_x - circle_radius, circle_center_y - circle_radius,
-             circle_center_x + circle_radius, circle_center_y + circle_radius],
-            fill=text_color  # Pilnaviduris
+            [circle_x - circle_radius, circle_y - circle_radius,
+             circle_x + circle_radius, circle_y + circle_radius],
+            fill=text_color
         )
         
-        # Tekstas (16px nuo apskritimo krašto) - TIKSLIAI centruotas su apskritimu
-        text_x = bullet_x + 24 + 16  # 24px apskritimas + 16px tarpas
-        draw.text((text_x, circle_center_y), bullet_text, fill=text_color, font=font_bullet, anchor="lm")
+        # Tekstas šalia apskritimo
+        text_x = circle_x + circle_radius + 10
+        draw.text((text_x, bullet_y), bullet_text.upper(), fill=text_color, font=font_bullet)
+    
+    # === TELEFONO NUMERIS APAČIOJE CENTRE ===
+    if phone_number:
+        font_phone = None
+        phone_fonts = [
+            "C:/Windows/Fonts/arial.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        ]
+        for font_path in phone_fonts:
+            try:
+                font_phone = ImageFont.truetype(font_path, 24)
+                break
+            except:
+                continue
+        if not font_phone:
+            font_phone = ImageFont.load_default()
+        
+        bbox = draw.textbbox((0, 0), phone_number, font=font_phone)
+        phone_width = bbox[2] - bbox[0]
+        phone_x = (1327 - phone_width) // 2
+        phone_y = 720
+        draw.text((phone_x, phone_y), phone_number, fill=text_color, font=font_phone)
     
     return canvas
 
