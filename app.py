@@ -3791,9 +3791,62 @@ if "ai_content_result" in st.session_state and st.session_state.ai_content_resul
 
     # Rodyti sugeneruotą turinį
     st.markdown("### 🎯 Paruošti tekstai:")
-    st.text_area(
-        "Kopijuokite tekstą:", value=st.session_state.ai_content_result, height=200, key="ai_content_persistent"
-    )
+    st.markdown("**Kopijuokite tekstą:**")
+    
+    # Padalinti į variantus
+    text = st.session_state.ai_content_result
+    if "---" in text:
+        variants = [v.strip() for v in text.split("---") if v.strip()]
+    else:
+        variants = [text]
+    
+    # Funkcija pašalinti antraštę
+    def clean_final_variant(text):
+        lines = text.split('\n')
+        cleaned = []
+        for line in lines:
+            stripped = line.strip()
+            if not (stripped.startswith("**VARIANTAS") or stripped.startswith("VARIANTAS")):
+                cleaned.append(line)
+        return '\n'.join(cleaned).strip()
+    
+    # Paruošiame visus variantus
+    cleaned_variants = [clean_final_variant(v) for v in variants]
+    
+    # HTML su components
+    import streamlit.components.v1 as components
+    texts_json = json.dumps(cleaned_variants)
+    
+    html_str = f"""
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <button id="btnfinal_0" onclick="copyTextFinal(0)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;">
+            💼 Kopijuoti
+        </button>
+        <button id="btnfinal_1" onclick="copyTextFinal(1)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;" {'disabled' if len(cleaned_variants) < 2 else ''}>
+            🏡 Kopijuoti
+        </button>
+        <button id="btnfinal_2" onclick="copyTextFinal(2)" style="flex: 1; background: #0066cc; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;" {'disabled' if len(cleaned_variants) < 3 else ''}>
+            😄 Kopijuoti
+        </button>
+    </div>
+    <script>
+    const textsFinal = {texts_json};
+    function copyTextFinal(idx) {{
+        const btn = document.getElementById('btnfinal_' + idx);
+        navigator.clipboard.writeText(textsFinal[idx]).then(() => {{
+            btn.style.backgroundColor = '#28a745';
+            btn.innerHTML = '✅ Nukopijuota!';
+            setTimeout(() => {{
+                btn.style.backgroundColor = '#0066cc';
+                const labels = ['💼 Kopijuoti', '🏡 Kopijuoti', '😄 Kopijuoti'];
+                btn.innerHTML = labels[idx];
+            }}, 1500);
+        }});
+    }}
+    </script>
+    """
+    
+    components.html(html_str, height=60)
 
     # Analitikos informacija
     if "ai_analyses" in st.session_state:
