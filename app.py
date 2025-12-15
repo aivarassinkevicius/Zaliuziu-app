@@ -2452,6 +2452,12 @@ if files_to_process:
                         photo1 = edited_images[0]
                         photo2 = edited_images[1]
                         
+                        # Nustatome Magazine Style foną (1327x768)
+                        magazine_bg = None
+                        if use_themed_bg and st.session_state.get('cached_custom_bg'):
+                            # Naudojame cached custom foną
+                            magazine_bg = st.session_state['cached_custom_bg']
+                        
                         collage = create_magazine_layout(
                             photo1=photo1,
                             photo2=photo2,
@@ -2464,7 +2470,7 @@ if files_to_process:
                             enable_rounded_corners=enable_rounded_corners,
                             enable_shadow_effect=enable_shadow_effect,
                             shadow_strength=shadow_strength,
-                            background=cached_bg  # Cached AI fonas (1327x768)
+                            background=magazine_bg  # Cached AI fonas (1327x768)
                         )
                         collage = collage.convert("RGBA")
 
