@@ -3514,38 +3514,45 @@ if files_to_process:
                                     cleaned.append(line)
                             return '\n'.join(cleaned).strip()
                         
-                        # Radio buttons pasirinkti variantą
-                        selected = st.radio(
-                            "Pasirinkite:",
-                            ["💼", "🏡", "😄"][:len(variants)],
-                            horizontal=True,
-                            key=f"variant_select_{entry['id']}",
-                            label_visibility="collapsed"
-                        )
+                        # Paruošiame visus variantus JavaScript
+                        cleaned_variants = [clean_variant(v) for v in variants]
+                        js_variants = []
+                        for v in cleaned_variants:
+                            js_text = v.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$').replace('\n', '\\n').replace('\r', '').replace('"', '\\"')
+                            js_variants.append(js_text)
                         
-                        # Randame indeksą
-                        variant_index = ["💼", "🏡", "😄"].index(selected)
-                        selected_text = clean_variant(variants[variant_index])
-                        
-                        # Automatinis kopijavimas su JavaScript
-                        copy_button_id = f"copy_btn_{entry['id']}"
-                        text_for_js = selected_text.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$').replace('\n', '\\n').replace('\r', '').replace('"', '\\"')
-                        
-                        copy_html = f"""
-                        <button id="{copy_button_id}" onclick="
-                            navigator.clipboard.writeText(`{text_for_js}`).then(function() {{
-                                document.getElementById('{copy_button_id}').innerHTML = '✅ Nukopijuota!';
-                                document.getElementById('{copy_button_id}').style.backgroundColor = '#28a745';
+                        # HTML radio buttons + copy mygtukas
+                        entry_id = entry['id']
+                        radio_html = f"""
+                        <div style="margin-bottom: 10px;">
+                            <input type="radio" id="v1_{entry_id}" name="variant_{entry_id}" value="0" checked>
+                            <label for="v1_{entry_id}">💼</label>
+                            
+                            <input type="radio" id="v2_{entry_id}" name="variant_{entry_id}" value="1" {"" if len(js_variants) > 1 else "disabled"}>
+                            <label for="v2_{entry_id}">🏡</label>
+                            
+                            <input type="radio" id="v3_{entry_id}" name="variant_{entry_id}" value="2" {"" if len(js_variants) > 2 else "disabled"}>
+                            <label for="v3_{entry_id}">😄</label>
+                        </div>
+                        <button id="copy_btn_{entry_id}" onclick="
+                            var selectedRadio = document.querySelector('input[name=\\'variant_{entry_id}\\']:checked');
+                            var variantIndex = parseInt(selectedRadio.value);
+                            var texts = ['{js_variants[0]}'{',' + repr(f"'{js_variants[1]}'") if len(js_variants) > 1 else ''}{',' + repr(f"'{js_variants[2]}'") if len(js_variants) > 2 else ''}];
+                            var textToCopy = texts[variantIndex];
+                            
+                            navigator.clipboard.writeText(textToCopy).then(function() {{
+                                document.getElementById('copy_btn_{entry_id}').innerHTML = '✅ Nukopijuota!';
+                                document.getElementById('copy_btn_{entry_id}').style.backgroundColor = '#28a745';
                                 setTimeout(function() {{
-                                    document.getElementById('{copy_button_id}').innerHTML = '📋 Kopijuoti';
-                                    document.getElementById('{copy_button_id}').style.backgroundColor = '#0066cc';
+                                    document.getElementById('copy_btn_{entry_id}').innerHTML = '📋 Kopijuoti';
+                                    document.getElementById('copy_btn_{entry_id}').style.backgroundColor = '#0066cc';
                                 }}, 1500);
                             }});
                         " style="background-color: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
                             📋 Kopijuoti
                         </button>
                         """
-                        st.markdown(copy_html, unsafe_allow_html=True)
+                        st.markdown(radio_html, unsafe_allow_html=True)
                     else:
                         # Jei nėra variantų - paprastas copy
                         copy_button_id = f"copy_btn_{entry['id']}"
