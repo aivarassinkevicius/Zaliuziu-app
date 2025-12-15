@@ -2489,10 +2489,10 @@ if files_to_process:
 
         num_photos = len(files_to_process)
 
-        # Du Magazine Style layoutai
+        # Du layoutai
         layout_options = [
             "📰 Magazine Style (2 nuotraukos + bullet list)",
-            "📸 4 Photo Magazine (4 nuotraukos + bullet list)",
+            "📸 Simple Style (4 nuotraukos + bullet list)",
         ]
 
         collage_layout = st.selectbox(
@@ -2505,8 +2505,8 @@ if files_to_process:
         logo_white_bg = False
         use_ai_text = False  # Default - bus pakeista checkbox col_fx2
         
-        if "Magazine Style" in collage_layout or "4 Photo Magazine" in collage_layout:
-            layout_name = "📰 Magazine Style" if "Magazine Style" in collage_layout else "📸 4 Photo Magazine"
+        if "Magazine Style" in collage_layout or "Simple Style" in collage_layout:
+            layout_name = "📰 Magazine Style" if "Magazine Style" in collage_layout else "📸 Simple Style"
             st.markdown(f"#### {layout_name} nustatymai")
             
             # Antraštė ir bullet punktai
@@ -2541,7 +2541,7 @@ if files_to_process:
             enable_rounded_corners = st.checkbox("⭕ Užapvalinti kampai", value=False, help="Apvalūs nuotraukų kampai")
             
             # Logo parinktys (abu layoutai)
-            if "Magazine Style" in collage_layout or "4 Photo Magazine" in collage_layout:
+            if "Magazine Style" in collage_layout or "Simple Style" in collage_layout:
                 logo_with_white = st.checkbox("⬜ Logo su baltu fonu", value=False, help="Logo su baltu fonu aplink")
                 logo_transparent = st.checkbox("🔲 Logo su skaidriu fonu", value=False, help="Logo su permatomu fonu")
 
@@ -2607,7 +2607,7 @@ if files_to_process:
         logo_white_bg = False
         show_logo = False
         
-        if "Magazine Style" in collage_layout or "4 Photo Magazine" in collage_layout:
+        if "Magazine Style" in collage_layout or "Simple Style" in collage_layout:
             if logo_with_white:
                 show_logo = True
                 logo_white_bg = True
@@ -2696,7 +2696,7 @@ if files_to_process:
                     num_photos = len(edited_images)
 
                     # ============ MAGAZINE STYLE LAYOUT (2 nuotraukos) ============
-                    if "Magazine Style" in collage_layout and "4 Photo" not in collage_layout:
+                    if "Magazine Style" in collage_layout and "Simple Style" not in collage_layout:
                         # 2 nuotraukos + antraštė (56px) + bullet list (32px)
                         photo1 = edited_images[0]
                         photo2 = edited_images[1]
@@ -2717,8 +2717,8 @@ if files_to_process:
                         )
                         collage = collage.convert("RGBA")
 
-                    # ============ 4 PHOTO MAGAZINE LAYOUT (4 nuotraukos) ============
-                    elif "4 Photo Magazine" in collage_layout:
+                    # ============ SIMPLE STYLE LAYOUT (4 nuotraukos) ============
+                    elif "Simple Style" in collage_layout:
                         # 4 nuotraukos + antraštė (56px) + bullet list (32px)
                         photo1 = edited_images[0]
                         photo2 = edited_images[1]
@@ -2765,8 +2765,8 @@ if files_to_process:
                     st.error(traceback.format_exc())
     else:
         # Skirtingi minimum reikalavimai skirtingiems layoutams
-        if "4 Photo Magazine" in selected_layout_preview:
-            st.warning(f"⚠️ 4 Photo Magazine layout reikia bent 4 nuotraukų! (Dabar įkelta: {len(files_to_process)})")
+        if "Simple Style" in selected_layout_preview:
+            st.warning(f"⚠️ Simple Style layout reikia bent 4 nuotraukų! (Dabar įkelta: {len(files_to_process)})")
         else:
             st.warning(f"⚠️ Magazine Style layout reikia bent 2 nuotraukų! (Dabar įkelta: {len(files_to_process)})")
 
