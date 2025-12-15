@@ -2326,12 +2326,17 @@ if files_to_process:
                 with col_gen2:
                     if st.button("🎨 Generuoti foną"):
                         with st.spinner("Generuojama..."):
-                            bg = generate_themed_background(None, 1327, 768, custom_prompt)
-                            if bg:
-                                st.session_state['cached_custom_bg'] = bg
-                                st.session_state['last_bg_prompt'] = custom_prompt
-                                st.success("✅ Fonas sugeneruotas!")
-                                st.rerun()
+                            try:
+                                bg = generate_themed_background(None, 1327, 768, custom_prompt)
+                                if bg:
+                                    st.session_state['cached_custom_bg'] = bg
+                                    st.session_state['last_bg_prompt'] = custom_prompt
+                                    st.success("✅ Fonas sugeneruotas!")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Nepavyko sugeneruoti fono. Patikrink API key.")
+                            except Exception as e:
+                                st.error(f"❌ Klaida: {str(e)}")
                 
                 # Rodyti cached foną
                 if st.session_state.get('cached_custom_bg'):
