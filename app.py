@@ -6,6 +6,15 @@ from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
 from supabase import create_client, Client
 
+# Google Gemini imports (optional - dual model)
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+    print("✅ DEBUG: Gemini SDK LOADED successfully, version:", genai.__version__)
+except ImportError as e:
+    GEMINI_AVAILABLE = False
+    print("❌ DEBUG: Gemini SDK IMPORT FAILED:", str(e))
+
 # HTML rendering imports (optional - tik jei naudojamas html_to_image)
 try:
     from selenium import webdriver
@@ -189,7 +198,8 @@ def add_marketing_overlay(
                     target_aspect_ratio=target_aspect_ratio,
                 )
             except Exception as e:
-                st.warning(f"OpenCV processing failed: {e}")
+                # OpenCV neveikia, bet tai netrukdo - tiesiog praleisti
+                pass
 
         # Konvertuojame į RGB jei reikia
         if img.mode in ("RGBA", "LA", "P"):
@@ -959,6 +969,96 @@ BULLET4: [tekstas]"""
         
     except Exception as e:
         st.error(f"❌ OpenAI Vision klaida: {str(e)}")
+        return None, None
+
+
+def generate_text_with_gemini_vision(image):
+    """
+    Generuoja tekstus naudojant Google Gemini Vision API (dual model comparison)
+    
+    Args:
+        image: PIL Image objektas
+        
+    Returns:
+        tuple: (header_text, bullets_list) arba (None, None) jei klaida
+    """
+    print(f"🔍 DEBUG: generate_text_with_gemini_vision() called, GEMINI_AVAILABLE={GEMINI_AVAILABLE}")
+    try:
+        if not GEMINI_AVAILABLE:
+            st.error("❌ Google Gemini SDK neįdiegtas")
+            print("❌ DEBUG: GEMINI_AVAILABLE is False")
+            return None, None
+        
+        # Gemini API key
+        gemini_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            st.warning("⚠️ GOOGLE_API_KEY/GEMINI_API_KEY nerastas")
+            return None, None
+        
+        genai.configure(api_key=gemini_key)
+        
+        # Prompt'as (identiškas GPT-4o)
+        prompt = """Analizuok šią nuotrauką ir atpažink produktą (medinės žaliuzės, roletai, plisuotos žaliuzės, roletai diena-naktis, romanetės, arba kitas langų uždengimo produktas).
+
+Sugeneruok LIETUVIŲ kalba:
+1. ANTRAŠTĖ: 1-2 žodžiai, MAX 25 raidės (pvz: "Medinės Žaliuzės", "Roletai")
+2. 4 BULLET PUNKTAI: kiekvienas 1-3 žodžiai, MAX 20 raidžių (pvz: "funkcionalus", "stilingas", "modernus", "kokybiškas")
+
+Atsakyk TIKTAI šiuo formatu (be jokių kitų žodžių):
+ANTRASTE: [tekstas]
+BULLET1: [tekstas]
+BULLET2: [tekstas]
+BULLET3: [tekstas]
+BULLET4: [tekstas]"""
+        
+        # Gemini Vision model (gemini-flash-latest - alias į naujausią free tier modelį)
+        model = genai.GenerativeModel('models/gemini-flash-latest')
+        
+        # Retry logic su exponential backoff (rate limiting)
+        max_retries = 3
+        retry_delay = 2  # pradinis delay sekundėmis
+        
+        for attempt in range(max_retries):
+            try:
+                # Generate content (PIL Image direkt, ne bytes)
+                response = model.generate_content([prompt, image])
+                break  # Jei pavyko - išeiname iš loop
+            except Exception as retry_error:
+                if "429" in str(retry_error) or "quota" in str(retry_error).lower():
+                    if attempt < max_retries - 1:
+                        wait_time = retry_delay * (2 ** attempt)  # exponential backoff
+                        st.warning(f"⏳ Gemini rate limit - laukiama {wait_time}s...")
+                        time.sleep(wait_time)
+                    else:
+                        raise retry_error  # Paskutinis bandymas - error
+                else:
+                    raise retry_error  # Kitos klaidos - error iš karto
+        
+        # Parse atsakymo
+        text = response.text.strip()
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        
+        # Ištraukiame antraštę ir bullets
+        header = None
+        bullets = []
+        
+        for line in lines:
+            if line.startswith("ANTRASTE:") or line.startswith("ANTRAŠTĖ:"):
+                header = line.split(":", 1)[1].strip() if ":" in line else ""
+            elif line.startswith("BULLET"):
+                bullet_text = line.split(":", 1)[1].strip() if ":" in line else ""
+                if bullet_text:
+                    bullets.append(bullet_text)
+        
+        # Validacija
+        if not header or len(bullets) != 4:
+            st.warning(f"⚠️ Gemini atsakymas netinkamas. Header: {header}, Bullets: {len(bullets)}")
+            return None, None
+        
+        return header, bullets
+        
+    except Exception as e:
+        st.error(f"❌ Gemini Vision klaida: {str(e)}")
         return None, None
 
 
@@ -2493,28 +2593,105 @@ if files_to_process:
             use_ai_text = st.checkbox(
                 "🤖 Naudoti AI tekstui",
                 value=False,
-                help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką (GPT-4 Vision)",
+                help="AI sugeneruos antraštę ir bullet punktus pagal nuotrauką",
             )
             
+            # Pasirinkimas kuris modelis generuos
+            ai_model_choice = None
+            if use_ai_text:
+                ai_model_choice = st.radio(
+                    "Pasirink AI modelį:",
+                    options=["🟢 GPT-4o Vision (greitas, mokamas)", 
+                             "🔵 Gemini Vision (nemokamas)", 
+                             "🔄 Abu modeliai (palyginimui)"],
+                    index=1,  # Default: Gemini (nemokamas)
+                    help="GPT-4o greičiau bet kainuoja, Gemini nemokamas bet lėtesnis, Abu - galėsi palyginti ir pasirinkti geresnį",
+                    horizontal=True
+                )
+            
             # Generavimo mygtukas (jei pažymėta ir yra nuotraukų)
-            if use_ai_text and len(files_to_process) >= 1:
-                if st.button("🤖 Generuoti tekstus su AI"):
-                    with st.spinner("AI generuoja tekstus pagal nuotrauką..."):
+            if use_ai_text and len(files_to_process) >= 1 and ai_model_choice:
+                # Nustato, kuriuos modelius generuoti
+                generate_gpt = "GPT-4o" in ai_model_choice or "Abu" in ai_model_choice
+                generate_gemini = "Gemini" in ai_model_choice or "Abu" in ai_model_choice
+                
+                button_text = "🤖 Generuoti tekstus"
+                if "Abu" in ai_model_choice:
+                    button_text = "🤖 Generuoti su ABIEM modeliais"
+                elif "GPT-4o" in ai_model_choice:
+                    button_text = "🤖 Generuoti su GPT-4o"
+                elif "Gemini" in ai_model_choice:
+                    button_text = "🤖 Generuoti su Gemini"
+                
+                if st.button(button_text):
+                    with st.spinner("AI generuoja tekstus..."):
                         # Paimame pirmą failą ir sukuriame PIL Image
                         first_file = files_to_process[0]
                         first_file.seek(0)
                         temp_image = Image.open(first_file)
                         
-                        # Generuojame tekstus
-                        ai_header, ai_bullets = generate_text_with_gemini(temp_image)
+                        # Generuojame pagal pasirinkimą
+                        gpt_header, gpt_bullets = None, None
+                        gemini_header, gemini_bullets = None, None
                         
-                        if ai_header and ai_bullets:
-                            st.session_state['ai_header'] = ai_header
-                            st.session_state['ai_bullets'] = "\n".join(ai_bullets)
-                            st.success(f"✅ Tekstai sugeneruoti! Perkraunama...")
-                            st.rerun()  # Rerun kad atsinaujintų text_input values
+                        if generate_gpt:
+                            gpt_header, gpt_bullets = generate_text_with_gemini(temp_image)
+                            if gpt_header and gpt_bullets:
+                                st.session_state['gpt_header'] = gpt_header
+                                st.session_state['gpt_bullets'] = gpt_bullets
+                        
+                        if generate_gemini and GEMINI_AVAILABLE:
+                            gemini_header, gemini_bullets = generate_text_with_gemini_vision(temp_image)
+                            if gemini_header and gemini_bullets:
+                                st.session_state['gemini_header'] = gemini_header
+                                st.session_state['gemini_bullets'] = gemini_bullets
+                        
+                        # Jei tik vienas modelis - iš karto į laukus
+                        if not ("Abu" in ai_model_choice):
+                            if generate_gpt and gpt_header and gpt_bullets:
+                                st.session_state['ai_header'] = gpt_header
+                                st.session_state['ai_bullets'] = "\n".join(gpt_bullets)
+                                st.success("✅ GPT-4o tekstai sugeneruoti!")
+                            elif generate_gemini and gemini_header and gemini_bullets:
+                                st.session_state['ai_header'] = gemini_header
+                                st.session_state['ai_bullets'] = "\n".join(gemini_bullets)
+                                st.success("✅ Gemini tekstai sugeneruoti!")
                         else:
-                            st.error("❌ AI nepavyko sugeneruoti tekstų. Bandyk dar kartą arba įvesk rankiniu būdu.")
+                            st.success("✅ Tekstai sugeneruoti! Pasirink kurį naudoti:")
+                        
+                        st.rerun()
+                
+                # Rodome palyginimą tik jei pasirinkta "Abu modeliai"
+                if "Abu" in ai_model_choice and ('gpt_header' in st.session_state or 'gemini_header' in st.session_state):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        if 'gpt_header' in st.session_state:
+                            st.markdown("### 🟢 GPT-4o Vision")
+                            st.markdown(f"**Antraštė:** {st.session_state['gpt_header']}")
+                            st.markdown("**Bullet'ai:**")
+                            for b in st.session_state['gpt_bullets']:
+                                st.markdown(f"• {b}")
+                            
+                            if st.button("✅ Naudoti GPT-4o variantą", key="use_gpt"):
+                                st.session_state['ai_header'] = st.session_state['gpt_header']
+                                st.session_state['ai_bullets'] = "\n".join(st.session_state['gpt_bullets'])
+                                st.success("GPT-4o pasirinktas!")
+                                st.rerun()
+                    
+                    with col2:
+                        if 'gemini_header' in st.session_state:
+                            st.markdown("### 🔵 Gemini Vision")
+                            st.markdown(f"**Antraštė:** {st.session_state['gemini_header']}")
+                            st.markdown("**Bullet'ai:**")
+                            for b in st.session_state['gemini_bullets']:
+                                st.markdown(f"• {b}")
+                            
+                            if st.button("✅ Naudoti Gemini variantą", key="use_gemini"):
+                                st.session_state['ai_header'] = st.session_state['gemini_header']
+                                st.session_state['ai_bullets'] = "\n".join(st.session_state['gemini_bullets'])
+                                st.success("Gemini pasirinktas!")
+                                st.rerun()
 
         # Custom prompt text area už stulpelių (kai pažymėta)
         custom_prompt = ""
