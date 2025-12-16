@@ -6,16 +6,18 @@ from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageOps, ImageFilter
 from supabase import create_client, Client
 
-# Google Gemini imports (optional - dual model)
+# ========================================
+# GOOGLE GEMINI IMPORTS (Dual AI Model)
+# ========================================
 try:
     import google.generativeai as genai
     GEMINI_AVAILABLE = True
-    print("✅ DEBUG: Gemini SDK LOADED successfully, version:", genai.__version__)
-except ImportError as e:
+except ImportError:
     GEMINI_AVAILABLE = False
-    print("❌ DEBUG: Gemini SDK IMPORT FAILED:", str(e))
 
-# HTML rendering imports (optional - tik jei naudojamas html_to_image)
+# ========================================
+# HTML RENDERING (Optional - Selenium)
+# ========================================
 try:
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
@@ -24,22 +26,24 @@ try:
     SELENIUM_AVAILABLE = True
 except ImportError:
     SELENIUM_AVAILABLE = False
+
 import tempfile
 import time
 
-# Import our new image processing module
+# ========================================
+# IMAGE PROCESSING (OpenCV Library)
+# ========================================
 try:
     from lib.image_processing import process_blinds_photo
-
     OPENCV_AVAILABLE = True
-except ImportError as e:
+except ImportError:
     OPENCV_AVAILABLE = False
-    print(f"OpenCV import failed: {e}")  # Debug log
 
-# ---------- Nustatymai ----------
+# ========================================
+# KONFIGŪRACIJA IR API RAKTAI
+# ========================================
 load_dotenv()
 
-# Version: 2.4 - Supabase integration for version history
 # Bandome gauti API raktą iš .env failo (vietinis) arba Streamlit secrets (cloud)
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
@@ -93,8 +97,9 @@ with col2:
     st.title("Žaliuzių ir Roletų turinio kūrėjas")
     st.caption("Įkelk iki 4 nuotraukų ir gauk paruoštus įrašus socialiniams tinklams.")
 
-# ---------- Pagalbinės funkcijos ----------
-
+# ========================================
+# PAGALBINĖS FUNKCIJOS - Vaizdo apdorojimas
+# ========================================
 
 def professional_auto_enhance(img):
     """
@@ -886,6 +891,10 @@ def html_to_image(html_string, width=1920, height=1080):
             os.unlink(temp_html_path)
 
 
+# ========================================
+# AI TEKSTŲ GENERAVIMAS (Dual Model: GPT-4o + Gemini)
+# ========================================
+
 def generate_text_with_gemini(image, season="", holiday=""):
     """
     Generuoja antraštę ir bullet punktus naudojant OpenAI Vision API (GPT-4 Vision)
@@ -960,7 +969,7 @@ BULLET4: [tekstas]"""
         
         # Parsimame atsakymą
         text = response.choices[0].message.content.strip()
-        st.info(f"🔍 AI atsakymas:\n{text}")  # Debug
+        st.info(f"🔍 AI atsakymas:\n{text}")
         lines = [line.strip() for line in text.split('\n') if line.strip()]
         
         # Ištraukiame antraštę ir bullets
@@ -1129,7 +1138,7 @@ def generate_themed_background(season, canvas_width, canvas_height, custom_promp
                 image_url=image_url,
                 prompt=custom_prompt if custom_prompt else f"Season: {season}",
                 season=season if not custom_prompt else "",
-                holiday=""  # TODO: pridėti holiday iš context
+                holiday=""
             )
             
             # Konvertuojame į PIL Image
@@ -1145,7 +1154,9 @@ def generate_themed_background(season, canvas_width, canvas_height, custom_promp
         return None
 
 
-# ============ DALL-E Background Storage (Supabase) ============
+# ========================================
+# DALL-E FONŲ ISTORIJA (Supabase Persistent Storage)
+# ========================================
 
 def save_dalle_background(image_url, prompt, season="", holiday=""):
     """Išsaugo DALL-E foną į Supabase lentelę"""
@@ -1163,7 +1174,6 @@ def save_dalle_background(image_url, prompt, season="", holiday=""):
         result = supabase.table("dalle_backgrounds").insert(data).execute()
         return result.data[0] if result.data else None
     except Exception as e:
-        print(f"❌ Supabase save error: {e}")
         return None
 
 
@@ -1181,7 +1191,6 @@ def load_dalle_backgrounds(limit=20):
         
         return result.data if result.data else []
     except Exception as e:
-        print(f"❌ Supabase load error: {e}")
         return []
 
 
@@ -1194,9 +1203,12 @@ def delete_dalle_background(bg_id):
         supabase.table("dalle_backgrounds").delete().eq("id", bg_id).execute()
         return True
     except Exception as e:
-        print(f"❌ Supabase delete error: {e}")
         return False
 
+
+# ========================================
+# FONO KŪRIMO FUNKCIJOS
+# ========================================
 
 def create_gradient_background(width, height, color1, color2, direction="vertical"):
     """Sukuria gradientinį foną (modernus canvas efektas)"""
@@ -1396,6 +1408,10 @@ def add_text_overlay_modern(img, text, position="bottom", font_size=60, bg_opaci
 
     return Image.alpha_composite(img, overlay)
 
+
+# ========================================
+# KOLIAŽO LAYOUTŲ FUNKCIJOS (Magazine, Instagram, Facebook)
+# ========================================
 
 def create_magazine_layout(photo1, photo2, header_text, bullet_points, phone_number=None, logo_path="assets/logo.png", logo_with_white_bg=False, enable_white_border=True, enable_rounded_corners=True, enable_shadow_effect=True, shadow_strength=50, background=None):
     """
@@ -2209,7 +2225,10 @@ def create_4photo_magazine_layout(photo1, photo2, photo3, photo4, header_text, b
         return fallback
 
 
-# ---------- Pagrindinis UI ----------
+# ========================================
+# STREAMLIT UI - SIDEBAR NUSTATYMAI
+# ========================================
+
 st.sidebar.markdown("### 🎨 Marketinginis redagavimas")
 
 add_watermark = st.sidebar.checkbox("💧 Pridėti vandens ženklą", value=True, help="Pridės jūsų tekstą ant nuotraukos")
@@ -2480,8 +2499,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Patikriname ar yra įkeltų failų
-# Mobiliai optimizuotas failų įkėlimas
+# ========================================
+# MAIN UI - NUOTRAUKŲ ĮKĖLIMAS
+# ========================================
+
 st.markdown("### 📸 Įkelkite nuotraukas")
 
 # Sukuriame tabs skirtingoms įkėlimo opcijoms
@@ -2692,11 +2713,12 @@ if files_to_process:
                 help="Kiekviena eilutė = 1 punktas. Bus rodomi 4 punktai su apskritimais."
             )
             
-            # Debug info
+            # AI rezultatų peržiūra
             if st.session_state.get('ai_header'):
-                with st.expander("🔍 DEBUG: AI Generated teksta"):
-                    st.write(f"**Antraštė:** {st.session_state.get('ai_header')}")
-                    st.write(f"**Bullets:** {st.session_state.get('ai_bullets')}")
+                if st.checkbox("🔍 Rodyti AI sugeneruotą tekstą", value=False):
+                    with st.expander("AI rezultatai", expanded=True):
+                        st.write(f"**Antraštė:** {st.session_state.get('ai_header')}")
+                        st.write(f"**Bullets:** {st.session_state.get('ai_bullets')}")
 
         # Nuotraukų efektai
         st.markdown("---")
