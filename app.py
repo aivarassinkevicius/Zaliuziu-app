@@ -2722,11 +2722,19 @@ if files_to_process:
             )
             
             # AI Custom Fono generavimas
+            # Auto-enable jei pasirinktas fonas iš gallery
+            if 'use_custom_bg_active' not in st.session_state:
+                st.session_state['use_custom_bg_active'] = False
+            
             use_custom_background = st.checkbox(
                 "🎨 Naudoti Custom AI foną",
-                value=False,
-                help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą",
+                value=st.session_state.get('use_custom_bg_active', False),
+                help="Aprašyk foną savo žodžiais - AI sugeneruos pagal tavo aprašymą, ARBA pasirink iš galerijos žemiau",
+                key="use_custom_bg_checkbox"
             )
+            
+            # Updatinti session_state
+            st.session_state['use_custom_bg_active'] = use_custom_background
             
             # AI tekstų generavimas (po custom AI fono)
             use_ai_text = st.checkbox(
@@ -2846,6 +2854,14 @@ if files_to_process:
             if custom_prompt and custom_prompt.strip():
                 st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
             
+            # Rodyti pasirinkta foną
+            if 'selected_dalle_bg' in st.session_state and st.session_state['selected_dalle_bg']:
+                st.success("✅ **Pasirinktas fonas iš galerijos** - bus naudojamas kūrimo metu (FREE!)")
+                if st.button("🔄 Atšaukti pasirinkimą"):
+                    del st.session_state['selected_dalle_bg']
+                    st.session_state['use_custom_bg_active'] = False
+                    st.rerun()
+            
             # DALL-E Fonų Galerija
             st.markdown("---")
             st.markdown("#### 🖼️ DALL-E Fonų Istorija")
@@ -2872,7 +2888,8 @@ if files_to_process:
                                     img_response = requests.get(bg['image_url'])
                                     if img_response.status_code == 200:
                                         st.session_state['selected_dalle_bg'] = Image.open(io.BytesIO(img_response.content))
-                                        st.success("✅ Fonas pasirinktas!")
+                                        st.session_state['use_custom_bg_active'] = True  # Įjungia automatiškai
+                                        st.success("✅ Fonas pasirinktas! Dabar galite kurti koliažą.")
                                         st.rerun()
                             
                             with col2:
