@@ -1124,6 +1124,14 @@ def generate_themed_background(season, canvas_width, canvas_height, custom_promp
         img_response = requests.get(image_url)
 
         if img_response.status_code == 200:
+            # Išsaugome į Supabase (background storage)
+            save_dalle_background(
+                image_url=image_url,
+                prompt=custom_prompt if custom_prompt else f"Season: {season}",
+                season=season if not custom_prompt else "",
+                holiday=""  # TODO: pridėti holiday iš context
+            )
+            
             # Konvertuojame į PIL Image
             bg_image = Image.open(io.BytesIO(img_response.content))
             # Prisitaikome prie reikiamo dydžio
@@ -1135,6 +1143,59 @@ def generate_themed_background(season, canvas_width, canvas_height, custom_promp
     except Exception as e:
         st.warning(f"⚠️ Nepavyko sugeneruoti tematinio fono: {e}. Naudojamas spalvinis fonas.")
         return None
+
+
+# ============ DALL-E Background Storage (Supabase) ============
+
+def save_dalle_background(image_url, prompt, season="", holiday=""):
+    """Išsaugo DALL-E foną į Supabase lentelę"""
+    if not supabase:
+        return None
+    
+    try:
+        data = {
+            "image_url": image_url,
+            "prompt": prompt,
+            "season": season,
+            "holiday": holiday
+        }
+        
+        result = supabase.table("dalle_backgrounds").insert(data).execute()
+        return result.data[0] if result.data else None
+    except Exception as e:
+        print(f"❌ Supabase save error: {e}")
+        return None
+
+
+def load_dalle_backgrounds(limit=20):
+    """Pakrauna paskutinius DALL-E fonus iš Supabase"""
+    if not supabase:
+        return []
+    
+    try:
+        result = supabase.table("dalle_backgrounds")\
+            .select("*")\
+            .order("created_at", desc=True)\
+            .limit(limit)\
+            .execute()
+        
+        return result.data if result.data else []
+    except Exception as e:
+        print(f"❌ Supabase load error: {e}")
+        return []
+
+
+def delete_dalle_background(bg_id):
+    """Ištrina DALL-E foną iš Supabase"""
+    if not supabase:
+        return False
+    
+    try:
+        supabase.table("dalle_backgrounds").delete().eq("id", bg_id).execute()
+        return True
+    except Exception as e:
+        print(f"❌ Supabase delete error: {e}")
+        return False
 
 
 def create_gradient_background(width, height, color1, color2, direction="vertical"):
@@ -2784,6 +2845,46 @@ if files_to_process:
 
             if custom_prompt and custom_prompt.strip():
                 st.info(f"✨ **Custom AI fonas**: '{custom_prompt[:60]}...'")
+            
+            # DALL-E Fonų Galerija
+            st.markdown("---")
+            st.markdown("#### 🖼️ DALL-E Fonų Istorija")
+            
+            with st.expander("📸 Žiūrėti išsaugotus fonus (click = naudoti)", expanded=False):
+                backgrounds = load_dalle_backgrounds(limit=12)
+                
+                if backgrounds:
+                    st.caption(f"💾 Rasta {len(backgrounds)} fonų. Click ant nuotraukos = naudoti be naujo generavimo ($0)")
+                    
+                    # Grid layout (3 stulpeliai)
+                    cols = st.columns(3)
+                    for idx, bg in enumerate(backgrounds):
+                        with cols[idx % 3]:
+                            # Thumbnail preview
+                            st.image(bg['image_url'], width=200, caption=f"{bg['prompt'][:30]}...")
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                # Naudoti mygtukas
+                                if st.button("✅ Naudoti", key=f"use_bg_{bg['id']}"):
+                                    # Pakrauname nuotrauką ir saugome session_state
+                                    import requests
+                                    img_response = requests.get(bg['image_url'])
+                                    if img_response.status_code == 200:
+                                        st.session_state['selected_dalle_bg'] = Image.open(io.BytesIO(img_response.content))
+                                        st.success("✅ Fonas pasirinktas!")
+                                        st.rerun()
+                            
+                            with col2:
+                                # Ištrinti mygtukas
+                                if st.button("🗑️", key=f"del_bg_{bg['id']}"):
+                                    if delete_dalle_background(bg['id']):
+                                        st.success("Ištrintas!")
+                                        st.rerun()
+                            
+                            st.caption(f"📅 {bg['created_at'][:10]}")
+                else:
+                    st.info("📭 Fonų istorija tuščia. Sugeneruok pirmąjį!")
 
         use_themed_bg = use_custom_background
         
@@ -2849,16 +2950,25 @@ if files_to_process:
                     else:  # Facebook
                         canvas_width, canvas_height = 1200, 630
 
-                    # Sukuriame foną (AI arba gradientą)
+                    # Sukuriame foną (AI, išsaugotas, arba gradientą)
                     if use_themed_bg:
-                        themed_bg = generate_themed_background(season, canvas_width, canvas_height, custom_prompt)
-                        if themed_bg:
+                        # Prioritetas: selected fonas iš gallery > generate naują
+                        if 'selected_dalle_bg' in st.session_state and st.session_state['selected_dalle_bg']:
+                            # Naudojame išsaugotą foną
+                            themed_bg = st.session_state['selected_dalle_bg'].copy()
+                            themed_bg = themed_bg.resize((canvas_width, canvas_height), Image.Resampling.LANCZOS)
                             collage = themed_bg
+                            st.info("♻️ Naudojamas išsaugotas fonas (FREE!)")
                         else:
-                            # Fallback į gradientą
-                            collage = create_gradient_background(
-                                canvas_width, canvas_height, (240, 245, 250), (250, 250, 255)
-                            )
+                            # Generuojame naują
+                            themed_bg = generate_themed_background(season, canvas_width, canvas_height, custom_prompt)
+                            if themed_bg:
+                                collage = themed_bg
+                            else:
+                                # Fallback į gradientą
+                                collage = create_gradient_background(
+                                    canvas_width, canvas_height, (240, 245, 250), (250, 250, 255)
+                                )
                     else:
                         collage = create_gradient_background(
                             canvas_width, canvas_height, (245, 245, 245), (255, 255, 255)
