@@ -1,18 +1,8 @@
-===========================================
-ŽALIUZIŲ APP - PRADINIS PROJECT BRIEF
-===========================================
-
-📋 PROJEKTO PAVADINIMAS:
-Žaliuzių ir roletų turinio kūrėjas socialiniams tinklams
-
-🎯 PAGRINDINIS TIKSLAS:
+PAGRINDINIS TIKSLAS:
 Sukurti automatizuotą įrankį, kuris paverčia nuotraukas į profesionalius marketinginius įrašus 
 socialiniams tinklams (Instagram, Facebook, Magazine format).
 
-===========================================
-MINIMALIOS FUNKCIJOS (MVP - Minimum Viable Product)
-===========================================
-
+MINIMALIOS FUNKCIJOS
 1. NUOTRAUKŲ ĮKĖLIMAS
    - Galimybė įkelti 1-4 nuotraukas
    - Palaikyti JPG/PNG formatus
@@ -36,9 +26,7 @@ MINIMALIOS FUNKCIJOS (MVP - Minimum Viable Product)
    - PNG formato failas
    - Aukšta kokybė (300 DPI konceptualiai)
 
-===========================================
 PRADINĖS INSTRUKCIJOS AI MODELIUI
-===========================================
 
 PROMPT ŠABLONAS tekstų generavimui:
 
@@ -50,28 +38,12 @@ UŽDUOTIS:
 2. Sugeneruok VIENĄ trumpą, patrauklią antraštę (max 60 simbolių)
 3. Sugeneruok 4 bullet punktus (po 40-60 simbolių kiekvienas)
 
-TONAS:
-- Profesionalus bet draugiškas
-- Lietuvių kalba
-- Orientuotas į namų savininkus
-- Pabrėžia praktiškumą ir estetiką
-
-TEMPOS:
-- Kokybė
-- Patogumas
-- Modernumas
-- Funkcionalumas
-
 PAVYZDYS OUTPUT:
 Antraštė: Modernios žaliuzės jūsų namų elegancija
 • Idealiai derančios prie interjero
 • Lengvai valomas audinys
 • Tikslus šviesos reguliavimas
 • Ilgalaikė kokybės garantija"
-
-===========================================
-TECHNINĖS SPECIFIKACIJOS
-===========================================
 
 TECHNOLOGIJOS:
 - Python 3.12
@@ -80,185 +52,3 @@ TECHNOLOGIJOS:
 - Pillow (PIL) - nuotraukų apdorojimas
 - Supabase - duomenų bazė (optional)
 
-API RAKTAI REIKALINGI:
-- OPENAI_API_KEY - GPT-4 Vision prieigai
-- SUPABASE_URL - versijų istorijos saugojimui (optional)
-- SUPABASE_KEY - autentifikacijai (optional)
-
-LAYOUTO SPECIFIKACIJOS:
-
-Magazine Layout (1080x1350px):
-- Kairė: 2 nuotraukos vertikaliai (3:4 ratio)
-- Dešinė: Tekstinė sekcija
-  - Antraštė: 36px šriftas, bold
-  - Punktyrinė linija atskyrimui
-  - 4 bullet'ai su apskritimais
-  - Telefonas apačioje
-  - Logo apačioje dešinėje
-
-Instagram Square (1080x1080px):
-- Nuotraukos grid'e (1x1, 2x1, 2x2 layout)
-- Tekstas overlay arba apačioje
-- Logo watermark
-
-Facebook Cover (1200x630px):
-- Horizontalus layout
-- Nuotraukos kairėje arba fone
-- Tekstas dešinėje
-
-===========================================
-ADVANCED FUNKCIJOS (Vėlesnėms versijoms)
-===========================================
-
-V2.0:
-- Auto enhance nuotraukų (brightness, contrast, sharpness)
-- Vandens ženklų pridėjimas
-- Spalvų korekcija (temperature, saturation)
-
-V3.0:
-- OpenCV integration (advanced preprocessing)
-- Nuotraukų palyginimas (before/after)
-- Automatinis fonas pašalinimas
-
-V4.0:
-- DALL-E fonų generavimas (custom backgrounds)
-- Versijų istorija su Supabase
-- Tekstų palyginimas (GPT vs rankinis)
-
-V5.0 (DUAL AI):
-- Google Gemini Vision integracija
-- Dviejų modelių palyginimas
-- Model selection (GPT-4o / Gemini / Both)
-- AI Budget Tracker
-
-V6.0 (COST OPTIMIZATION):
-- DALL-E fonų galerija
-- Persistent storage su Supabase
-- Background reuse funkcionalumas
-- Seasonal/holiday kontekstas AI promptuose
-
-===========================================
-KAIP PRADĖTI PROJEKTĄ NUO NULIO
-===========================================
-
-STEP 1: Environment Setup
-```bash
-python -m venv venv
-venv\Scripts\activate
-pip install streamlit openai pillow python-dotenv
-```
-
-STEP 2: Sukurti .env failą
-```
-OPENAI_API_KEY=sk-xxxxxxxxxx
-```
-
-STEP 3: Sukurti minimalų app.py
-```python
-import streamlit as st
-from openai import OpenAI
-from PIL import Image
-
-st.title("Žaliuzių turinio kūrėjas")
-uploaded_files = st.file_uploader("Įkelk nuotraukas", accept_multiple_files=True)
-
-if uploaded_files:
-    # Process images
-    # Generate text with AI
-    # Create collage
-    # Display result
-```
-
-STEP 4: Paleisti
-```bash
-streamlit run app.py
-```
-
-===========================================
-USER FLOW (Vartotojo kelias)
-===========================================
-
-1. Vartotojas atidaro aplikaciją
-2. Įkelia 1-4 nuotraukas
-3. (Optional) Pasirenka stilių/formatą
-4. Paspausia "Generuoti AI tekstą"
-5. Mato sugeneruotą antraštę ir bullet'us
-6. (Optional) Redaguoja tekstą rankiniu būdu
-7. Paspausia "Sukurti koliažą"
-8. Mato preview
-9. Atsisiunčia rezultatą
-
-===========================================
-VERSIJŲ ISTORIJA (Kaip evoliucionavo)
-===========================================
-
-v1.0 - MVP: Basic tekstų generavimas + magazine layout
-v1.5 - Multi-format support (Instagram, Facebook)
-v2.0 - Auto enhance + manual adjustments
-v2.4 - Supabase integration, version history
-v3.0 - OpenCV advanced preprocessing
-v3.5 - DALL-E custom backgrounds
-v4.0 - Dual Model AI (GPT-4o + Gemini Vision)
-v4.5 - AI Budget Tracker + Seasonal context
-v5.0 - DALL-E backgrounds gallery + persistent storage
-
-===========================================
-CURRENT STATUS (Dabartinis statusas)
-===========================================
-
-✅ VEIKIA:
-- Multi-format layouts (Magazine, Instagram, Facebook)
-- Dual AI models (GPT-4o Vision + Gemini Flash)
-- Auto enhance su PIL
-- OpenCV advanced preprocessing
-- DALL-E custom backgrounds
-- Supabase version history + DALL-E gallery
-- AI Budget Tracker
-- Seasonal/holiday context
-- Background reuse optimization
-
-🚧 TOBULINTINA:
-- Mobile upload experience
-- Faster image processing
-- More layout templates
-- Batch processing
-
-💡 IDĖJOS ATEIČIAI:
-- Video content generation
-- Automated social media posting
-- Analytics integration
-- Multi-language support
-- Custom branding templates
-
-===========================================
-DEPLOYMENT (Kaip iškelti į internetą)
-===========================================
-
-STREAMLIT CLOUD:
-1. Push to GitHub
-2. Eiti į https://share.streamlit.io
-3. Connect repository
-4. Select branch: dev-stable
-5. Main file: app.py
-6. Add secrets (OPENAI_API_KEY, etc.)
-7. Deploy!
-
-IMPORTANT FILES:
-- requirements.txt (Python packages)
-- packages.txt (System packages - Linux only)
-- .streamlit/config.toml (Streamlit config)
-- assets/logo.png (Logo file)
-
-===========================================
-KONTAKTAI IR NUORODOS
-===========================================
-
-GitHub: https://github.com/aivarassinkevicius/Zaliuziu-app
-Branch: dev-stable
-OpenAI: https://platform.openai.com/api-keys
-Google AI: https://aistudio.google.com/apikey
-Supabase: https://supabase.com/dashboard
-
-===========================================
-END OF INSTRUCTIONS
-===========================================
