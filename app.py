@@ -886,16 +886,23 @@ def html_to_image(html_string, width=1920, height=1080):
             os.unlink(temp_html_path)
 
 
-def generate_text_with_gemini(image):
+def generate_text_with_gemini(image, season="", holiday=""):
     """
     Generuoja antraštę ir bullet punktus naudojant OpenAI Vision API (GPT-4 Vision)
     
     Args:
         image: PIL Image objektas
+        season: Metų laikas (Pavasaris, Vasara, Ruduo, Žiema)
+        holiday: Šventė (Kalėdos, Velykos, etc.)
         
     Returns:
         tuple: (header_text, bullets_list) arba (None, None) jei klaida
     """
+    # Increment usage counter
+    if 'ai_usage_count' not in st.session_state:
+        st.session_state['ai_usage_count'] = {'gpt': 0, 'gemini': 0, 'dalle': 0}
+    st.session_state['ai_usage_count']['gpt'] += 1
+    
     try:
         # Naudojame tą patį OpenAI client kaip custom background
         if not api_key:
@@ -909,8 +916,15 @@ def generate_text_with_gemini(image):
         image.save(buffered, format="JPEG")
         img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
         
-        # Prompt'as
-        prompt = """Analizuok šią nuotrauką ir atpažink produktą (medinės žaliuzės, roletai, plisuotos žaliuzės, roletai diena-naktis, romanetės, arba kitas langų uždengimo produktas).
+        # Kontekstas (sezonas/šventė)
+        context_info = ""
+        if holiday and holiday != "Nėra":
+            context_info = f"\n\n🎉 SVARBU: Šiandien yra {holiday} šventė! Atsižvelk į šventę kurdamas tekstus (pvz: šventiniai žodžiai, tinkamos asociacijos)."
+        elif season:
+            context_info = f"\n\n🍂 Kontekstas: Dabar {season} sezonas. Galima atsižvelgti į sezoną (pvz: šilti/vėsūs atspalviai, tinkamos asociacijos)."
+        
+        # Prompt'as su kontekstu
+        prompt = f"""Analizuok šią nuotrauką ir atpažink produktą (medinės žaliuzės, roletai, plisuotos žaliuzės, roletai diena-naktis, romanetės, arba kitas langų uždengimo produktas).{context_info}
 
 Sugeneruok LIETUVIŲ kalba:
 1. ANTRAŠTĖ: 1-2 žodžiai, MAX 25 raidės (pvz: "Medinės Žaliuzės", "Roletai")
@@ -923,7 +937,7 @@ BULLET2: [tekstas]
 BULLET3: [tekstas]
 BULLET4: [tekstas]"""
         
-        # Siunčiame užklausą su GPT-4 Vision
+        # Siunčiame užklausą su GPT-4 Vision (temperature 1.3 - įvairesni rezultatai)
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
@@ -940,7 +954,8 @@ BULLET4: [tekstas]"""
                     ]
                 }
             ],
-            max_tokens=300
+            max_tokens=300,
+            temperature=1.3
         )
         
         # Parsimame atsakymą
@@ -972,17 +987,25 @@ BULLET4: [tekstas]"""
         return None, None
 
 
-def generate_text_with_gemini_vision(image):
+def generate_text_with_gemini_vision(image, season="", holiday=""):
     """
     Generuoja tekstus naudojant Google Gemini Vision API (dual model comparison)
     
     Args:
         image: PIL Image objektas
+        season: Metų laikas (Pavasaris, Vasara, Ruduo, Žiema)
+        holiday: Šventė (Kalėdos, Velykos, etc.)
         
     Returns:
-        tuple: (header_text, bullets_list) arba (None, None) jei klaida
+        tuple: (header_text, bullets_list) arba (None, None) jei klaida)
     """
     print(f"🔍 DEBUG: generate_text_with_gemini_vision() called, GEMINI_AVAILABLE={GEMINI_AVAILABLE}")
+    
+    # Increment usage counter
+    if 'ai_usage_count' not in st.session_state:
+        st.session_state['ai_usage_count'] = {'gpt': 0, 'gemini': 0, 'dalle': 0}
+    st.session_state['ai_usage_count']['gemini'] += 1
+    
     try:
         if not GEMINI_AVAILABLE:
             st.error("❌ Google Gemini SDK neįdiegtas")
@@ -997,8 +1020,15 @@ def generate_text_with_gemini_vision(image):
         
         genai.configure(api_key=gemini_key)
         
-        # Prompt'as (identiškas GPT-4o)
-        prompt = """Analizuok šią nuotrauką ir atpažink produktą (medinės žaliuzės, roletai, plisuotos žaliuzės, roletai diena-naktis, romanetės, arba kitas langų uždengimo produktas).
+        # Kontekstas (sezonas/šventė)
+        context_info = ""
+        if holiday and holiday != "Nėra":
+            context_info = f"\n\n🎉 SVARBU: Šiandien yra {holiday} šventė! Atsižvelk į šventę kurdamas tekstus (pvz: šventiniai žodžiai, tinkamos asociacijos)."
+        elif season:
+            context_info = f"\n\n🍂 Kontekstas: Dabar {season} sezonas. Galima atsižvelgti į sezoną (pvz: šilti/vėsūs atspalviai, tinkamos asociacijos)."
+        
+        # Prompt'as su kontekstu
+        prompt = f"""Analizuok šią nuotrauką ir atpažink produktą (medinės žaliuzės, roletai, plisuotos žaliuzės, roletai diena-naktis, romanetės, arba kitas langų uždengimo produktas).{context_info}
 
 Sugeneruok LIETUVIŲ kalba:
 1. ANTRAŠTĖ: 1-2 žodžiai, MAX 25 raidės (pvz: "Medinės Žaliuzės", "Roletai")
@@ -1079,6 +1109,11 @@ def generate_themed_background(season, canvas_width, canvas_height, custom_promp
 
             prompt = prompts.get(season, prompts["Vasara"])
 
+        # Increment usage counter
+        if 'ai_usage_count' not in st.session_state:
+            st.session_state['ai_usage_count'] = {'gpt': 0, 'gemini': 0, 'dalle': 0}
+        st.session_state['ai_usage_count']['dalle'] += 1
+        
         # Generuojame nuotrauką su DALL-E 3
         response = client.images.generate(model="dall-e-3", prompt=prompt, size="1024x1024", quality="standard", n=1)
 
@@ -2210,6 +2245,49 @@ else:
     st.sidebar.warning("⚠️ OpenCV neprieinamas")
 
 st.sidebar.markdown("---")
+
+# ============ AI BIUDŽETO TRACKER ============
+st.sidebar.markdown("### 💰 AI Biudžetas ir Naudojimas")
+
+with st.sidebar.expander("📊 Žiūrėti AI statistiką", expanded=False):
+    # Session usage counter
+    if 'ai_usage_count' not in st.session_state:
+        st.session_state['ai_usage_count'] = {'gpt': 0, 'gemini': 0, 'dalle': 0}
+    
+    st.markdown("**🔢 Šios sesijos naudojimas:**")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("🟢 GPT-4o", f"{st.session_state['ai_usage_count']['gpt']} req")
+        st.metric("🔵 Gemini", f"{st.session_state['ai_usage_count']['gemini']} req")
+    with col2:
+        st.metric("🎨 DALL-E", f"{st.session_state['ai_usage_count']['dalle']} req")
+    
+    st.markdown("---")
+    st.markdown("**💳 Biudžeto valdymas:**")
+    
+    # OpenAI
+    st.markdown("**🟢 OpenAI (GPT-4o + DALL-E 3)**")
+    st.markdown("- Balansas: [Tikrinti čia](https://platform.openai.com/usage)")
+    st.markdown("- Papildyti: [Billing](https://platform.openai.com/settings/organization/billing/overview)")
+    st.caption("💡 GPT-4o Vision: ~$0.01/request")
+    
+    st.markdown("---")
+    
+    # Gemini
+    st.markdown("**🔵 Google Gemini Vision**")
+    st.markdown("- Free tier: 15 req/min, 1500/day")
+    st.markdown("- Quota: [AI Studio](https://ai.google.dev/gemini-api/docs/api-key)")
+    st.markdown("- Papildyti: [Google Cloud](https://console.cloud.google.com/billing)")
+    st.caption("💡 Gemini nemokamas iki limito")
+    
+    st.markdown("---")
+    
+    if st.button("🔄 Reset sesijos counter'ius", key="reset_ai_counters"):
+        st.session_state['ai_usage_count'] = {'gpt': 0, 'gemini': 0, 'dalle': 0}
+        st.success("✅ Counter'iai išvalyti!")
+        st.rerun()
+
+st.sidebar.markdown("---")
 st.sidebar.markdown("### 📅 Turinio temos (AI generavimui)")
 
 # Funkcija metų laikui nustatyti pagal datą
@@ -2630,18 +2708,18 @@ if files_to_process:
                         first_file.seek(0)
                         temp_image = Image.open(first_file)
                         
-                        # Generuojame pagal pasirinkimą
+                        # Generuojame pagal pasirinkimą (su sezono/šventės kontekstu)
                         gpt_header, gpt_bullets = None, None
                         gemini_header, gemini_bullets = None, None
                         
                         if generate_gpt:
-                            gpt_header, gpt_bullets = generate_text_with_gemini(temp_image)
+                            gpt_header, gpt_bullets = generate_text_with_gemini(temp_image, season=season, holiday=holiday)
                             if gpt_header and gpt_bullets:
                                 st.session_state['gpt_header'] = gpt_header
                                 st.session_state['gpt_bullets'] = gpt_bullets
                         
                         if generate_gemini and GEMINI_AVAILABLE:
-                            gemini_header, gemini_bullets = generate_text_with_gemini_vision(temp_image)
+                            gemini_header, gemini_bullets = generate_text_with_gemini_vision(temp_image, season=season, holiday=holiday)
                             if gemini_header and gemini_bullets:
                                 st.session_state['gemini_header'] = gemini_header
                                 st.session_state['gemini_bullets'] = gemini_bullets
